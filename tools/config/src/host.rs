@@ -55,7 +55,7 @@ pub fn initialize_host(
 /// interact with user to get ip address
 pub fn what_host() -> Result<HostAndPort, anyhow::Error> {
     // get from external source since many cloud providers show different interfaces for `machine_ip`
-    let resp = reqwest::blocking::get("https://ifconfig.me")?;
+    let resp = reqwest::blocking::get("https://ipinfo.io/ip")?;
     // let ip_str = resp.text()?;
 
     let host = match resp.text() {
