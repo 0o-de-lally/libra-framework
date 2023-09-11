@@ -20,11 +20,10 @@ endif
 
 
 genesis:
-	cargo r -- --org-github  0LNetworkCommunity \
+	cargo r -- genesis --org-github 0LNetworkCommunity \
 	--name-github genesis-smoke \
 	--local-framework \
 	--json-legacy ./tests/fixtures/${RECOVERY_FILE}.json \
-	genesis \
 	--target-supply ${TARGET_SUPPLY} \
 	--target-future-uses ${FUTURE_USES} \
 	--map-dd-to-slow 3A6C51A0B786D644590E8A21591FA8E2 \
@@ -32,11 +31,10 @@ genesis:
 
 
 wizard:
-	cargo r -- --org-github  0LNetworkCommunity \
+	cargo r -- wizard --org-github 0LNetworkCommunity \
 	--name-github genesis-smoke \
 	--local-framework \
 	--json-legacy ./tests/fixtures/${RECOVERY_FILE}.json \
-	wizard \
 	--target-supply ${TARGET_SUPPLY} \
 	--target-future-uses ${FUTURE_USES} \
 	--map-dd-to-slow 3A6C51A0B786D644590E8A21591FA8E2 \
