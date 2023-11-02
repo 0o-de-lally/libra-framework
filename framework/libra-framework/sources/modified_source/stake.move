@@ -58,8 +58,7 @@ module diem_framework::stake {
     /// https://github.com/diem-labs/diem-core/blob/main/crates/diem-bitvec/src/lib.rs#L20
     const MAX_VALIDATOR_SET_SIZE: u64 = 65536;
 
-    /// Limit the maximum value of `rewards_rate` in order to avoid any arithmetic overflow.
-    const MAX_REWARDS_RATE: u64 = 1000000;
+    // deprecated constant
 
     const MAX_U64: u128 = 18446744073709551615;
 

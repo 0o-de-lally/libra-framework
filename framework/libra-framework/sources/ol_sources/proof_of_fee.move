@@ -27,7 +27,7 @@ module ol_framework::proof_of_fee {
   friend ol_framework::epoch_boundary;
 
   /// The nominal reward for each validator in each epoch.
-  const GENESIS_BASELINE_REWARD: u64 = 1000000;
+  const TESTNET_GENESIS_BASELINE_REWARD: u64 = 1000000;
 
   //////// ERRORS /////////
   /// Not an active validator
@@ -75,8 +75,8 @@ module ol_framework::proof_of_fee {
       move_to<ConsensusReward>(
         vm,
         ConsensusReward {
-          nominal_reward: GENESIS_BASELINE_REWARD,
-          net_reward: GENESIS_BASELINE_REWARD,
+          nominal_reward: TESTNET_GENESIS_BASELINE_REWARD,
+          net_reward: TESTNET_GENESIS_BASELINE_REWARD,
           entry_fee: 0,
           clearing_bid: 0,
           median_win_bid: 0,
