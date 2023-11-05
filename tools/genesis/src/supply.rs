@@ -51,6 +51,7 @@ pub struct Supply {
     pub slow_validator_locked: f64,
     pub slow_unlocked: f64,
     pub donor_directed: f64,
+    pub makewhole: f64,
     // which will compute later
     pub split_factor: f64,
     pub escrow_pct: f64,
@@ -75,20 +76,27 @@ impl Supply {
 
 fn inc_supply(
     mut acc: Supply,
-    r: &LegacyRecovery,
+    user: &LegacyRecovery,
     dd_wallet_list: &[LegacyAddress],
 ) -> anyhow::Result<Supply> {
     // get balances
-    let amount: f64 = match &r.balance {
+    let amount: f64 = match &user.balance {
         Some(b) => b.coin as f64,
         None => 0.0,
     };
     acc.total += amount;
 
+    // Make whole coins
+    if let Some(mk) = &user.make_whole{
+      let user_mk_whole = mk.credits.iter().try_fold(0u64, |sum, f| { sum.checked_add(f.coins.value) }).expect("could not get makewhole value for account");
+      acc.makewhole += user_mk_whole as f64;
+      acc.total += user_mk_whole as f64;
+    }
+
     // get donor directed
-    if dd_wallet_list.contains(&r.account.unwrap()) {
+    if dd_wallet_list.contains(&user.account.unwrap()) {
         acc.donor_directed += amount;
-    } else if let Some(sl) = &r.slow_wallet {
+    } else if let Some(sl) = &user.slow_wallet {
         acc.slow_total += amount;
         if sl.unlocked > 0 {
             acc.slow_unlocked += amount;
@@ -97,13 +105,13 @@ fn inc_supply(
                 let locked = amount - sl.unlocked as f64;
                 acc.slow_locked += locked;
                 // if this is the special case of a validator account with slow locked balance
-                if r.val_cfg.is_some() {
+                if user.val_cfg.is_some() {
                     acc.validator += amount;
                     acc.slow_validator_locked += locked;
                 }
             }
         }
-    } else if r.cumulative_deposits.is_some() {
+    } else if user.cumulative_deposits.is_some() {
         // catches the cases of any dd wallets that were mapped to slow wallets
         acc.slow_locked += amount;
         acc.slow_total += amount;
