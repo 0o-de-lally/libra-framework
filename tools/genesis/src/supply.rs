@@ -144,6 +144,7 @@ pub fn populate_supply_stats_from_legacy(
         split_factor: 0.0,
         escrow_pct: 0.0,
         epoch_reward_base_case: 0.0,
+        makewhole: 0.0,
     };
 
     let dd_wallets = rec
