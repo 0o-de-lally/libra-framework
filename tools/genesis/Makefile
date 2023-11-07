@@ -19,7 +19,7 @@ YEARS = 7
 endif
 
 ifndef CHAIN
-CHAIN = testnet
+CHAIN = mainnet
 endif
 
 ifndef GIT_ORG
@@ -27,7 +27,7 @@ GIT_ORG = 0LNetworkCommunity
 endif
 
 ifndef GIT_REPO
-GIT_REPO = genesis-smoke
+GIT_REPO = genesis-upgrade-6-9-0
 endif
 
 
