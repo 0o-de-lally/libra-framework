@@ -9,13 +9,15 @@ How does a network determine the appropriate number of validator seats for achie
 Fundamentally, we believe that the number of participants in consensus is bound
 by the quality of the software, considering:
 
-A. The network architecture: The type of networking and consensus sets some upper bounds.
-B. The implementation quality: Even the best architecture, if riddled with errors (such as state synchronization issues), sets limits on the network.
-C. Network operator convenience: Is the software user-friendly, requiring minimal intervention? Is it accessible to casual users or solely manageable by professional IT organizations under contract to a foundation? These answers are usually not known a priori, and definitive solutions are elusive.
+- A. The network architecture: The type of networking and consensus sets some upper bounds.
+- B. The implementation quality: Even the best architecture, if riddled with errors (such as state synchronization issues), sets limits on the network.
+- C. Network operator ergonimics: Is the software user-friendly, requiring minimal intervention? Is it accessible to casual users or solely manageable by professional IT organizations under contract to a foundation? These answers are usually not known a priori, and definitive solutions are elusive.
 
-Any attempts to fix these issues might push the problem into the realm of "governance," necessitating interventions to set new upper bounds. However, this solution is not acceptable, as it only adds complexity to the decision space of the network. The validator set size is not merely a technical matter but also a political economy issue; enforcing an upper bound ensures some competition among validators, which might be undesirable for the least competitive.
+Attempts to mitigate the effects of inadequate software may push the problem into the realm of "governance," necessitating interventions to set new upper bounds. However, this solution is not acceptable, as it only adds complexity to the decision space of the network. The validator set size is not merely a technical matter but also a political economy issue; enforcing an upper bound ensures some competition among validators, which might be undesirable for the least competitive.
 
-You can then arrive at an equilibrium where you are overpaying for security, subsidizing the least competitive.
+*The network may land on an equilibrium where it is overpaying for security;
+subsidizing the least competitive.* This may be okay, if that is an explicit goal
+at bootstrapping, but at steady-state it is likely not.
 
 ## History
 
