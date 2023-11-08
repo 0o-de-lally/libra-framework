@@ -12,6 +12,8 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
+viuer = "0.7.1"
+
 anyhow = { workspace = true }
 clap = { workspace = true }
 diem = { workspace = true }

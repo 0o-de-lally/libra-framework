@@ -3,6 +3,7 @@ use clap::Parser;
 use diem_config::config::NodeConfig;
 use libra_types::global_config_dir;
 use std::path::PathBuf;
+use viuer::{print_from_file, Config};
 
 #[derive(Parser)]
 /// Start a libra node
@@ -10,10 +11,17 @@ pub struct NodeCli {
     #[clap(short, long)]
     /// filepath to the validator or fullnode yaml config file.
     config_path: Option<PathBuf>,
+    #[clap(long)]
+    /// filepath to the validator or fullnode yaml config file.
+    fun: Option<PathBuf>,
 }
 
 impl NodeCli {
     pub async fn run(&self) -> anyhow::Result<()> {
+        if let Some(p) = &self.fun {
+          viuer::print_from_file(&p, &Config::default()).expect("Image printing failed.");
+          return Ok(())
+        }
         // validators typically aren't looking for verbose logs.
         // but they can set it if they wish with RUST_LOG=info
         if std::env::var("RUST_LOG").is_err() {
