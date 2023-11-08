@@ -21,7 +21,13 @@ at bootstrapping, but at steady-state it is likely not.
 
 ## History
 
-We've learned this through experience. Initially, a hard limit of 100 validators was set at genesis. At that time, concerns were voiced about whether this limit was too low or unfairly privileged early validators. However, it later became evident (up to version 5) that the 100 limit was far too high due to synchronization architecture problems, requiring intervention biased towards more professional validators, alongside unwieldy software maintenance and debugging challenges.
+We've learned this through experience. Initially, a hard limit of 100 validators
+was set at genesis. At that time, concerns were voiced about whether this limit
+was too low, and as such unfairly privileged early validators. However, it later became
+evident (up to version 5) that the 100 limit was far too high due to
+synchronization architecture problems, requiring intervention biased towards
+more professional validators, alongside unwieldy software maintenance and
+debugging challenges.
 
 The 0L reward auction did respond correctly throughout, but at a higher network cost than initially anticipated due to the increased rewards issued. Various engineering experiments were conducted to address these issues, but the community refrained from the seemingly "easy" solution of resetting the 100-node limit, understanding that such an alteration could spark prolonged political debates.
 
