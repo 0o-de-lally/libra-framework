@@ -1,9 +1,106 @@
+// MUSICAL CHAIRS
+// TL;DR we think validator set size is a technical software constraint that
+// should not be corrected through politics. It's part of an overall theme that
+// which is important to this community; how to create an independent blockchain
+// without governance from a "foundation" company nor Proof-of-Stake chicanery.
+
+// How does a network determine the correct amount of validator seats
+// to offer for consensus?
+// Usually in BFT networks deployed in the wild, the number is
+// decided externally to the network (i.e. the founders or foundation decides
+// this number);
+// However they can get this number wrong. We think here that
+// fundamentally the number is bound by the software.
+// A. The architecture of the network: the type of networking and consensus
+// determines some upper bounds.
+// B. The quality of the implementation: a best in class architecture
+// implemented with many errors (state sync I'm looking at you), will place
+// an upper bound on the netwrok.
+// C. The ergonomics for network operators: is the software set-it-and-forget-it
+// or does it require intervention? Is it approachable by casual users, or does
+// it neet professional IT organizations that are bound by contract to a
+// foundation?
+// We assumes these answer can't be know a priori. And neither can the
+// solutions be definitive And if we did
+// there would be changes in the market, the software becomes relatively more
+// difficult to use compared to other network ecosystems.
+// This pushes the problem to "governance", meaning, that administrators of some
+// kind need to intervene and set a new upper bound. This is not an acceptable
+// solution since it adds to an already large decision space for the network
+// (i.e. validator set size is a political economy problem as well).
+// After all an upper bound so that there is some competition among validators,
+// and this is undesirable for the least competitive.
+
+// 0L knows this from experience. The initial hard limit on validator set was
+// established as 100 at genesis. At the time, several people voiced concerns
+// about setting such a limit: was it too low? Many early prospective validators
+// thought it was an arbitrarily low threshold, meant to prvilege the earliest
+// validators. Others thought, it was likely too high, because we had no
+// experience in running the pre-alpha software that Facebook was only running
+// in a lab.
+
+// Ultimately, it became clear that a mix of factors A, B, C above proved that
+// the 100 limit was far too high (up to version 5). There were problems in the
+// architecture of syncronization (inexplicable halts), which required validator
+// intervention (biasing to more professional validators), and software which
+// was unwieldy to maintain and debug. Additionally the market for compute
+// fluctuated during the first 4 years of 0L, i.e. validators at times were less
+// willing to put the effort into fixing the issues.
+// All that said, it appears 0L reward auction, did respond correctly during the
+// whole period (there were always willing validators). Though it came at a
+// higher cost to the network (more rewards issued), than was initially
+// expected.
+
+// There were a number of experiments conducted from an engineering perspective
+// to address this. However, this community did not intervene with what/
+// would have been the "easy" answer, wich is to intervene and reset the limit
+// of 100. There's a longer discussion warranted here, but in short, beginning
+// to alter that threshold could become a persistent political topic.
+
+
+// So how does one pick a viable validator set size consistently, without
+// resorting to politics and authority? Our experiment is called Musical Chairs.
+
+// With musical chairs we are trying to estimate
+// the number of nodes which the network can support, based on internal metrics
+// of the performance: i.e. can the network sustain itself at the current size of
+// the validator set, or should it be ratcheted up or down.
+// Consensus algorithms in the BFT-style family have upperbounds in the low
+// hundreds. As such the variance of units of seats offered might be in the
+// single digits.
+
+// There are many metrics that can be used. For now we'll use
+// a simple heuristic that is already on chain: compliant node cardinality.
+// Other heuristics may be explored, so long as the information
+// reliably committed to the chain.
+
+// The rules:
+// All we are establishing is the maximum number of seats per validator.
+// When the 100% of the validators are performing well
+// the network can safely increase the threshold by 1 node.
+// Validators who perform however, are establishing the threshold, but are not
+// guaranteed entry into the next epoch, that's a separate concern, which we
+// currently (experimentally) solve with our Proof-of-Fee game (instead of
+// Proof-of-Stake).
+// On the other hand,when the network is performing poorly (few validators
+// performing perfectly) the threshold must be reduced. The count of reduction
+// of seats should be not by a predetermined unit, but down to the number of
+// compliant and performant nodes. Hence the reference to the "musical chairs" game.
+// There are a number of implementation details that are commented in the code
+// below (e.g. if less that 5% fail to perform, no change happens). In general
+// the main implementation consideration is that:  the algorithm with "test"
+// increasing the validator set conservatively, while and decreases predictibly
+// to the optimal performance, by removing seats.
+
+// The objective of this design is that the algorithm has a "thermostatic"
+// quality: continuously adjusting until a balance is found for the current
+// social, technical, and economic conditions.
+
 module ol_framework::musical_chairs {
     use diem_framework::chain_status;
     use diem_framework::system_addresses;
     use diem_framework::stake;
     use ol_framework::grade;
-    // use ol_framework::testnet;
     use std::fixed_point32;
     use std::vector;
     // use diem_std::debug::print;
@@ -16,31 +113,6 @@ module ol_framework::musical_chairs {
         // A small history, for future use.
         history: vector<u64>,
     }
-
-    // With musical chairs we are trying to estimate
-    // the number of nodes which the network can support
-    // BFT has upperbounds in the low hundreds, but we
-    // don't need to hard code it.
-    // There also needs to be an upper bound so that there is some
-    // competition among validators.
-    // Instead of hard coding a number, and needing to reach social
-    // consensus to change it:  we'll determine the size based on
-    // the network's performance as a whole.
-    // There are many metrics that can be used. For now we'll use
-    // a simple heuristic that is already on chain: compliant node cardinality.
-    // Other heuristics may be explored, so long as the information
-    // reliably committed to the chain.
-
-    // The rules:
-    // Validators who perform, are not guaranteed entry into the
-    // next epoch of the chain. All we are establishing is the ceiling
-    // for validators.
-    // When the 100% of the validators are performing well
-    // the network can safely increase the threshold by 1 node.
-    // We can also say if less that 5% fail, no change happens.
-    // When the network is performing poorly, greater than 5%,
-    // the threshold is reduced not by a predetermined unit, but
-    // to the number of compliant and performant nodes.
 
     /// Called by root in genesis to initialize the GAS coin
     public fun initialize(
