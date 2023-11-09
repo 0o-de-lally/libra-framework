@@ -32,8 +32,8 @@ jobs:
       #   uses: ./.github/actions/build_env
 
       - name: install prover dependencies
-        run: >
-            bash util/dev_setup.sh -by
+        run: |
+            bash util/dev_setup.sh -byp
 
       - name: install diem (for move tests)
         run: |
@@ -41,6 +41,9 @@ jobs:
           chmod +x ${{github.workspace}}/diem
           cp ${{github.workspace}}/diem $HOME/.cargo/bin/
 
-      - name: prove
-        run: ${{github.workspace}}/diem move prove -f guid
+      # Move framework tests
+      - name: move framework
         working-directory: ./framework/libra-framework
+        run: >
+          bash ~/.profile &&
+          ${{github.workspace}}/diem move prove -f guid
