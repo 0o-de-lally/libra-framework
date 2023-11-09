@@ -36,7 +36,7 @@ jobs:
             bash util/dev_setup.sh -by
 
       - name: install diem (for move tests)
-        run: >
+        run: |
           wget -O ${{github.workspace}}/diem https://github.com/0LNetworkCommunity/diem/releases/latest/download/diem &&
           chmod +x ${{github.workspace}}/diem
           cp ${{github.workspace}}/diem $HOME/.cargo/bin/
