@@ -10,8 +10,9 @@ on:
       - opened
       - synchronize
     branches:
-      - 'release**'
-      - 'main'
+      - "ci*"
+      - "prover*"
+
 env:
   DOTNET_ROOT: "/home/runner/.dotnet"
   Z3_EXE: "/home/runner/bin/z3"
