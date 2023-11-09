@@ -38,8 +38,9 @@ jobs:
       - name: install diem (for move tests)
         run: >
           wget -O ${{github.workspace}}/diem https://github.com/0LNetworkCommunity/diem/releases/latest/download/diem &&
-          sudo chmod 755 ${{github.workspace}}/diem
+          chmod +x ${{github.workspace}}/diem
+          cp ${{github.workspace}}/diem $HOME/.cargo/bin/
 
       - name: prove
-        run: diem move prove -f version
+        run: ${{github.workspace}}/diem move prove -f guid
         working-directory: ./framework/libra-framework
