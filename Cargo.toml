@@ -31,14 +31,14 @@ rust-version = "1.66.1"
 ######## Internal crate dependencies ########
 # Internal crate dependencies.
 libra-cached-packages = { path = "framework/cached-packages" }
-libra-config = { path = "tools/config" }
+libra-config = { path = "tools/config" , version="*"}
 libra-framework = { path = "framework" }
-libra-query = { path = "tools/query" }
+libra-query = { path = "tools/query", version="*" }
 libra-smoke-tests = { path = "smoke-tests" }
-libra-tower = { path = "tools/tower" }
-libra-types = { path = "types" }
-libra-txs = { path = "tools/txs" }
-libra-wallet = { path = "tools/wallet" }
+libra-tower = { path = "tools/tower", version="*" }
+libra-types = { path = "types", version="*" }
+libra-txs = { path = "tools/txs", version="*" }
+libra-wallet = { path = "tools/wallet", version="*" }
 vdf = { git = "https://github.com/0o-de-lally/verifiable_delay.git" }
 
 diem-api-types = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
@@ -48,12 +48,12 @@ diem-forge = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = 
 diem-transactional-test-harness = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 smoke-test = { package = "smoke-test", git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 
-diem = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
+diem = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release", version = "2.0.2" }
 diem-build-info = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
-diem-node = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
+diem-node = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release", version = "1.6.0"}
 diem-rest-client = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-sdk = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
-diem-config = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
+diem-config = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release", version = "0.1.0" }
 diem-crypto = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-genesis = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-global-constants = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
