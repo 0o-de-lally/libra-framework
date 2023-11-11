@@ -1,0 +1,21 @@
+[package]
+name = "tacoma"
+version = "0.1.0"
+
+# Workspace inherited keys
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+
+[dependencies]
+anyhow = { workspace = true }
+bcs = { workspace = true }
+clap = { workspace = true }
+diem-crypto = { workspace = true }
+diem-crypto-derive = { workspace = true }
+diem-types = { workspace = true }
+diem-data-client = { workspace = true }
+rand_core = { workspace = true }
+serde = { workspace = true }
