@@ -9253,6 +9253,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "tacoma"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs 0.1.4 (git+https://github.com/aptos-labs/bcs.git?rev=d31fab9d81748e2594be5cd5cdf845786a30562d)",
+ "clap 4.4.2",
+ "diem-crypto",
+ "diem-crypto-derive",
+ "diem-data-client",
+ "diem-types",
+ "rand_core 0.5.1",
+ "serde 1.0.163",
+]
+
+[[package]]
 name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

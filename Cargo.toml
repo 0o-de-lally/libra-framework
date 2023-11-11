@@ -10,6 +10,7 @@ members = [
   "tools/genesis",
   "tools/query",
   "tools/rescue",
+  "tools/tacoma",
   "tools/tower",
   "tools/txs",
   "tools/wallet",
@@ -55,6 +56,7 @@ diem-rest-client = { git = "https://github.com/0LNetworkCommunity/diem.git", bra
 diem-sdk = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-config = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-crypto = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
+diem-crypto-derive = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-genesis = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-global-constants = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-keygen = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
@@ -66,6 +68,7 @@ diem-vm-genesis = { git = "https://github.com/0LNetworkCommunity/diem.git", bran
 diem-executor = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-framework = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-cached-packages = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
+diem-data-client = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-github-client = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-release-builder = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-language-e2e-tests = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
