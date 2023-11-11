@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
+use crate::data_client;
+
 #[derive(Parser)]
 /// Demo
 pub struct DemoCli {
@@ -13,5 +15,6 @@ pub struct DemoCli {
 impl DemoCli {
     pub fn run(&self) {
         println!("{:?}", &self.config_path);
+        data_client::start().expect("could not run data_client");
     }
 }

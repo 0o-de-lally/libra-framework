@@ -34,6 +34,7 @@ rust-version = "1.70.0"
 libra-cached-packages = { path = "framework/cached-packages" }
 libra-config = { path = "tools/config" }
 libra-framework = { path = "framework" }
+libra-genesis-tools = { path = "tools/genesis" }
 libra-query = { path = "tools/query" }
 libra-smoke-tests = { path = "smoke-tests" }
 libra-tower = { path = "tools/tower" }
@@ -46,11 +47,14 @@ diem-api-types = { git = "https://github.com/0LNetworkCommunity/diem.git", branc
 diem-debugger = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-db = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-forge = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
+diem-storage-service-client = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
+diem-time-service = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-transactional-test-harness = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 smoke-test = { package = "smoke-test", git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 
 diem = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-build-info = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
+diem-network = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-node = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-rest-client = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }
 diem-sdk = { git = "https://github.com/0LNetworkCommunity/diem.git", branch = "release" }

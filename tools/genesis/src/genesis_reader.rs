@@ -32,7 +32,6 @@ use std::sync::Arc;
 /// the waypoint for that state.
 pub fn bootstrap_db_reader_from_gen_tx(
     genesis_transaction: &Transaction,
-    // db_path: &Path,
 ) -> anyhow::Result<(DbReaderWriter, Waypoint)> {
     let pb = ProgressBar::new(1000)
         .with_style(OLProgress::spinner())
