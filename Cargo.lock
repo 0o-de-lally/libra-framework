@@ -5744,6 +5744,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-swarm"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 4.4.2",
+ "libra-smoke-tests",
+]
+
+[[package]]
 name = "libra-tower"
 version = "0.1.0"
 dependencies = [
