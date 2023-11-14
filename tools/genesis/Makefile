@@ -60,8 +60,8 @@ legacy: ancestry dump
 ancestry:
 ### Fetch Ancestry Data, Snapshot, and Use v5.2 codebase and snapshot to generate recovery.json for seeding v6.9.x state
 	sudo rm -Rf ~/libra-recovery && mkdir -p ~/libra-recovery
-	wget https://github.com/0LNetworkCommunity/epoch-archive/raw/main/670.tar.gz -O ~/libra-recovery/670.tar.gz
-	cd ~/libra-recovery && tar -xvzf 670.tar.gz
+	wget https://github.com/0LNetworkCommunity/epoch-archive/raw/main/${EPOCH}.tar.gz -O ~/libra-recovery/${EPOCH}.tar.gz
+	cd ~/libra-recovery && tar -xvzf ${EPOCH}.tar.gz
 	wget https://raw.githubusercontent.com/sirouk/ol-data-extraction/v-6.9.x-ready/assets/data.json -O ~/libra-recovery/v5_ancestry.json
 
 build-legacy:
@@ -69,7 +69,7 @@ build-legacy:
 
 recovery:
 	cd ${DATA_PATH}/libra-legacy-v6/ol/genesis-tools && \
-	cargo r -p ol-genesis-tools -- --export-json ${DATA_PATH}/libra-recovery/v5_recovery.json --snapshot-path ${DATA_PATH}/libra-recovery/670/state_ver* --ancestry-file ${RECOVERY_FILE}
+	cargo r -p ol-genesis-tools -- --export-json ${DATA_PATH}/libra-recovery/v5_recovery.json --snapshot-path ${DATA_PATH}/libra-recovery/${EPOCH}/state_ver* --ancestry-file ${RECOVERY_FILE}
 
 	md5sum ${RECOVERY_FILE}
 
