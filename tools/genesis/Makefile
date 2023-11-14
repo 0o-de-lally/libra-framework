@@ -40,8 +40,6 @@ ifndef GIT_REPO
 GIT_REPO = release-v6.9.0-rc.9-genesis
 endif
 
-
-
 echo:
 	@echo SOURCE_PATH: ${SOURCE_PATH}
 	@echo BINS_PATH: ${BINS_PATH}
@@ -59,10 +57,10 @@ legacy: ancestry dump
 
 ancestry:
 ### Fetch Ancestry Data, Snapshot, and Use v5.2 codebase and snapshot to generate recovery.json for seeding v6.9.x state
-	sudo rm -Rf ~/libra-recovery && mkdir -p ~/libra-recovery
-	wget https://github.com/0LNetworkCommunity/epoch-archive/raw/main/${EPOCH}.tar.gz -O ~/libra-recovery/${EPOCH}.tar.gz
-	cd ~/libra-recovery && tar -xvzf ${EPOCH}.tar.gz
-	wget https://raw.githubusercontent.com/sirouk/ol-data-extraction/v-6.9.x-ready/assets/data.json -O ~/libra-recovery/v5_ancestry.json
+	mkdir -p ${DATA_PATH}libra-recovery | true
+	wget https://github.com/0LNetworkCommunity/epoch-archive/raw/main/${EPOCH}.tar.gz -O ${DATA_PATH}libra-recovery/${EPOCH}.tar.gz
+	cd ${DATA_PATH}libra-recovery && tar -xvzf ${EPOCH}.tar.gz
+	wget https://raw.githubusercontent.com/sirouk/ol-data-extraction/v-6.9.x-ready/assets/data.json -O ${DATA_PATH}libra-recovery/v5_ancestry.json
 
 build-legacy:
 	cd ${DATA_PATH} && git clone -b v6 https://github.com/0LNetworkCommunity/libra-legacy-v6
