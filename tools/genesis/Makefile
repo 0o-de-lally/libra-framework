@@ -60,14 +60,14 @@ register:
 
 legacy: get-legacy recovery
 
-get-legacy: check
+get-legacy:
 ### Fetch Ancestry Data, Snapshot, and Use v5.2 codebase and snapshot to generate recovery.json for seeding v6.9.x state
 	mkdir -p ${DATA_PATH}libra-recovery | true
 	wget https://github.com/0LNetworkCommunity/epoch-archive/raw/main/${EPOCH}.tar.gz -O ${DATA_PATH}libra-recovery/${EPOCH}.tar.gz
 	cd ${DATA_PATH}libra-recovery && tar -xvzf ${EPOCH}.tar.gz
 	wget https://raw.githubusercontent.com/sirouk/ol-data-extraction/v-6.9.x-ready/assets/data.json -O ${DATA_PATH}libra-recovery/v5_ancestry.json
 
-recovery: check
+recovery:
 	cd ${DATA_PATH} && git clone -b v6 https://github.com/0LNetworkCommunity/libra-legacy-v6
 
 	cd ${DATA_PATH}libra-legacy-v6/ol/genesis-tools && \
