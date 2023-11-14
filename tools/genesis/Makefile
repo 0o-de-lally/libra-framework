@@ -40,9 +40,14 @@ ifndef GIT_REPO
 GIT_REPO = release-v6.9.0-rc.9-genesis
 endif
 
-echo:
+ifndef EPOCH
+$(error EPOCH is not set)
+endif
+
+check:
 	@echo SOURCE_PATH: ${SOURCE_PATH}
 	@echo BINS_PATH: ${BINS_PATH}
+	@echo EPOCH: ${EPOCH}
 
 install:
 	cd ${SOURCE_PATH} && cargo build --release -p libra -p libra-genesis-tools -p libra-framework
@@ -53,20 +58,19 @@ register:
 # have cli tools use localhost
 	libra config fix --force-url http://localhost:8080
 
-legacy: ancestry dump
+legacy: get-legacy recovery
 
-ancestry:
+get-legacy: check
 ### Fetch Ancestry Data, Snapshot, and Use v5.2 codebase and snapshot to generate recovery.json for seeding v6.9.x state
 	mkdir -p ${DATA_PATH}libra-recovery | true
 	wget https://github.com/0LNetworkCommunity/epoch-archive/raw/main/${EPOCH}.tar.gz -O ${DATA_PATH}libra-recovery/${EPOCH}.tar.gz
 	cd ${DATA_PATH}libra-recovery && tar -xvzf ${EPOCH}.tar.gz
 	wget https://raw.githubusercontent.com/sirouk/ol-data-extraction/v-6.9.x-ready/assets/data.json -O ${DATA_PATH}libra-recovery/v5_ancestry.json
 
-build-legacy:
+recovery: check
 	cd ${DATA_PATH} && git clone -b v6 https://github.com/0LNetworkCommunity/libra-legacy-v6
 
-recovery:
-	cd ${DATA_PATH}/libra-legacy-v6/ol/genesis-tools && \
+	cd ${DATA_PATH}libra-legacy-v6/ol/genesis-tools && \
 	cargo r -p ol-genesis-tools -- --export-json ${DATA_PATH}/libra-recovery/v5_recovery.json --snapshot-path ${DATA_PATH}/libra-recovery/${EPOCH}/state_ver* --ancestry-file ${RECOVERY_FILE}
 
 	md5sum ${RECOVERY_FILE}
