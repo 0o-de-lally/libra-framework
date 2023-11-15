@@ -10,7 +10,7 @@ pub fn who_am_i(show_validator: bool) -> anyhow::Result<()> {
     // NOTE: we use the validator keygen so that we can optionally show that
     // info
     // the owner key will derive to the same.
-    let (_validator_blob, _vfn_blob, _private_identity, public_identity, _legacy_keys) =
+    let (_validator_blob, _vfn_blob, private_identity, public_identity, _legacy_keys) =
         make_validator_keys(None, keep_legacy_address)?;
 
     if show_validator {
@@ -19,6 +19,16 @@ pub fn who_am_i(show_validator: bool) -> anyhow::Result<()> {
             "{}",
             serde_json::to_string_pretty(&public_identity).unwrap()
         );
+        let show_private = Confirm::new()
+        .with_prompt("See private keys?")
+        .interact()?;
+
+        if show_private {
+          println!(
+              "{}",
+              serde_json::to_string_pretty(&private_identity).unwrap()
+          );
+        }
     } else {
         println!("owner address: {}", &public_identity.account_address);
         println!(
