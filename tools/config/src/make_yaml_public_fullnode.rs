@@ -4,7 +4,7 @@ use diem_types::{
     account_address::AccountAddress, network_address::NetworkAddress, waypoint::Waypoint, PeerId,
 };
 use libra_types::global_config_dir;
-use libra_wallet::keys::make_validator_keys;
+use libra_wallet::keys::{make_validator_keys, write_key_file, VFN_FILE};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -18,31 +18,36 @@ pub async fn init_fullnode_yaml(
     overwrite_peers: bool,
     vfn: bool,
 ) -> anyhow::Result<PathBuf> {
-    let waypoint = get_genesis_waypoint(home_dir.clone()).await?;
+    let home_dir = home_dir.unwrap_or_else(global_config_dir);
 
+    let waypoint = get_genesis_waypoint(Some(home_dir.clone())).await?;
     let yaml = if vfn {
-        let (_validator_blob, _vfn_blob, _private_identity, public_identity, _legacy_keys) =
+        let (_validator_blob, vfn_blob, _private_identity, public_identity, _legacy_keys) =
             make_validator_keys(None, false)?;
+
+        write_key_file(&home_dir, VFN_FILE, vfn_blob)?;
+
         println!("Enter the IP or domain for the VALIDATOR NODE (not this VFN)");
         let host = enter_a_host().await?;
         let key = public_identity
             .full_node_network_public_key
             .context("expected a full_node_network_public_key in operator.yaml")?;
         let net_addr = host.as_network_address(key)?;
+
         make_private_vfn_yaml(
-            home_dir.clone(),
+            Some(home_dir.clone()),
             waypoint,
             public_identity.account_address,
             net_addr,
         )?
     } else {
-        make_fullnode_yaml(home_dir.clone(), waypoint)?
+        make_fullnode_yaml(Some(home_dir.clone()), waypoint)?
     };
 
     let filename = if vfn { "vfn.yaml" } else { "fullnode.yaml" };
 
-    let home = home_dir.unwrap_or_else(global_config_dir);
-    let p = home.join(filename);
+    // let home = home_dir.unwrap_or_else(global_config_dir);
+    let p = home_dir.join(filename);
     std::fs::write(&p, yaml)?;
 
     if false {
@@ -163,7 +168,7 @@ full_node_networks:
     {vfn_acc}:
       - {vfn_net_addr}
 api:
-  enabled: false
+  enabled: true
   address: '0.0.0.0:8080'
 "
     );

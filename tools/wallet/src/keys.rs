@@ -25,7 +25,7 @@ use std::path::{Path, PathBuf};
 const PRIVATE_KEYS_FILE: &str = "private-keys.yaml";
 pub const PUBLIC_KEYS_FILE: &str = "public-keys.yaml";
 pub const VALIDATOR_FILE: &str = "validator-identity.yaml";
-const VFN_FILE: &str = "validator-full-node-identity.yaml";
+pub const VFN_FILE: &str = "validator-full-node-identity.yaml";
 // This is Libra specific
 const USER_FILE: &str = "danger-user-private-keys.yaml";
 
@@ -128,7 +128,8 @@ pub fn make_validator_keys(
     ))
 }
 
-fn write_key_file<T: Serialize>(output_dir: &Path, filename: &str, data: T) -> anyhow::Result<()> {
+/// write the key file in yaml format
+pub fn write_key_file<T: Serialize>(output_dir: &Path, filename: &str, data: T) -> anyhow::Result<()> {
     let file = output_dir.join(filename);
     check_if_file_exists(file.as_path())?;
     write_to_user_only_file(
