@@ -48,12 +48,12 @@ pub fn validator_keygen(
     // this is the only moment the validators will see the mnemonic
     let legacy_keys = legacy_keygen(true)?;
 
-    let (validator_blob, vfn_blob, private_identity, public_identity) =
+    let (mut validator_blob, vfn_blob, private_identity, public_identity) =
         generate_key_objects_from_legacy(&legacy_keys)?;
 
     save_val_files(
         output_opt,
-        &validator_blob,
+        &mut validator_blob,
         &vfn_blob,
         &private_identity,
         &public_identity,
@@ -74,12 +74,13 @@ pub fn refresh_validator_files(
     PublicIdentity,
     KeyChain,
 )> {
-    let (validator_blob, vfn_blob, private_identity, public_identity, legacy_keys) =
+    let (mut validator_blob, vfn_blob, private_identity, public_identity, legacy_keys) =
         make_validator_keys(mnem, keep_legacy_addr)?;
+
 
     save_val_files(
         output_opt,
-        &validator_blob,
+        &mut validator_blob,
         &vfn_blob,
         &private_identity,
         &public_identity,
@@ -142,15 +143,18 @@ pub fn write_key_file<T: Serialize>(output_dir: &Path, filename: &str, data: T) 
 
 fn save_val_files(
     output_opt: Option<PathBuf>,
-    validator_blob: &IdentityBlob,
+    validator_blob: &mut IdentityBlob,
     vfn_blob: &IdentityBlob,
-    private_identity: &PrivateIdentity,
+    _private_identity: &PrivateIdentity,
     public_identity: &PublicIdentity,
 ) -> anyhow::Result<()> {
     let output_dir = dir_default_to_current(&output_opt)?;
     create_dir_if_not_exist(output_dir.as_path())?;
 
-    write_key_file(&output_dir, PRIVATE_KEYS_FILE, private_identity)?;
+    // DON'T EVER SAVE PRIVATE MONEY MOVING KEYS.
+    validator_blob.account_private_key = None;
+
+    // write_key_file(&output_dir, PRIVATE_KEYS_FILE, private_identity)?;
     write_key_file(&output_dir, PUBLIC_KEYS_FILE, public_identity)?;
     write_key_file(&output_dir, VALIDATOR_FILE, validator_blob)?;
     write_key_file(&output_dir, VFN_FILE, vfn_blob)?;
