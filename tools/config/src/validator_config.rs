@@ -58,7 +58,21 @@ async fn get_ip() -> anyhow::Result<HostAndPort> {
         _ => bail!("can't get this host's external ip"),
     }
 }
+
 /// interact with user to get ip address
+pub async fn enter_a_host() -> Result<HostAndPort, anyhow::Error> {
+    let input: String = Input::new()
+        .with_prompt("Enter the DNS or IP address, with port (validator: 6180, VFN: 6181, public: 6182")
+        .interact_text()
+        .unwrap();
+    let ip = input
+        .parse::<HostAndPort>()
+        .expect("Could not parse IP or DNS address");
+
+    Ok(ip)
+}
+
+/// wizard to get a host address
 pub async fn what_host() -> Result<HostAndPort, anyhow::Error> {
     // get from external source since many cloud providers show different interfaces for `machine_ip`
     if let Ok(h) = get_ip().await {
@@ -71,15 +85,7 @@ pub async fn what_host() -> Result<HostAndPort, anyhow::Error> {
         }
     };
 
-    let input: String = Input::new()
-        .with_prompt("Enter the DNS or IP address, with port 6180")
-        .interact_text()
-        .unwrap();
-    let ip = input
-        .parse::<HostAndPort>()
-        .expect("Could not parse IP or DNS address");
-
-    Ok(ip)
+    enter_a_host().await
 }
 
 pub async fn initialize_validator_configs(

@@ -1,10 +1,16 @@
+use anyhow::Context;
 use diem_config::config::NodeConfig;
-use diem_types::{network_address::NetworkAddress, waypoint::Waypoint, PeerId};
+use diem_types::{
+    account_address::AccountAddress, network_address::NetworkAddress, waypoint::Waypoint, PeerId,
+};
 use libra_types::global_config_dir;
+use libra_wallet::keys::make_validator_keys;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
 };
+
+use crate::validator_config::enter_a_host;
 
 /// fetch seed peers and make a yaml file from template
 pub async fn init_fullnode_yaml(
@@ -15,7 +21,20 @@ pub async fn init_fullnode_yaml(
     let waypoint = get_genesis_waypoint(home_dir.clone()).await?;
 
     let yaml = if vfn {
-        make_private_vfn_yaml(home_dir.clone(), waypoint)?
+        let (_validator_blob, _vfn_blob, _private_identity, public_identity, _legacy_keys) =
+            make_validator_keys(None, false)?;
+        println!("Enter the IP or domain for the VALIDATOR NODE (not this VFN)");
+        let host = enter_a_host().await?;
+        let key = public_identity
+            .full_node_network_public_key
+            .context("expected a full_node_network_public_key in operator.yaml")?;
+        let net_addr = host.as_network_address(key)?;
+        make_private_vfn_yaml(
+            home_dir.clone(),
+            waypoint,
+            public_identity.account_address,
+            net_addr,
+        )?
     } else {
         make_fullnode_yaml(home_dir.clone(), waypoint)?
     };
@@ -26,7 +45,7 @@ pub async fn init_fullnode_yaml(
     let p = home.join(filename);
     std::fs::write(&p, yaml)?;
 
-    if overwrite_peers {
+    if false {
         let peers = fetch_seed_addresses(None).await?;
         add_peers_to_yaml(&p, peers)?;
     }
@@ -104,6 +123,8 @@ api:
 pub fn make_private_vfn_yaml(
     home_dir: Option<PathBuf>,
     waypoint: Waypoint,
+    vfn_acc: AccountAddress,
+    vfn_net_addr: NetworkAddress,
 ) -> anyhow::Result<String> {
     let home_dir = home_dir.unwrap_or_else(global_config_dir);
     let path = home_dir.display().to_string();
@@ -138,7 +159,9 @@ full_node_networks:
   identity:
     type: 'from_file'
     path: {path}/validator-full-node-identity.yaml
-
+  seed_addrs:
+    {vfn_acc}:
+      - {vfn_net_addr}
 api:
   enabled: false
   address: '0.0.0.0:8080'

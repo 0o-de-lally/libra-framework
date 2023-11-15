@@ -469,22 +469,6 @@ module diem_framework::stake {
         let stake_pool = borrow_global_mut<ValidatorState>(validator_address);
         assert!(signer::address_of(operator) == stake_pool.operator_address, error::unauthenticated(ENOT_OPERATOR));
 
-        // assert!(
-        //     get_validator_state(validator_address) == VALIDATOR_STATUS_INACTIVE,
-        //     error::invalid_state(EALREADY_ACTIVE_VALIDATOR),
-        // );
-
-        // let config = staking_config::get();
-        // let (minimum_stake, maximum_stake) = staking_config::get_required_stake(&config);
-        // let minimum_stake = 1;
-        // let maximum_stake = 100;
-        // let voting_power = 1; // voting power is always 1 in Libra
-        // assert!(voting_power >= minimum_stake, error::invalid_argument(ESTAKE_TOO_LOW));
-        // assert!(voting_power <= maximum_stake, error::invalid_argument(ESTAKE_TOO_HIGH));
-        // Track and validate voting power increase.
-        // update_voting_power_increase(voting_power);
-
-
         // Add validator to pending_active, to be activated in the next epoch.
         let validator_config = borrow_global_mut<ValidatorConfig>(validator_address);
         assert!(!vector::is_empty(&validator_config.consensus_pubkey), error::invalid_argument(EINVALID_PUBLIC_KEY));
