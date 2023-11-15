@@ -43,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
                 .map_err(|e| anyhow!("Failed to execute move tool, message: {}", &e))?;
         }
         Some(Sub::Node(n)) => {
-            n.run().await?;
+            n.run()?;
         }
         Some(Sub::Query(query_cli)) => {
             query_cli.run().await?;
