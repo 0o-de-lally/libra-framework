@@ -582,6 +582,7 @@ module ol_framework::proof_of_fee {
   // get the current bid for a validator
 
 
+  #[view]
   /// get the baseline reward from ConsensusReward
   /// returns (reward, entry_fee, clearing_bid, median_win_bid)
   public fun get_consensus_reward(): (u64, u64, u64, u64) acquires ConsensusReward {
