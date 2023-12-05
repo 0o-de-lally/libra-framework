@@ -31,7 +31,7 @@ module ol_framework::test_account {
     let (a_balance, _) = ol_account::balance(alice_addr);
     assert!(a_balance == 100, 735703);
 
-    ol_account::transfer(&alice_sig, bob_addr, 20);
+    ol_account::transfer_and_create(&alice_sig, bob_addr, 20);
     let addr_tree = ancestry::get_tree(bob_addr);
     assert!(vector::length(&addr_tree) > 1, 7357004);
     assert!(vector::contains(&addr_tree, &alice_addr), 7357005);

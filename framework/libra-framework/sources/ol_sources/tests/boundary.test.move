@@ -67,8 +67,7 @@ module ol_framework::test_boundary {
     let _vals = common_test_setup(&root);
 
     // generate credentials for validator registration
-    // ol_account::create_account(&root, @0x12345);
-    ol_account::transfer(&alice, @0x12345, 200000);
+    ol_account::transfer_and_create(&alice, @0x12345, 200000);
     let (_sk, pk, pop) = stake::generate_identity();
     let pk_bytes = bls12381::public_key_to_bytes(&pk);
     let pop_bytes = bls12381::proof_of_possession_to_bytes(&pop);
@@ -112,7 +111,7 @@ module ol_framework::test_boundary {
     testnet::unset(&root);
     // generate credentials for validator registration
     // ol_account::create_account(&root, @0x12345);
-    ol_account::transfer(&alice, @0x12345, 200000);
+    ol_account::transfer_and_create(&alice, @0x12345, 200000);
     let (_sk, pk, pop) = stake::generate_identity();
     let pk_bytes = bls12381::public_key_to_bytes(&pk);
     let pop_bytes = bls12381::proof_of_possession_to_bytes(&pop);

@@ -114,7 +114,7 @@ module ol_framework::test_slow_wallet {
     // transferring funds will create Bob's account
     // the coins are also unlocked
     let transfer_amount = 10;
-    ol_account::transfer(&alice, @0x456, transfer_amount);
+    ol_account::transfer_and_create(&alice, @0x456, transfer_amount);
     // slow transfer
     let b_balance = coin::balance<LibraCoin>(@0x456);
     assert!(b_balance == transfer_amount, 735704);
@@ -147,7 +147,7 @@ module ol_framework::test_slow_wallet {
     coin::destroy_mint_cap(mint_cap);
 
     // alice will transfer and create bob's account
-    ol_account::transfer(&alice, @0x456, 99);
+    ol_account::transfer_and_create(&alice, @0x456, 99);
 
     let b_balance = coin::balance<LibraCoin>(@0x456);
     assert!(b_balance == 99, 735702);

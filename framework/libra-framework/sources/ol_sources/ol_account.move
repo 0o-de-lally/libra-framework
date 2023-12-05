@@ -154,16 +154,25 @@ module ol_framework::ol_account {
         };
     }
 
-    /// Convenient function to transfer GAS to a recipient account that might not exist.
-    /// This would create the recipient account first, which also registers it to receive GAS, before transferring.
+    /// The default transfer function for Libra
     public entry fun transfer(sender: &signer, to: address, amount: u64)
     acquires BurnTracker {
       let payer = signer::address_of(sender);
-      maybe_sender_creates_account(sender, to);
+      //COMMMIT NOTE: by default this function will fail if account does not
+      // exist. Use transfer_and_create instead
       transfer_checks(payer, to, amount);
       // both update burn tracker
       let c = withdraw(sender, amount);
       deposit_coins(to, c);
+    }
+
+
+    /// Convenient function to transfer GAS to a recipient account that might not exist.
+    /// This would create the recipient account first, which also registers it to receive GAS, before transferring.
+    public entry fun transfer_and_create(sender: &signer, to: address, amount: u64)
+    acquires BurnTracker {
+      maybe_sender_creates_account(sender, to);
+      transfer(sender, to, amount);
     }
 
     // transfer with capability, and do appropriate checks on both sides, and
