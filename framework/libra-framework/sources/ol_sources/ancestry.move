@@ -94,6 +94,10 @@ module ol_framework::ancestry {
       if (vector::contains(&left_tree, &right)) return (true, right);
       if (vector::contains(&right_tree, &left)) return (true, left);
 
+      // check for direct relationship.
+      if (vector::contains(&left_tree, &right)) return (true, right);
+      if (vector::contains(&right_tree, &left)) return (true, left);
+
       let i = 0;
       // check every address on the list if there are overlaps.
       while (i < vector::length<address>(&left_tree)) {
