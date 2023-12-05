@@ -4,7 +4,7 @@ use anyhow::bail;
 use diem_sdk::{
     rest_client::diem_api_types::TransactionOnChainData, types::account_address::AccountAddress,
 };
-use libra_cached_packages::libra_framework_sdk_builder::EntryFunctionCall::OlAccountTransfer;
+use libra_cached_packages::libra_framework_sdk_builder::EntryFunctionCall::{OlAccountTransfer, OlAccountTransferAndCreate};
 use libra_types::move_resource::gas_coin;
 
 impl Sender {
@@ -12,18 +12,25 @@ impl Sender {
         &mut self,
         to: AccountAddress,
         amount: f64,
+        create: bool,
         estimate: bool,
     ) -> anyhow::Result<Option<TransactionOnChainData>> {
         // must scale the coin from decimal to onchain representation
         let coin_scaled = gas_coin::cast_decimal_to_coin(amount);
-        let payload = OlAccountTransfer {
-            to,
-            amount: coin_scaled,
-        }
-        .encode();
+        let payload = if create {
+            OlAccountTransfer {
+              to,
+              amount: coin_scaled,
+          }
+        } else {
+          OlAccountTransferAndCreate {
+              to,
+              amount: coin_scaled,
+          }
+        };
 
         if estimate {
-            let res = self.estimate(payload).await?;
+            let res = self.estimate(payload.encode()).await?;
             println!("{:#?}", &res);
 
             let success = res[0].info.success;

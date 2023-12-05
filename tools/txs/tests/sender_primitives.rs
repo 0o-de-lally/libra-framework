@@ -26,7 +26,7 @@ async fn sender_back_and_forth() -> anyhow::Result<()> {
     // create an account for alice by transferring funds
     let mut s = Sender::from_app_cfg(&val_app_cfg, None).await?;
     let res = s
-        .transfer(alice.child_0_owner.account, 100.0, false)
+        .transfer(alice.child_0_owner.account, 100.0, true, false)
         .await?
         .unwrap();
     assert!(res.info.status().is_success());
@@ -45,7 +45,7 @@ async fn sender_back_and_forth() -> anyhow::Result<()> {
     assert!(alice_acct == &alice_sender.local_account.address());
 
     let res = alice_sender
-        .transfer(ls.first_account.address(), 10.0, false)
+        .transfer(ls.first_account.address(), 10.0, true, false)
         .await?
         .unwrap();
 

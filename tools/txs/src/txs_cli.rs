@@ -87,6 +87,10 @@ pub enum TxsSub {
         /// The amount of coins to transfer
         #[clap(short, long)]
         amount: f64,
+
+        /// Create the account
+        #[clap(short, long)]
+        create: bool,
     },
     Publish(MovePackageDir),
     /// Generate a transaction that executes an Entry function on-chain
@@ -173,8 +177,8 @@ impl TxsCli {
         send.set_tx_cost(&tx_cost);
 
         match &self.subcommand {
-            Some(TxsSub::Transfer { to_account, amount }) => {
-                send.transfer(to_account.to_owned(), amount.to_owned(), self.estimate_only)
+            Some(TxsSub::Transfer { to_account, amount, create }) => {
+                send.transfer(to_account.to_owned(), amount.to_owned(), *create, self.estimate_only, )
                     .await?;
                 Ok(())
             }
