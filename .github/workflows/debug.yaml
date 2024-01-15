@@ -1,0 +1,26 @@
+name: rust ci
+
+on:
+  push:
+    branches: ["debug*"]
+
+env:
+  DIEM_FORGE_NODE_BIN_PATH: ${{github.workspace}}/diem-node
+  LIBRA_CI: 1
+  MODE_0L: "TESTNET"
+
+jobs:
+  debug:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: setup env
+        uses: ./.github/actions/build_env
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
+        timeout-minutes: 15
