@@ -3,7 +3,6 @@ name: debug
 on:
   push:
     branches: ["debug*"]
-
 env:
   DIEM_FORGE_NODE_BIN_PATH: ${{github.workspace}}/diem-node
   LIBRA_CI: 1
