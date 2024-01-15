@@ -23,4 +23,4 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         with:
           detached: true
-        timeout-minutes: 15
+        timeout-minutes: 60
