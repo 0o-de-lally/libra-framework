@@ -22,9 +22,11 @@ module diem_framework::epoch_boundary {
     use diem_framework::coin::{Self, Coin};
     use std::vector;
     use std::error;
+    use std::signer;
     use std::string;
     use std::signer;
     use diem_framework::create_signer;
+
 
     use diem_std::debug::print;
 
@@ -116,9 +118,10 @@ module diem_framework::epoch_boundary {
       pof_thermo_amount: u64,
     }
 
-    /// initialize structs, requires both signers since BoundaryBit can only be
-    // accessed by VM
-    public fun initialize(framework_signer: &signer) {
+    public fun initialize(framework: &signer) {
+      let addr = signer::address_of(framework);
+      if (addr != @ol_framework) return; // don't throw error.
+
       if (!exists<BoundaryStatus>(@ol_framework)){
         move_to(framework_signer, reset());
       };
