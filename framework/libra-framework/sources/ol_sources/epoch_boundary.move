@@ -24,7 +24,6 @@ module diem_framework::epoch_boundary {
     use std::error;
     use std::signer;
     use std::string;
-    use std::signer;
     use diem_framework::create_signer;
 
 
@@ -118,9 +117,8 @@ module diem_framework::epoch_boundary {
       pof_thermo_amount: u64,
     }
 
-    public fun initialize(framework: &signer) {
-      let addr = signer::address_of(framework);
-      if (addr != @ol_framework) return; // don't throw error.
+    public fun initialize(framework_signer: &signer) {
+      if (signer::address_of(framework_signer) != @ol_framework) return; // don't throw error.
 
       if (!exists<BoundaryStatus>(@ol_framework)){
         move_to(framework_signer, reset());
