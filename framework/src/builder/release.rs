@@ -20,7 +20,12 @@ use super::named_addresses::NAMED_ADDRESSES;
 pub fn ol_release_default() -> BuildOptions {
     BuildOptions {
         dev: false,
-        with_srcs: true,
+        with_srcs: false, // too big
+      // And if you complain once more
+      // You'll meet an army of me
+      // And if you complain once more
+      // You'll meet an army of me
+
         with_abis: true,
         with_source_maps: true,
         with_error_map: true,
@@ -102,7 +107,7 @@ impl ReleaseTarget {
         ReleaseBundle::read(path)
     }
 
-    pub fn create_release_options(self, _with_srcs: bool, out: Option<PathBuf>) -> ReleaseOptions {
+    pub fn create_release_options(self, with_srcs: bool, out: Option<PathBuf>) -> ReleaseOptions {
         let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         // let crate_dir = crate_dir.parent().unwrap().to_path_buf();
         let packages = self
@@ -115,6 +120,7 @@ impl ReleaseTarget {
         ReleaseOptions {
             build_options: BuildOptions {
                 with_docs: true,
+                with_srcs,
                 docgen_options: Some(DocgenOptions {
                     include_impl: true,
                     include_specs: true,
