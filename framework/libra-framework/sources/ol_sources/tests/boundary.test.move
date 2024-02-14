@@ -12,13 +12,13 @@ module ol_framework::test_boundary {
   use ol_framework::testnet;
   use ol_framework::validator_universe;
   use ol_framework::epoch_boundary;
-  use ol_framework::block;  
+  use ol_framework::block;
   use ol_framework::ol_account;
   use diem_framework::stake;
   use diem_framework::reconfiguration;
   use diem_framework::timestamp;
   use diem_framework::diem_governance;
-  
+
   // use diem_std::debug::print;
 
   const Alice: address = @0x1000a;
@@ -110,8 +110,7 @@ module ol_framework::test_boundary {
   #[test(root = @ol_framework, alice = @0x1000a,  marlon_rando = @0x12345)]
   fun e2e_add_validator_sad_vouches(root: signer, alice: signer, marlon_rando: signer) {
     let _vals = common_test_setup(&root);
-    // this test requires prod settings, since we don't check vouches on testing
-    testnet::unset(&root);
+
     // generate credentials for validator registration
     // ol_account::create_account(&root, @0x12345);
     ol_account::transfer(&alice, @0x12345, 200000);
@@ -124,6 +123,8 @@ module ol_framework::test_boundary {
     assert!(vector::length(&vals) == 11, 7357000);
     mock::mock_bids(&vals);
 
+    // this test requires prod settings, since we don't check vouches on testing
+    testnet::unset(&root);
     mock::trigger_epoch(&root);
 
     assert!(epoch_boundary::get_reconfig_success(), 7357002);
@@ -219,14 +220,14 @@ module ol_framework::test_boundary {
     // testing mainnet, so change the chainid
     testnet::unset(root);
 
-    //verify trigger is not enabled 
+    //verify trigger is not enabled
     assert!(!features::epoch_trigger_enabled(), 101);
 
     // test setup advances to epoch #2
     let epoch = reconfiguration::get_current_epoch();
     assert!(epoch == 2, 7357001);
     epoch_boundary::test_set_boundary_ready(root, epoch);
-    
+
 
     // case: trigger not set and flipped
     timestamp::fast_forward_seconds(1); // needed for reconfig

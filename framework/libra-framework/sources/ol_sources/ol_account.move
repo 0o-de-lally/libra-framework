@@ -1,12 +1,16 @@
 module ol_framework::ol_account {
     use diem_framework::account::{Self, new_event_handle, WithdrawCapability};
     use diem_framework::coin::{Self, Coin};
+    use diem_framework::comparator;
     use diem_framework::event::{EventHandle, emit_event};
     use diem_framework::system_addresses;
     use diem_framework::chain_status;
+
+    use std::bcs;
     use std::error;
     use std::signer;
     use std::option::{Self, Option};
+    use std::vector;
     use diem_std::from_bcs;
     use diem_std::fixed_point32;
     use diem_std::math64;
@@ -17,11 +21,11 @@ module ol_framework::ol_account {
     use ol_framework::slow_wallet;
     use ol_framework::receipts;
     use ol_framework::cumulative_deposits;
-
-    // use diem_std::debug::print;
+    use ol_framework::testnet;
 
     #[test_only]
-    use std::vector;
+    use diem_framework::chain_id;
+    // use diem_std::debug::print;
 
     friend ol_framework::donor_voice;
     friend ol_framework::burn;
@@ -53,6 +57,11 @@ module ol_framework::ol_account {
 
     /// why is VM trying to use this?
     const ENOT_FOR_VM: u64 = 9;
+
+    /// you're trying to create an account with an invalid address format.
+    // Legacy addresses with 32 characters (or prepended with 32 zeros)
+    // are not valid.
+     const ECANT_CREATE_LEGACY_ADDR: u64 = 10;
 
     struct BurnTracker has key {
       prev_supply: u64,
@@ -98,6 +107,17 @@ module ol_framework::ol_account {
     public entry fun create_account(root: &signer, auth_key: address) {
         system_addresses::assert_ol(root);
         create_impl(root, auth_key);
+    }
+
+    /// Check if this is an OL v5 legacy address
+    /// from before the 32byte addresses
+
+    public fun is_legacy_addr(addr: address): bool {
+      let legacy_prepend = x"00000000000000000000000000000000";
+
+      let v = bcs::to_bytes(&addr);
+      vector::trim(&mut v, 16);
+      comparator::is_equal(&comparator::compare(&v, &legacy_prepend))
     }
 
     /// For migrating accounts from a legacy system
@@ -216,6 +236,9 @@ module ol_framework::ol_account {
     }
 
     fun maybe_sender_creates_account(sender: &signer, maybe_new_user: address) {
+
+      assert!(!is_legacy_addr(maybe_new_user) || testnet::is_not_mainnet(), ECANT_CREATE_LEGACY_ADDR);
+
       if (!account::exists_at(maybe_new_user)) {
           // creates the account address (with the same bytes as the authentication key).
           create_impl(sender, maybe_new_user);
@@ -553,6 +576,7 @@ module ol_framework::ol_account {
     #[test(root = @ol_framework, alice = @0xa11ce, core = @0x1)]
     public fun test_transfer_ol(root: &signer, alice: &signer, core: &signer)
     acquires BurnTracker {
+        chain_id::initialize_for_test(root, 4);
         let bob = from_bcs::to_address(x"0000000000000000000000000000000000000000000000000000000000000b0b");
         let carol = from_bcs::to_address(x"00000000000000000000000000000000000000000000000000000000000ca501");
 
@@ -596,6 +620,8 @@ module ol_framework::ol_account {
     #[test(root = @ol_framework, from = @0x123, core = @0x1, recipient_1 = @0x124, recipient_2 = @0x125)]
     public fun test_batch_transfer(root: &signer, from: &signer, core: &signer,
     recipient_1: &signer, recipient_2: &signer) acquires BurnTracker{
+        chain_id::initialize_for_test(root, 4);
+
         let (burn_cap, mint_cap) =
         diem_framework::libra_coin::initialize_for_test(core);
         libra_coin::test_set_final_supply(root, 1000); // dummy to prevent fail

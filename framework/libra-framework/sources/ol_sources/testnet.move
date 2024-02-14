@@ -31,10 +31,10 @@ module ol_framework::testnet {
     }
 
     #[test_only]
-    public fun unset(vm: &signer) {
+    public fun unset(framework: &signer) {
       use diem_framework::system_addresses;
-      system_addresses::assert_ol(vm);
-      chain_id::set_for_test(vm, 1);
+      system_addresses::assert_ol(framework);
+      chain_id::set_for_test(framework, 1);
 
     }
 }
