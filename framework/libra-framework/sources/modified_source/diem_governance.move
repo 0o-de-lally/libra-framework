@@ -597,7 +597,10 @@ module diem_framework::diem_governance {
     GovernanceResponsbility {
       system_addresses::assert_core_resource(sig);
       testnet::assert_testnet(sig);
-      trigger_epoch(sig);
+      // dont'check if can_trigger
+      let framework_signer = get_signer(@ol_framework);
+      epoch_boundary::smoke_trigger_epoch(&framework_signer);
+
     }
 
 

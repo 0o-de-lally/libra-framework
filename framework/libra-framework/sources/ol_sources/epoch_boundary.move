@@ -237,6 +237,19 @@ module diem_framework::epoch_boundary {
       epoch_boundary(framework_signer, state.closing_epoch, 0);
     }
 
+    public(friend) fun smoke_trigger_epoch(framework_signer: &signer) acquires BoundaryBit,
+    BoundaryStatus {
+      // CANNOT BE MAINNET
+      assert!(testnet::is_not_mainnet(), 0);
+      // must get root permission from governance.move
+      system_addresses::assert_ol(framework_signer);
+      // Don't check
+      // let _ = can_trigger(); // will abort if false
+      let state = borrow_global_mut<BoundaryBit>(@ol_framework);
+
+      epoch_boundary(framework_signer, state.closing_epoch, 0);
+    }
+
     #[view]
     /// check to see if the epoch Boundary Bit is true
     public fun can_trigger(): bool acquires BoundaryBit {
