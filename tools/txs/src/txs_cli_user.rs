@@ -57,6 +57,21 @@ impl SetSlowTx {
     }
 }
 
+
+
+/// Alice wants to give Bob posession of an account.
+/// There is a two step protocol:
+/// 1. Alice send a TX which will "offer" the RotationCapability, that only Bob can claim.
+/// 2. Bob will accept the offer by sending a tx.
+/// 3. Alice could overwrite the offer and give to someone else (Carol)
+/// 4. Alice could also revoke the offer to bob
+#[derive(clap::Args)]
+pub struct RotateKeyOfferTx {
+    #[clap(short, long)]
+    /// The new authkey to be used
+    recipient: AccountAddress, // Dev NOTE: account address has the same bytes as AuthKey
+}
+
 #[derive(clap::Args)]
 pub struct RotateKeyTx {
     #[clap(short, long)]

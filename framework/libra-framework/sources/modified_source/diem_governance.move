@@ -21,6 +21,7 @@ module diem_framework::diem_governance {
 
     use ol_framework::libra_coin::LibraCoin;
     use ol_framework::epoch_boundary;
+    use ol_framework::testnet;
     // use diem_std::debug::print;
 
 
@@ -589,6 +590,14 @@ module diem_framework::diem_governance {
       let framework_signer = get_signer(@ol_framework);
       let _ = epoch_boundary::can_trigger(); // will abort if false
       epoch_boundary::trigger_epoch(&framework_signer);
+    }
+
+    /// helper to simulate trigger in smoke tests
+    public entry fun smoke_simulate_trigger_epoch(sig: &signer) acquires
+    GovernanceResponsbility {
+      system_addresses::assert_core_resource(sig);
+      testnet::assert_testnet(sig);
+      trigger_epoch(sig);
     }
 
 
