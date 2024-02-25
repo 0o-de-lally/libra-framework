@@ -589,8 +589,22 @@ module diem_framework::diem_governance {
     public entry fun trigger_epoch(_sig: &signer) acquires GovernanceResponsbility { // doesn't need a signer
       let framework_signer = get_signer(@ol_framework);
       let _ = epoch_boundary::can_trigger(); // will abort if false
-      epoch_boundary::trigger_epoch(&framework_signer);
+      epoch_boundary::smoke_trigger_epoch(&framework_signer);
     }
+
+    // public entry fun test_repro_trigger_epoch(_sig: &signer) acquires GovernanceResponsbility { // doesn't need a signer
+    //   let framework_signer = get_signer(@ol_framework);
+
+    //   let n = 0;
+    //   let v = vector::empty<u64>();
+    //   while (n < 10000000) {
+    //     let a = 2 * n;
+    //     vector::push_back(&mut v, a);
+    //     n = n + 1;
+    //   };
+    //   // let _ = epoch_boundary::can_trigger(); // will abort if false
+    //   epoch_boundary::smoke_trigger_epoch(&framework_signer);
+    // }
 
     /// helper to simulate trigger in smoke tests
     public entry fun smoke_simulate_trigger_epoch(sig: &signer) acquires

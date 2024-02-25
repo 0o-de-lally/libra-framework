@@ -31,6 +31,7 @@ tokio = { workspace = true }
 url = { workspace = true }
 
 [dev-dependencies]
+diem-forge = { workspace = true }
 diem-temppath = { workspace = true }
 libra-framework = { workspace = true }
 libra-smoke-tests = { workspace = true }
