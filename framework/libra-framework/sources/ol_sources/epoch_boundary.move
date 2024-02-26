@@ -284,7 +284,7 @@ module diem_framework::epoch_boundary {
         status.dd_accounts_amount = amount;
         status.dd_accounts_success = success;
 
-        print(&string::utf8(b"tower_state::reconfig"));
+        print(&string::utf8(b"fee_maker::epoch_reset_fee_maker"));
         // reset fee makers tracking
         status.set_fee_makers_success = fee_maker::epoch_reset_fee_maker(root);
 
