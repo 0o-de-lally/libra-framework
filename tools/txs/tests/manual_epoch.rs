@@ -2,6 +2,7 @@
 use std::time::Duration;
 
 use diem_forge::Swarm;
+use diem_types::transaction::EntryFunction;
 use libra_smoke_tests::{configure_validator, libra_smoke::LibraSmoke};
 use libra_txs::{
   txs_cli_governance::GovernanceTxs::EpochBoundary,
@@ -11,7 +12,7 @@ use libra_types::legacy_types::app_cfg::TxCost;
 
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-async fn smoke_epoch_gov() {
+async fn smoke_epoch_gov() -> anyhow::Result<()> {
     let d = diem_temppath::TempPath::new();
 
     let mut s = LibraSmoke::new(None)
@@ -22,6 +23,14 @@ async fn smoke_epoch_gov() {
         configure_validator::init_val_config_files(&mut s.swarm, 0, d.path().to_owned())
             .await
             .expect("could not init validator config");
+
+    let pi = s.swarm.diem_public_info();
+    let tf = pi.transaction_factory();
+    // let e: EntryFunction =
+    // "0x1::epoch_boundary::swarm_set_trigger".try_into()?;
+    // EntryFunction::
+    // EntryFunction::
+    // let f = tf.entry_function(e);
 
     // case 2. Account does not yet exist.
     let cli = TxsCli {
