@@ -483,6 +483,14 @@ pub enum EntryFunctionCall {
         optional_auth_key: Vec<u8>,
     },
 
+    /// Creates a new resource account, publishes the package under this account transaction under
+    /// this account and leaves the signer cap readily available for pickup.
+    ResourceAccountCreateResourceAccountAndPublishPackage {
+        _seed: Vec<u8>,
+        _metadata_serialized: Vec<u8>,
+        _code: Vec<Vec<u8>>,
+    },
+
     SlowWalletSmokeTestVmUnlock {
         user_addr: AccountAddress,
         unlocked: u64,
@@ -845,6 +853,15 @@ impl EntryFunctionCall {
                 seed,
                 optional_auth_key,
             } => resource_account_create_resource_account(seed, optional_auth_key),
+            ResourceAccountCreateResourceAccountAndPublishPackage {
+                _seed,
+                _metadata_serialized,
+                _code,
+            } => resource_account_create_resource_account_and_publish_package(
+                _seed,
+                _metadata_serialized,
+                _code,
+            ),
             SlowWalletSmokeTestVmUnlock {
                 user_addr,
                 unlocked,
@@ -2222,6 +2239,31 @@ pub fn resource_account_create_resource_account(
     ))
 }
 
+/// Creates a new resource account, publishes the package under this account transaction under
+/// this account and leaves the signer cap readily available for pickup.
+pub fn resource_account_create_resource_account_and_publish_package(
+    _seed: Vec<u8>,
+    _metadata_serialized: Vec<u8>,
+    _code: Vec<Vec<u8>>,
+) -> TransactionPayload {
+    TransactionPayload::EntryFunction(EntryFunction::new(
+        ModuleId::new(
+            AccountAddress::new([
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 1,
+            ]),
+            ident_str!("resource_account").to_owned(),
+        ),
+        ident_str!("create_resource_account_and_publish_package").to_owned(),
+        vec![],
+        vec![
+            bcs::to_bytes(&_seed).unwrap(),
+            bcs::to_bytes(&_metadata_serialized).unwrap(),
+            bcs::to_bytes(&_code).unwrap(),
+        ],
+    ))
+}
+
 pub fn slow_wallet_smoke_test_vm_unlock(
     user_addr: AccountAddress,
     unlocked: u64,
@@ -3235,6 +3277,22 @@ mod decoder {
         }
     }
 
+    pub fn resource_account_create_resource_account_and_publish_package(
+        payload: &TransactionPayload,
+    ) -> Option<EntryFunctionCall> {
+        if let TransactionPayload::EntryFunction(script) = payload {
+            Some(
+                EntryFunctionCall::ResourceAccountCreateResourceAccountAndPublishPackage {
+                    _seed: bcs::from_bytes(script.args().get(0)?).ok()?,
+                    _metadata_serialized: bcs::from_bytes(script.args().get(1)?).ok()?,
+                    _code: bcs::from_bytes(script.args().get(2)?).ok()?,
+                },
+            )
+        } else {
+            None
+        }
+    }
+
     pub fn slow_wallet_smoke_test_vm_unlock(
         payload: &TransactionPayload,
     ) -> Option<EntryFunctionCall> {
@@ -3636,6 +3694,10 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<EntryFunctionDecoderMa
         map.insert(
             "resource_account_create_resource_account".to_string(),
             Box::new(decoder::resource_account_create_resource_account),
+        );
+        map.insert(
+            "resource_account_create_resource_account_and_publish_package".to_string(),
+            Box::new(decoder::resource_account_create_resource_account_and_publish_package),
         );
         map.insert(
             "slow_wallet_smoke_test_vm_unlock".to_string(),
