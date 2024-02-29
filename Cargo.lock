@@ -5778,6 +5778,7 @@ dependencies = [
  "clap 4.4.2",
  "diem",
  "diem-crypto",
+ "diem-forge",
  "diem-framework",
  "diem-genesis",
  "diem-logger",
@@ -5794,6 +5795,7 @@ dependencies = [
  "libra-wallet",
  "serde_json",
  "serde_yaml 0.8.26",
+ "smoke-test",
  "tokio",
  "url",
 ]

@@ -6,6 +6,22 @@ use std::str::FromStr;
 use crate::builder::framework_generate_upgrade_proposal::make_framework_upgrade_artifacts;
 use anyhow::Context;
 
+use std::sync::Once;
+
+static INIT: Once = Once::new();
+
+/// helper to create fixtures before the testsuite runs.
+pub fn testsuite_warmup_fixtures() {
+    INIT.call_once(|| {
+        // don't regenerate
+        let fixture_path = fixtures_path();
+        let p = fixture_path.join("upgrade-single-lib");
+        if p.exists() { return }
+        // initialization code here
+        upgrade_fixtures().expect("could no warmup upgrade fixtures");
+    });
+}
+
 // TODO: This could be generated dynamically at the start of the test suites. using `Once`. Though if the tools aren't compiled it will take approximately forever to do so. Hence fixtures, though not ideal.
 
 pub fn fixtures_path() -> PathBuf {
@@ -71,6 +87,11 @@ pub fn generate_fixtures(output_path: PathBuf, modules: Vec<String>) -> anyhow::
 // KEEP THIS TEST HERE TO HELP REGENERATE FIXTURES
 #[test]
 fn make_the_upgrade_fixtures() -> anyhow::Result<()> {
+    upgrade_fixtures()
+}
+
+/// helper for testing, so that we have fresh fixtures at every run.
+pub fn upgrade_fixtures() -> anyhow::Result<()> {
     let fixture_path = fixtures_path();
 
     // for single step upgrades
