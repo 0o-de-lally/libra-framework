@@ -29,7 +29,7 @@ pub async fn repro_deserialize_debugger() -> anyhow::Result<()> {
     let _ = debug
         .run_session_at_version(version, |session| {
             // let root = MoveValue::Signer("0x1".parse().unwrap());
-            execute_fn(session, "account", "create_account_unchecked", vec![&addr]);
+            execute_fn(session, "create_signer", "create_signer", vec![&addr]);
 
             // execute_fn(session, "repro_deserialize", "maybe_aborts", vec![&addr]);
             Ok(())
