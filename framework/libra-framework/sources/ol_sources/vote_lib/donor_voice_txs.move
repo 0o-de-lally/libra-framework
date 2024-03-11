@@ -54,6 +54,7 @@ module ol_framework::donor_voice_txs {
     use ol_framework::match_index;
     use ol_framework::donor_voice;
     use ol_framework::not_my_friend;
+    use ol_framework::vouch;
 
     // use diem_std::debug::print;
 
@@ -71,6 +72,9 @@ module ol_framework::donor_voice_txs {
     const EMULTISIG_NOT_INIT: u64 = 5;
     /// No enum for this number
     const ENO_VETO_ID_FOUND: u64 = 6;
+    /// This account appears on 10% donations originator not-friend list.
+    /// needs more vouches to get this payment proposed.
+    const ERED_FLAG_ACCOUNT: u64 = 7;
 
     const SCHEDULED: u8 = 1;
     const VETO: u8 = 2;
@@ -218,6 +222,9 @@ module ol_framework::donor_voice_txs {
       not_my_friend::abort_not_friends_duplex(signer::address_of(sender), payee);
       not_my_friend::abort_not_friends_duplex(multisig_address, payee);
 
+      // will abort if the account is a red flag and doesn't have vouches
+      assert_not_red_flag(multisig_address, payee);
+
       // TODO: get expiration
       let prop = multi_action::proposal_constructor(tx, option::none());
 
@@ -237,6 +244,43 @@ module ol_framework::donor_voice_txs {
 
     }
 
+    ///  check that the payee is not blocked by 10% of the donors
+    /// (by pro_rata share)
+    fun is_red_flag (
+      multisig_address: address,
+      payee: address
+    ): bool {
+      let (pro_rata_addresses, pro_rata_amounts) = get_pro_rata(multisig_address);
+
+      let donor_restricted = 0;
+      let i = 0;
+      while (i < vector::length(&pro_rata_addresses)) {
+        let donor = vector::borrow(&pro_rata_addresses, i);
+        if (not_my_friend::is_not_a_friend(*donor, payee)) {
+          let amount_donated = vector::borrow(&pro_rata_amounts, i);
+          donor_restricted = donor_restricted + *amount_donated;
+        };
+        i = i + 1;
+      };
+
+      // the prorata deposits are calculated from cumulative, not current.
+      let cumulative_deposits = cumulative_deposits::get_cumulative_deposits(multisig_address);
+      // is it greater than 10%
+      donor_restricted > cumulative_deposits/10
+    }
+
+    /// if the payee is a red flag then it will require higher social proof.
+    /// needs at least five friends from different family trees
+    fun is_well_loved(payee: address): bool {
+      let friends = vouch::true_friends(payee);
+      vector::length(&friends) > 4
+    }
+
+    fun assert_not_red_flag(multisig: address, payee: address) {
+      if (is_red_flag(multisig, payee)) {
+        assert!(is_well_loved(payee), error::invalid_argument(ERED_FLAG_ACCOUNT));
+      }
+    }
     /// Private function which handles the logic of adding a new timed transfer
     /// DANGER upstream functions need to check the sender is authorized.
     // TODO: perhaps require the WithdrawCapability
@@ -332,6 +376,18 @@ module ol_framework::donor_voice_txs {
         if (this_exp == epoch) {
           let t = vector::remove(&mut state.scheduled, i);
           let multisig_address = guid::id_creator_address(&t.uid);
+
+          // exit gracefull and expire transaction if is a red flag in the
+          // interim time of proposing.
+          if (is_red_flag(multisig_address, t.tx.payee)) {
+            if (!is_well_loved(t.tx.payee)) {
+              // exit here.
+              // update the records
+                vector::push_back(&mut state.veto, t);
+                // go to next scheduled transaction
+                continue
+            }
+          };
 
           // Note the VM can do this without the WithdrawCapability
           expected_amount = expected_amount + t.tx.value;
