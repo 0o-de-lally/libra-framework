@@ -20,4 +20,18 @@ module ol_framework::not_my_friend {
 // Libra framework prevent automated actions relatedt to Bob's account happen
 // with the list of Alice's non-friends. AKA opt-in network filtering.
 
+// How does this actually work:
+// Anyone can propose a list of people they would rather not do business with.
+// There could be valid or spurious reasons for this. But it does not obligate
+// anyone else from adopting it. Importantly: it does not force the network as a
+// whole from adopting it.
+// Users, Validators, Community Wallets, The donors to community wallets, can
+// "subscribe" to that list. Now they can feel confident that any transactions
+// that they submit, will first check that list, and then prevent those
+// transactions from completing (most relevant: payments).
+// This module may interact with other modules. For example, vouch.move. The
+// user can detemine which information takes precedence: their personal vouches
+// overrides the subscribed non-friend list, or the inverse (prevent vouching
+// for someone that is on the list).
+
 }
