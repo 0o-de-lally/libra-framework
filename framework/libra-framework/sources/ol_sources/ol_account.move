@@ -19,6 +19,7 @@ module ol_framework::ol_account {
     use ol_framework::cumulative_deposits;
     use ol_framework::community_wallet;
     use ol_framework::donor_voice;
+    use ol_framework::not_my_friend;
 
     // use diem_std::debug::print;
 
@@ -61,14 +62,18 @@ module ol_framework::ol_account {
     /// below 1,000 coins
     const ETRANSFER_TOO_HIGH_FOR_INIT: u64 = 10;
 
-    /// what limit should be set for new account creation while using transfer()
-    const MAX_COINS_FOR_INITIALIZE: u64 = 1000 * 1000000;
-
     /// community wallets cannot use transfer, they have a dedicated workflow
     const ENOT_FOR_CW: u64 = 11;
 
     /// donor voice cannot use transfer, they have a dedicated workflow
     const ENOT_FOR_DV: u64 = 12;
+
+    /// recipient is not a friend of yours, check your not_my_friend state.
+    const ENOT_A_FRIEND: u64 = 13;
+
+
+    /// what limit should be set for new account creation while using transfer()
+    const MAX_COINS_FOR_INITIALIZE: u64 = 1000 * 1000000;
 
 
     struct BurnTracker has key {
@@ -253,14 +258,11 @@ module ol_framework::ol_account {
         error::invalid_state(ENOT_FOR_CW));
         assert!(!donor_voice::is_donor_voice(payer),
         error::invalid_state(ENOT_FOR_DV));
-
+        assert!(!not_my_friend::is_not_a_friend(payer, recipient), error::invalid_state(ENOT_A_FRIEND));
 
         // TODO: Check if Resource Accounts can register here, since they
         // may be created without any coin registration.
         assert!(coin::is_account_registered<LibraCoin>(recipient), error::invalid_argument(EACCOUNT_NOT_REGISTERED_FOR_GAS));
-
-        // must track the slow wallet on both sides of the transfer
-        // slow_wallet::maybe_track_slow_transfer(payer, recipient, amount);
 
         // maybe track cumulative deposits if this is a donor directed wallet
         // or other wallet which tracks cumulative payments.
