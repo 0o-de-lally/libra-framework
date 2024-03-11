@@ -53,6 +53,7 @@ module ol_framework::donor_voice_txs {
     use ol_framework::transaction_fee;
     use ol_framework::match_index;
     use ol_framework::donor_voice;
+    use ol_framework::not_my_friend;
 
     // use diem_std::debug::print;
 
@@ -212,6 +213,10 @@ module ol_framework::donor_voice_txs {
         value,
         description,
       };
+
+      // will abort if the social graph is self-filtered
+      not_my_friend::abort_not_friends_duplex(signer::address_of(sender), payee);
+      not_my_friend::abort_not_friends_duplex(multisig_address, payee);
 
       // TODO: get expiration
       let prop = multi_action::proposal_constructor(tx, option::none());

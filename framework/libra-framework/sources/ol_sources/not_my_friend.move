@@ -43,6 +43,7 @@ module ol_framework::not_my_friend {
 
   friend ol_framework::ol_account;
   friend ol_framework::vouch;
+  friend ol_framework::donor_voice_txs;
 
   /// no non-friend list published at this address
   const ENO_LIST_PUBLISHED: u64 = 0;

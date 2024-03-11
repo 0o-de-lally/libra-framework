@@ -1,5 +1,4 @@
 /// For an account to qualify for the Burn or Match recycling of accounts.
-
 /// Entry functions for community wallet, so that we don't cause dependency cycles
 
 module ol_framework::community_wallet_init {
@@ -166,19 +165,10 @@ module ol_framework::community_wallet_init {
       fam
     }
 
-    // /// check qualifications of community wallets
-    // /// need to check every epoch so that wallets who no longer qualify are not biasing the Match algorithm.
-    // public fun epoch_reset_ratios(root: &signer) {
-    //   system_addresses::assert_ol(root);
-    //   let good = get_qualifying();
-    //   match_index::calc_ratios(root, good);
-    // }
 
     #[view]
     /// from the list of addresses that opted into the match_index, filter for only those that qualified.
     public fun get_qualifying(opt_in_list: vector<address>): vector<address> {
-      // let opt_in_list = match_index::get_address_list();
-
       vector::filter(opt_in_list, |addr|{
         qualifies(*addr)
       })
