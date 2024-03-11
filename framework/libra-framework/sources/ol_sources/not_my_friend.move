@@ -21,10 +21,12 @@ module ol_framework::not_my_friend {
 // with the list of Alice's non-friends. AKA opt-in network filtering.
 
 // How does this actually work:
+// In short the registry is only as credible as the people publishing it. And no
+// registry will have any formal authority.
 // Anyone can propose a list of people they would rather not do business with.
-// There could be valid or spurious reasons for this. But it does not obligate
-// anyone else from adopting it. Importantly: it does not force the network as a
-// whole from adopting it.
+// There could be valid or spurious reasons for this. Importantly publishing
+// this it does not obligate anyone else from adopting it.
+// Read again: nothing forces the network or community as a whole to adopt it.
 // Users, Validators, Community Wallets, The donors to community wallets, can
 // "subscribe" to that list. Now they can feel confident that any transactions
 // that they submit, will first check that list, and then prevent those
@@ -49,7 +51,7 @@ module ol_framework::not_my_friend {
   /// business with.
   // this is alice in the example above
   struct NotMyFriends has key {
-    registry: vector<address>
+    list: vector<address>
   }
 
   /// as a user I can subscribe to someone else's registry.
@@ -57,7 +59,7 @@ module ol_framework::not_my_friend {
   /// NotMyFriends registry.
   /// In that case the system will create a union of all the registries
   // bob in the example above
-  struct Subscribe has key {
+  struct Subscriptions has key {
     registries: vector<address>,
     // if this list can be overriden by a "vouch" to the account.
     vouch_can_override: bool,
@@ -68,7 +70,7 @@ module ol_framework::not_my_friend {
   public entry fun publish(sig: &signer) {
     if (!exists<NotMyFriends>(signer::address_of(sig))) {
       move_to<NotMyFriends>(sig, NotMyFriends {
-        registry: vector::empty()
+        list: vector::empty()
       })
     }
   }
@@ -80,7 +82,7 @@ module ol_framework::not_my_friend {
     error::invalid_state(ENO_LIST_PUBLISHED));
 
     let state = borrow_global_mut<NotMyFriends>(my_addr);
-    vector::append(&mut state.registry, add_list);
+    vector::append(&mut state.list, add_list);
   }
 
   /// user transaction remove addresses from their registry
@@ -91,7 +93,7 @@ module ol_framework::not_my_friend {
 
     let state = borrow_global_mut<NotMyFriends>(my_addr);
     vector::for_each(remove_list, |a| {
-      vector::remove_value(&mut state.registry, &a);
+      vector::remove_value(&mut state.list, &a);
     })
   }
 
@@ -101,34 +103,34 @@ module ol_framework::not_my_friend {
   /// a user can subscribe to multiple lists, where the result is union of lists.
   // In the example above Bob will subscribe to Alice's registry
   public entry fun keep_me_safe(sig: &signer, registry: address) acquires
-  Subscribe {
+  Subscriptions {
     maybe_subscribe_init(sig);
-    let state = borrow_global_mut<Subscribe>(signer::address_of(sig));
+    let state = borrow_global_mut<Subscriptions>(signer::address_of(sig));
     vector::push_back(&mut state.registries, registry);
   }
 
   /// unsubscribe, or remove registry from this account
   public entry fun unsubscribe(sig: &signer, registry: address) acquires
-  Subscribe {
-    assert!(exists<Subscribe>(signer::address_of(sig)), ENO_REGISTRIES_SUBSCRIBED);
+  Subscriptions {
+    assert!(exists<Subscriptions>(signer::address_of(sig)), ENO_REGISTRIES_SUBSCRIBED);
 
-    let state = borrow_global_mut<Subscribe>(signer::address_of(sig));
+    let state = borrow_global_mut<Subscriptions>(signer::address_of(sig));
     vector::remove_value(&mut state.registries, &registry);
   }
 
   /// transaction for user to choose whether vouching overrides an address in
   // the registries subscribed to
   public entry fun let_vouch_override(sig: &signer, vouch_override: bool)
-  acquires Subscribe {
-    assert!(exists<Subscribe>(signer::address_of(sig)), ENO_REGISTRIES_SUBSCRIBED);
-    let state = borrow_global_mut<Subscribe>(signer::address_of(sig));
+  acquires Subscriptions {
+    assert!(exists<Subscriptions>(signer::address_of(sig)), ENO_REGISTRIES_SUBSCRIBED);
+    let state = borrow_global_mut<Subscriptions>(signer::address_of(sig));
     state.vouch_can_override = vouch_override;
   }
 
   /// a user subscribes to another user's NotMyFriends
   fun maybe_subscribe_init(sig: &signer) {
-   if(!exists<Subscribe>(signer::address_of(sig))) {
-    move_to(sig, Subscribe {
+   if(!exists<Subscriptions>(signer::address_of(sig))) {
+    move_to(sig, Subscriptions {
       registries: vector::empty(),
       vouch_can_override: false,
     })
@@ -137,14 +139,40 @@ module ol_framework::not_my_friend {
 
   //////// GETTERS ////////
   #[view]
-  /// checks if a user is in another user's not-friend registry
+  /// checks all registries a user is subscribed to (including own registry) for
+  /// inclusion of an address
+  public fun is_not_a_friend(subscriber: address, maybe_friend: address): bool acquires
+  NotMyFriends, Subscriptions {
+    let long_list = vector::empty();
+    // first check if subscriber has own registry
+    if (exists<NotMyFriends>(subscriber)) {
+      let own_registry_state = borrow_global<NotMyFriends>(subscriber);
+      vector::append(&mut long_list, own_registry_state.list);
+    };
+
+    if (exists<Subscriptions>(subscriber)) {
+      let sub_state = borrow_global<Subscriptions>(subscriber);
+      vector::for_each(sub_state.registries, |publisher| {
+        let other_registry_state = borrow_global<NotMyFriends>(publisher);
+        vector::append(&mut long_list, other_registry_state.list);
+      })
+    };
+
+    if (vector::is_empty(&long_list)) {
+      return false
+    };
+    vector::contains(&long_list, &maybe_friend)
+  }
+
+  #[view]
+  /// checks if a user is in a particular registry
   public fun is_in_registry(registry: address, user: address): bool acquires
   NotMyFriends {
     if (!exists<NotMyFriends>(registry)) {
       return false
     } else {
       let state = borrow_global<NotMyFriends>(registry);
-      vector::contains(&state.registry, &user)
+      vector::contains(&state.list, &user)
     }
   }
 
@@ -156,8 +184,7 @@ module ol_framework::not_my_friend {
       return option::none()
     } else {
       let state = borrow_global<NotMyFriends>(addr);
-      return option::some(state.registry)
+      return option::some(state.list)
     }
   }
-
 }
