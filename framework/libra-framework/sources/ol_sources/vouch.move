@@ -73,7 +73,7 @@ module ol_framework::vouch {
 
       // check in both directions if the users are filtering each other from the
       // social graph
-      not_my_friend::assert_not_friends_duplex(grantor_addr, wanna_be_my_friend);
+      not_my_friend::abort_not_friends_duplex(grantor_addr, wanna_be_my_friend);
 
       ancestry::assert_unrelated(grantor_addr, wanna_be_my_friend);
       vouch_impl(grantor, wanna_be_my_friend);

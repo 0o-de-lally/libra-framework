@@ -68,14 +68,6 @@ module ol_framework::ol_account {
     /// donor voice cannot use transfer, they have a dedicated workflow
     const ENOT_FOR_DV: u64 = 12;
 
-    /// recipient is not a friend of yours, it's in one of your subscriptions
-    // you opted into in your not_my_friend state.
-    const ERECIPIENT_NOT_A_FRIEND: u64 = 13;
-
-    /// you are trying to pay someone who does not want to do business with you.
-    /// They have a not_my_friend protection enabled
-    const EPAYER_NOT_A_FRIEND: u64 = 14;
-
     /// what limit should be set for new account creation while using transfer()
     const MAX_COINS_FOR_INITIALIZE: u64 = 1000 * 1000000;
 
@@ -262,8 +254,8 @@ module ol_framework::ol_account {
         error::invalid_state(ENOT_FOR_CW));
         assert!(!donor_voice::is_donor_voice(payer),
         error::invalid_state(ENOT_FOR_DV));
-        assert!(!not_my_friend::is_not_a_friend(payer, recipient), error::invalid_state(ERECIPIENT_NOT_A_FRIEND));
-        assert!(!not_my_friend::is_not_a_friend(recipient, payer), error::invalid_state(EPAYER_NOT_A_FRIEND));
+
+        not_my_friend::abort_not_friends_duplex(payer, recipient);
 
         // TODO: Check if Resource Accounts can register here, since they
         // may be created without any coin registration.
