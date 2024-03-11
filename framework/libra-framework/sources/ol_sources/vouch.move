@@ -5,6 +5,7 @@ module ol_framework::vouch {
     use ol_framework::ancestry;
     use ol_framework::ol_account;
     use ol_framework::epoch_helper;
+    use ol_framework::not_my_friend;
 
     use diem_framework::system_addresses;
     use diem_framework::transaction_fee;
@@ -66,8 +67,15 @@ module ol_framework::vouch {
     /// will only succesfully vouch if the two are not related by ancestry
     /// prevents spending a vouch that would not be counted.
     /// to add a vouch and ignore this check use insist_vouch
-    public entry fun vouch_for(grantor: &signer, wanna_be_my_friend: address) acquires MyVouches {
-      ancestry::assert_unrelated(signer::address_of(grantor), wanna_be_my_friend);
+    public entry fun vouch_for(grantor: &signer, wanna_be_my_friend: address)
+    acquires MyVouches {
+      let grantor_addr = signer::address_of(grantor);
+
+      // check in both directions if the users are filtering each other from the
+      // social graph
+      not_my_friend::assert_not_friends_duplex(grantor_addr, wanna_be_my_friend);
+
+      ancestry::assert_unrelated(grantor_addr, wanna_be_my_friend);
       vouch_impl(grantor, wanna_be_my_friend);
     }
 

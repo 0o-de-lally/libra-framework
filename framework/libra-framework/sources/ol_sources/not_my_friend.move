@@ -41,11 +41,15 @@ module ol_framework::not_my_friend {
   use std::vector;
   use std::option::{Self, Option};
 
+  friend ol_framework::vouch;
   /// no non-friend list published at this address
   const ENO_LIST_PUBLISHED: u64 = 0;
 
   /// you have not subscribed to any registries of non-friends
   const ENO_REGISTRIES_SUBSCRIBED: u64 = 1;
+
+  /// user is excluded from the other's social graph
+  const ENOT_A_FRIEND: u64 = 2;
 
   /// any user can publish a registry of people they would rather not do
   /// business with.
@@ -135,6 +139,21 @@ module ol_framework::not_my_friend {
       vouch_can_override: false,
     })
    }
+  }
+
+  //////// ASSERT HELPERS ///////
+  /// aborts tx if maybe_friend is in a subscriber's registries
+  public(friend) fun assert_not_friend(subscriber: address, maybe_friend:
+  address) acquires NotMyFriends, Subscriptions {
+    assert!(is_not_a_friend(subscriber, maybe_friend), error::invalid_state(ENOT_A_FRIEND));
+  }
+
+    /// check in both directions if users have filtered each other out of their
+  /// social graphs
+  public(friend) fun assert_not_friends_duplex(subscriber: address,
+  maybe_friend: address) acquires NotMyFriends, Subscriptions  {
+    assert_not_friend(subscriber, maybe_friend);
+    assert_not_friend(maybe_friend, subscriber);
   }
 
   //////// GETTERS ////////
