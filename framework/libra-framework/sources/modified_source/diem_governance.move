@@ -17,6 +17,7 @@ module diem_framework::diem_governance {
     use diem_framework::system_addresses;
     use diem_framework::timestamp;
     use diem_framework::voting;
+    use diem_framework::block;
 
     use ol_framework::libra_coin;
     use ol_framework::epoch_boundary;
@@ -567,9 +568,17 @@ module diem_framework::diem_governance {
     }
 
     /// Force reconfigure. To be called at the end of a proposal that alters on-chain configs.
-    public fun reconfigure(diem_framework: &signer) {
+    public fun rescue_reconfigure(diem_framework: &signer) {
         system_addresses::assert_diem_framework(diem_framework);
         reconfiguration::reconfigure();
+    }
+
+    /// Force event writeset block event.
+    // needed for offline rescues
+    public fun rescue_emit_writeset(diem_framework: &signer) acquires GovernanceResponsbility {
+        system_addresses::assert_diem_framework(diem_framework);
+        let vm_sig = get_signer(@0x0);
+        block::emit_writeset_block_event(&vm_sig, @0x1ee7);
     }
 
     // TODO: from v5 evaluate if this is needed or is obviated by

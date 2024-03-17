@@ -33,7 +33,7 @@ async fn test_valid_genesis() -> anyhow::Result<()> {
     blob_path.create_as_dir()?;
 
     let script_path = support::make_script(first_validator_address);
-
+    dbg!(&script_path);
     println!("2. compile the script");
 
     let r = RescueTxOpts {

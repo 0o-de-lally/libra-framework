@@ -243,7 +243,7 @@ spec diem_framework::diem_governance {
         aborts_if !proposal.is_resolved;
     }
 
-    spec reconfigure(diem_framework: &signer) {
+    spec rescue_reconfigure(diem_framework: &signer) {
         use diem_framework::chain_status;
         use diem_framework::coin::CoinInfo;
         use diem_framework::libra_coin::LibraCoin;

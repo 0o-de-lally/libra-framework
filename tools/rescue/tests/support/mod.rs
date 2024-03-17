@@ -20,12 +20,11 @@ pub fn make_script(remove_validator: AccountAddress) -> PathBuf {
         script {{
             use diem_framework::stake;
             use diem_framework::diem_governance;
-            use diem_framework::block;
 
-            fun main(vm_signer: &signer, framework_signer: &signer) {{
+            fun main(_vm_signer: &signer, framework_signer: &signer) {{
                 stake::remove_validators(framework_signer, &vector[@0x{:?}]);
-                block::emit_writeset_block_event(vm_signer, @0x1);
-                diem_governance::reconfigure(framework_signer);
+                diem_governance::rescue_emit_writeset(framework_signer);
+                diem_governance::rescue_reconfigure(framework_signer);
             }}
     }}
     "#,

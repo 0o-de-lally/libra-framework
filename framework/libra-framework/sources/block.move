@@ -19,6 +19,7 @@ module diem_framework::block {
     use ol_framework::epoch_boundary;
 
     friend diem_framework::genesis;
+    friend diem_framework::diem_governance;
 
     const MAX_U64: u64 = 18446744073709551615;
 
