@@ -13,6 +13,8 @@ module ol_framework::libra_coin {
     use std::signer;
     use std::vector;
     use std::option::{Self, Option};
+    use diem_std::math64;
+    use diem_framework::fixed_point32;
     // use diem_std::debug::print;
 
     use diem_framework::coin::{Self, Coin, MintCapability, BurnCapability};
@@ -201,6 +203,24 @@ module ol_framework::libra_coin {
       };
       0
     }
+
+    #[view]
+    /// Returns a human readable version of the supply with (integer, decimal_part)
+    public fun supply_human(): (u64, u64) {
+
+        let unscaled_value = supply();
+
+        let decimal_places = coin::decimals<LibraCoin>();
+        let scaling = math64::pow(10, (decimal_places as u64));
+        let value = fixed_point32::create_from_rational(unscaled_value, scaling);
+        // multiply will TRUNCATE.
+        let integer_part = fixed_point32::multiply_u64(1, value);
+
+        let decimal_part = unscaled_value - (integer_part * scaling);
+
+        (integer_part, decimal_part)
+    }
+
     #[view]
     /// debugging view
     public fun supply_128(): u128 {
