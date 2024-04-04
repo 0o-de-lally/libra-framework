@@ -5712,6 +5712,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-genesis-tools-legacy-v5"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.13.0",
+ "bcs 0.1.4 (git+https://github.com/aptos-labs/bcs.git?rev=d31fab9d81748e2594be5cd5cdf845786a30562d)",
+ "chrono",
+ "clap 4.4.2",
+ "dialoguer",
+ "diem-config",
+ "diem-crypto",
+ "diem-db",
+ "diem-executor",
+ "diem-framework",
+ "diem-gas",
+ "diem-genesis",
+ "diem-github-client",
+ "diem-logger",
+ "diem-state-view",
+ "diem-storage-interface",
+ "diem-temppath",
+ "diem-types",
+ "diem-vm",
+ "diem-vm-genesis",
+ "indicatif",
+ "libra-config",
+ "libra-framework",
+ "libra-types",
+ "libra-wallet",
+ "move-core-types",
+ "serde 1.0.163",
+ "serde_json",
+ "tokio",
+ "ureq",
+]
+
+[[package]]
 name = "libra-query"
 version = "0.1.0"
 dependencies = [

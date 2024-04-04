@@ -8,6 +8,7 @@ members = [
   "tools/cli",
   "tools/config",
   "tools/genesis",
+  "tools/genesis-legacy-v5",
   "tools/query",
   "tools/rescue",
   "tools/storage",
