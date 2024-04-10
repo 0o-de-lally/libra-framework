@@ -48,19 +48,18 @@ fn fix_duplicate_auth_keys(r: &[LegacyRecoveryV6]) {
         .into_iter()
         .filter(|&e| !seen.insert(e.auth_key))
         .collect();
-    seen.iter().take(10).for_each(|auth| {
+    seen.iter().take(2).for_each(|auth| {
         // dbg!(&auth.unwrap().to_string());
         if let Some(a) = auth {
             // dbg!(&a.to_string());
             let combined_balance = duplicates
                 .iter()
                 .filter_map(|e| {
-                    // dbg!(&e.auth_key.unwrap().borrow().to_string());
-
-                    if e.auth_key.unwrap() == *a {
+                    if e.auth_key.unwrap().to_string().contains(&a.to_string()) {
+                        dbg!(&a);
                         if let Some(balance) = &e.balance {
                             if balance.coin > 0 {
-                                dbg!(&balance.coin);
+                                // dbg!(&auth, &balance.coin);
                                 return Some(balance.coin);
                             }
                         }
@@ -70,7 +69,7 @@ fn fix_duplicate_auth_keys(r: &[LegacyRecoveryV6]) {
                     None
                 })
                 .reduce(|acc, e| acc + e);
-            dbg!(&a.to_string(), &combined_balance);
+            // dbg!(&a.to_string(), &combined_balance);
         }
     });
     dbg!(&duplicates.len());
