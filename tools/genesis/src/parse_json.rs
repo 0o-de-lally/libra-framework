@@ -5,6 +5,8 @@ use libra_types::{
 use serde::{Deserialize, Serialize};
 
 use std::{
+    borrow::Borrow,
+    collections::HashSet,
     fs,
     path::{Path, PathBuf},
 };
@@ -35,6 +37,43 @@ fn fix_slow_wallet(r: &mut [LegacyRecoveryV6]) -> anyhow::Result<Vec<AccountAddr
     });
 
     Ok(errs)
+}
+
+fn fix_duplicate_auth_keys(r: &[LegacyRecoveryV6]) {
+    // r.sort_unstable_by_key(|e| e.auth_key);
+    dbg!(&r.len());
+
+    let mut seen = HashSet::new();
+    let duplicates: Vec<&LegacyRecoveryV6> = r
+        .into_iter()
+        .filter(|&e| !seen.insert(e.auth_key))
+        .collect();
+    seen.iter().take(10).for_each(|auth| {
+        // dbg!(&auth.unwrap().to_string());
+        if let Some(a) = auth {
+            // dbg!(&a.to_string());
+            let combined_balance = duplicates
+                .iter()
+                .filter_map(|e| {
+                    // dbg!(&e.auth_key.unwrap().borrow().to_string());
+
+                    if e.auth_key.unwrap() == *a {
+                        if let Some(balance) = &e.balance {
+                            if balance.coin > 0 {
+                                dbg!(&balance.coin);
+                                return Some(balance.coin);
+                            }
+                        }
+                        // dbg!(&a.to_string());
+                        //  dbg!(&e.balance.as_ref().unwrap().coin);
+                    }
+                    None
+                })
+                .reduce(|acc, e| acc + e);
+            dbg!(&a.to_string(), &combined_balance);
+        }
+    });
+    dbg!(&duplicates.len());
 }
 
 #[derive(Serialize, Deserialize)]
@@ -86,6 +125,16 @@ fn parse_json_single() {
     //     .iter()
     //     .find(|el| el.comm_wallet.is_some())
     //     .expect("could not find 0x0 state in recovery file");
+}
+
+#[test]
+fn parse_duplicates() {
+    let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/sample_export_recovery.json");
+
+    let r = recovery_file_parse(p).unwrap();
+
+    fix_duplicate_auth_keys(&r);
 }
 
 #[test]
