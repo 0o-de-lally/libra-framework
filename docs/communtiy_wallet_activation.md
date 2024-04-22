@@ -21,6 +21,7 @@ There are two steps in creating a community wallet account:
   the account will not be initialized with Donor Voice features. This is a
   safety check to ensure the community wallet has the expected authorities
   before making it irreversibly a multisig.
+
  2) finalize the account, making it a multisig with the authorities checked
     above.
  This step is irreversible. The current mnemonic will no longer work going

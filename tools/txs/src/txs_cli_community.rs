@@ -56,10 +56,10 @@ impl CommunityTxs {
 #[derive(clap::Args)]
 pub struct ProposeTx {
     #[clap(short, long)]
-    /// The Community Wallet you are a admin for
+    /// The Community Wallet you are authorized to sign
     pub community_wallet: AccountAddress,
     #[clap(short, long)]
-    /// The SlowWallet recipient of funds
+    /// The Slow Wallet recipient of funds
     pub recipient: AccountAddress,
     #[clap(short, long)]
     /// Amount of coins (units) to transfer
