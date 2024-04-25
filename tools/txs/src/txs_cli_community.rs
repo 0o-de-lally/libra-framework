@@ -106,8 +106,8 @@ pub struct BatchTx {
     /// Write the result json to a different file (otherwise will overwrite)
     pub out: Option<PathBuf>,
     #[clap(long)]
-    /// Just check if the destinations are slow wallets
-    pub check: bool,
+    /// Sends the TXS, otherwise it will only check the txs by default
+    pub submit: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -250,7 +250,7 @@ impl BatchTx {
 
             total_submitted += inst.amount;
 
-            if self.check {
+            if !self.submit {
                 continue;
             };
 
@@ -268,7 +268,7 @@ impl BatchTx {
             }
         }
 
-        if self.check {
+        if !self.submit {
             list.iter().for_each(|e| {
                 if let Some(s) = e.is_slow {
                     if !s {
@@ -281,6 +281,7 @@ impl BatchTx {
                 }
             });
             println!("checks completed");
+            println!("to submit transactions run this command with --submit");
         } else {
             println!("Transfers proposed and voted on. Note: transactions are not atomic, some of the transfers may have been ignored. JSON file will be updated.");
         }
