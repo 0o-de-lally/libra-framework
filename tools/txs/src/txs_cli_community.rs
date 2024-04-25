@@ -199,7 +199,11 @@ impl BatchTx {
             pending_or_approved.insert(recipient, found);
         });
 
+        let mut total_instructions = 0;
+        let mut total_submitted = 0;
         for inst in &mut list {
+            total_instructions += inst.amount;
+
             let addr: AccountAddress = inst
                 .recipient
                 .parse()
@@ -244,6 +248,8 @@ impl BatchTx {
                 }
             }
 
+            total_submitted += inst.amount;
+
             if self.check {
                 continue;
             };
@@ -278,6 +284,9 @@ impl BatchTx {
         } else {
             println!("Transfers proposed and voted on. Note: transactions are not atomic, some of the transfers may have been ignored. JSON file will be updated.");
         }
+
+        println!("total instructions value: {}", total_instructions);
+        println!("total submitted value: {}", total_submitted);
 
         let json = serde_json::to_string(&list)?;
         let p = if let Some(out_path) = &self.out {
