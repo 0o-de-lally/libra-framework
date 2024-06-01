@@ -32,6 +32,9 @@ module diem_framework::double_entry {
   /// User is not a depositor to this address
   const ENOT_A_DEPOSITOR: u64 = 2;
 
+  /// Attempting to debit more than user's credits
+  const EDEBIT_EXCEEDS_USER_CREDITS: u64 = 3;
+
   /// Flag on the account which sets the policy
   /// Defines a table for all the credits deposited on this account.
   struct DoubleEntry has key{
@@ -73,6 +76,25 @@ module diem_framework::double_entry {
     }
   }
 
+  /// Debits a credit from a user account
+  fun debit_credit_impl(double_entry: address, depositor: address, value:
+  u64) acquires DoubleEntry {
+
+    assert!(user_credits(double_entry, depositor) > 0,
+    error::invalid_state(ENOT_A_DEPOSITOR));
+
+    let table = &mut borrow_global_mut<DoubleEntry>(double_entry).credit_table;
+
+    let entry = table::borrow_mut(table, depositor);
+    assert!(*entry >= value, error::invalid_argument(EDEBIT_EXCEEDS_USER_CREDITS));
+    *entry = *entry - value;
+
+    // drop from table if no more credits are found
+    if (*entry == 0) {
+      table::remove(table, depositor);
+    }
+  }
+
   //////// GETTERS ////////
 
   #[view]
@@ -84,14 +106,14 @@ module diem_framework::double_entry {
   #[view]
   /// Get the credits of a depositor
   /// @params double_entry_account
-  public fun user_credits(double_entry_acc: address, depositor_acc: address):
+  public fun user_credits(double_entry: address, depositor: address):
   u64 acquires DoubleEntry {
-    assert!(is_double_entry(double_entry_acc),
+    assert!(is_double_entry(double_entry),
     error::invalid_state(ENOT_A_DOUBLE_ENTRY_ACCOUNT));
 
-    let table = &mut borrow_global_mut<DoubleEntry>(double_entry_acc).credit_table;
-    assert!(table::contains(table, depositor_acc), ENOT_A_DEPOSITOR);
-    *table::borrow_mut(table, depositor_acc)
+    let table = &mut borrow_global_mut<DoubleEntry>(double_entry).credit_table;
+    assert!(table::contains(table, depositor), ENOT_A_DEPOSITOR);
+    *table::borrow_mut(table, depositor)
   }
 
 
@@ -114,8 +136,35 @@ module diem_framework::double_entry {
     assert!(is_double_entry(double_entry_acc), 7357001);
     assert!(!is_double_entry(bob_depositor), 7357002);
 
+    // initialize and add
     register_credit_impl(double_entry_acc, bob_depositor, 100);
     assert!(user_credits(double_entry_acc, bob_depositor) == 100, 7357003);
+
+    // debit
+    debit_credit_impl(double_entry_acc, bob_depositor, 10);
+    assert!(user_credits(double_entry_acc, bob_depositor) == 90, 7357004);
+
+    // credit again
+    register_credit_impl(double_entry_acc, bob_depositor, 20);
+    assert!(user_credits(double_entry_acc, bob_depositor) == 110, 7357005);
   }
 
+  #[test(framework = @0x1, double_entry_sig = @123, bob_depositor = @456)]
+  /// vm can migrate an account
+  fun zero_balance_removes_credit(framework: &signer, double_entry_sig: &signer,
+  bob_depositor: address) acquires DoubleEntry {
+    vm_migrate_account(framework, double_entry_sig);
+    let double_entry_acc = signer::address_of(double_entry_sig);
+    assert!(is_double_entry(double_entry_acc), 7357001);
+    assert!(!is_double_entry(bob_depositor), 7357002);
+
+    // initialize and add
+    register_credit_impl(double_entry_acc, bob_depositor, 100);
+    assert!(user_credits(double_entry_acc, bob_depositor) == 100, 7357003);
+
+    // debit
+    debit_credit_impl(double_entry_acc, bob_depositor, 100);
+    let table = &mut borrow_global_mut<DoubleEntry>(double_entry_acc).credit_table;
+    assert!(!table::contains(table, bob_depositor), 7357004);
+  }
 }
