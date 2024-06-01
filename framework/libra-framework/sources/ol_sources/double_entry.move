@@ -19,11 +19,16 @@
 // explicit (plus most users taking advantage of double entry, will be doing so
 // programattically).
 
+// TODO: Future refactor. Possibly cumulative deposits and double_entry have overlapping
+// functionality. I.e., they both should use the same table
+
 module diem_framework::double_entry {
   use std::signer;
   use std::error;
   use diem_framework::system_addresses;
   use diem_std::table::{Self, Table};
+
+  friend ol_framework::ol_account;
 
   //////// ERROR CODES ////////
   /// Account not implementing double entry policy
@@ -48,6 +53,17 @@ module diem_framework::double_entry {
       move_to<DoubleEntry>(sig, DoubleEntry{
         credit_table: table::new<address, u64>()
       })
+    }
+  }
+
+  // check if either sender or recipient is a double entry policy account.
+  // if so do the requisite update, or fail.
+  // ol_account calls this
+  public(friend) fun maybe_credit_double_entry(double_entry: address, depositor: address,
+  value: u64) acquires DoubleEntry {
+    // fail gracefully
+    if (is_double_entry(double_entry)) {
+      register_credit_impl(double_entry, depositor, value);
     }
   }
 

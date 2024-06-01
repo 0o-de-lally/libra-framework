@@ -13,6 +13,7 @@ module ol_framework::ol_account {
 
 
     use ol_framework::ancestry;
+    use ol_framework::double_entry;
     use ol_framework::libra_coin::{Self, LibraCoin};
     use ol_framework::slow_wallet;
     use ol_framework::receipts;
@@ -39,6 +40,8 @@ module ol_framework::ol_account {
     #[test_only]
     friend ol_framework::test_slow_wallet;
 
+    //////// ERROR CODES ////////
+
     /// Account does not exist.
     const EACCOUNT_NOT_FOUND: u64 = 1;
     /// Account is not registered to receive GAS.
@@ -49,37 +52,29 @@ module ol_framework::ol_account {
     const EACCOUNT_DOES_NOT_ACCEPT_DIRECT_TOKEN_TRANSFERS: u64 = 4;
     /// The lengths of the recipients and amounts lists don't match.
     const EMISMATCHING_RECIPIENTS_AND_AMOUNTS_LENGTH: u64 = 5;
-
     /// not enough unlocked coins to transfer
     const EINSUFFICIENT_BALANCE: u64 = 6;
-
     /// On legacy account migration we need to check if we rotated auth keys correctly and can find the user address.
     const ECANT_MATCH_ADDRESS_IN_LOOKUP: u64 = 7;
-
     /// trying to transfer zero coins
     const EZERO_TRANSFER: u64 = 8;
-
     /// why is VM trying to use this?
     const ENOT_FOR_VM: u64 = 9;
-
     /// you are trying to send a large coin transfer to an account that does not
     /// yet exist.  If you are trying to initialize this address send an amount
     /// below 1,000 coins
     const ETRANSFER_TOO_HIGH_FOR_INIT: u64 = 10;
-
     /// community wallets cannot use transfer, they have a dedicated workflow
     const ENOT_FOR_CW: u64 = 11;
-
     /// donor voice cannot use transfer, they have a dedicated workflow
     const ENOT_FOR_DV: u64 = 12;
-
     /// This key cannot be used to create accounts. The address may have
     /// malformed state. And says, "My advice is to not let the boys in".
     const ETOMBSTONE: u64 = 21;
-
     /// This account is malformed, it does not have the necessary burn tracker struct
     const ENO_TRACKER_INITIALIZED: u64 = 13;
-
+    /// Double entry policy accounts cannot transfer with these functions
+    const EDOUBLE_ENTRY_POLICY: u64 = 14;
 
     ///////// CONSTS /////////
     /// what limit should be set for new account creation while using transfer()
@@ -326,14 +321,17 @@ module ol_framework::ol_account {
         // may be created without any coin registration.
         assert!(coin::is_account_registered<LibraCoin>(recipient), error::invalid_argument(EACCOUNT_NOT_REGISTERED_FOR_GAS));
 
-        // must track the slow wallet on both sides of the transfer
-        // slow_wallet::maybe_track_slow_transfer(payer, recipient, amount);
-
         // maybe track cumulative deposits if this is a donor directed wallet
         // or other wallet which tracks cumulative payments.
         cumulative_deposits::maybe_update_deposit(payer, recipient, amount);
-    }
 
+        // If Bob is paying funds to a recipient custodian Alice, then we need
+        // to update Alices deposits ledger. If Alice is trying to use this
+        // function then it must abort.
+        assert!(!double_entry::is_double_entry(payer), error::invalid_argument(EDOUBLE_ENTRY_POLICY));
+        double_entry::maybe_credit_double_entry(recipient, payer, amount);
+
+    }
 
 
     /// vm can transfer between account to settle.
@@ -691,7 +689,7 @@ module ol_framework::ol_account {
     public fun test_transfer_to_resource_account_ol(root: &signer, alice: &signer,
     core: &signer) acquires BurnTracker{
         let (burn_cap, mint_cap) =
-        ol_framework::libra_coin::initialize_for_test(core);
+        libra_coin::initialize_for_test(core);
         libra_coin::test_set_final_supply(root, 1000); // dummy to prevent fail
 
         let (resource_account, _) = test_ol_create_resource_account(alice, vector[]);
@@ -750,4 +748,32 @@ module ol_framework::ol_account {
         set_allow_direct_coin_transfers(user, true);
         assert!(can_receive_direct_coin_transfers(addr), 2);
     }
+
+    // #[test(framework_sig = @ol_framework, alice = @0xa11ce, bob = @0x808)]
+    // public fun test_update_double_entry(framework_sig: &signer, alice: &signer,
+    // bob: address) acquires BurnTracker {
+    //     let double_entry_acc = signer::address_of(alice);
+    //     let (burn_cap, mint_cap) =
+    //     libra_coin::initialize_for_test(framework_sig);
+    //     libra_coin::test_set_final_supply(framework_sig, 1000); // dummy to
+    //     // prevent fail
+    //     account::maybe_initialize_duplicate_originating(framework_sig);
+    //     create_account(framework_sig, double_entry_acc);
+
+    //     // initialize double entry
+    //     double_entry::set_double_entry(alice);
+    //     assert!(double_entry::is_double_entry(double_entry_acc), 7357001);
+    //     assert!(!double_entry::is_double_entry(bob), 7357002);
+
+    //     coin::deposit(double_entry_acc, coin::mint(10000, &mint_cap));
+    //     transfer(alice, bob, 500);
+    //     assert!(libra_coin::balance(bob) == 500, 7357003);
+    //     assert!(double_entry::user_credits(double_entry_acc, bob) > 0, 7357004);
+    //     assert!(double_entry::user_credits(double_entry_acc, bob) > 500, 7357004);
+
+    //     // cleanup
+    //     coin::destroy_burn_cap(burn_cap);
+    //     coin::destroy_mint_cap(mint_cap);
+
+    // }
 }
