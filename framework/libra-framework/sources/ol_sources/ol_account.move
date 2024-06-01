@@ -749,31 +749,64 @@ module ol_framework::ol_account {
         assert!(can_receive_direct_coin_transfers(addr), 2);
     }
 
-    // #[test(framework_sig = @ol_framework, alice = @0xa11ce, bob = @0x808)]
-    // public fun test_update_double_entry(framework_sig: &signer, alice: &signer,
-    // bob: address) acquires BurnTracker {
-    //     let double_entry_acc = signer::address_of(alice);
-    //     let (burn_cap, mint_cap) =
-    //     libra_coin::initialize_for_test(framework_sig);
-    //     libra_coin::test_set_final_supply(framework_sig, 1000); // dummy to
-    //     // prevent fail
-    //     account::maybe_initialize_duplicate_originating(framework_sig);
-    //     create_account(framework_sig, double_entry_acc);
 
-    //     // initialize double entry
-    //     double_entry::set_double_entry(alice);
-    //     assert!(double_entry::is_double_entry(double_entry_acc), 7357001);
-    //     assert!(!double_entry::is_double_entry(bob), 7357002);
+    #[test(framework_sig = @ol_framework, double_entry = @0xa11ce, depositor = @0x808)]
 
-    //     coin::deposit(double_entry_acc, coin::mint(10000, &mint_cap));
-    //     transfer(alice, bob, 500);
-    //     assert!(libra_coin::balance(bob) == 500, 7357003);
-    //     assert!(double_entry::user_credits(double_entry_acc, bob) > 0, 7357004);
-    //     assert!(double_entry::user_credits(double_entry_acc, bob) > 500, 7357004);
+    public fun transfer_updates_double_entry_recipient(framework_sig: &signer, double_entry: &signer,
+    depositor: &signer) acquires BurnTracker {
+        let double_entry_acc = signer::address_of(double_entry);
+        let depositor_acc = signer::address_of(depositor);
+        let (burn_cap, mint_cap) =
+        libra_coin::initialize_for_test(framework_sig);
+        libra_coin::test_set_final_supply(framework_sig, 1000); // dummy to
+        // prevent fail
+        account::maybe_initialize_duplicate_originating(framework_sig);
+        create_account(framework_sig, double_entry_acc);
+        create_account(framework_sig, depositor_acc);
 
-    //     // cleanup
-    //     coin::destroy_burn_cap(burn_cap);
-    //     coin::destroy_mint_cap(mint_cap);
+        // initialize double entry
+        double_entry::set_double_entry(double_entry);
+        assert!(double_entry::is_double_entry(double_entry_acc), 7357001);
+        assert!(!double_entry::is_double_entry(depositor_acc), 7357002);
 
-    // }
+        // GIVE depositor_acc coins so that he can send to the double entry account
+        coin::deposit(depositor_acc, coin::mint(10000, &mint_cap));
+        transfer(depositor, double_entry_acc, 500);
+
+        assert!(double_entry::user_credits(double_entry_acc, depositor_acc) == 500, 7357003);
+
+        // cleanup
+        coin::destroy_burn_cap(burn_cap);
+        coin::destroy_mint_cap(mint_cap);
+    }
+
+    #[test(framework_sig = @ol_framework, alice = @0xa11ce, bob = @0x808)]
+    #[expected_failure(abort_code = 65550, location = 0x1::ol_account)]
+
+    public fun transfer_aborts_for_double_entry_sender(framework_sig: &signer, alice: &signer,
+    bob: address) acquires BurnTracker {
+        let double_entry_acc = signer::address_of(alice);
+        let (burn_cap, mint_cap) =
+        libra_coin::initialize_for_test(framework_sig);
+        libra_coin::test_set_final_supply(framework_sig, 1000); // dummy to
+        // prevent fail
+        account::maybe_initialize_duplicate_originating(framework_sig);
+        create_account(framework_sig, double_entry_acc);
+
+        // initialize double entry
+        double_entry::set_double_entry(alice);
+        assert!(double_entry::is_double_entry(double_entry_acc), 7357001);
+        assert!(!double_entry::is_double_entry(bob), 7357002);
+
+        coin::deposit(double_entry_acc, coin::mint(10000, &mint_cap));
+        transfer(alice, bob, 500);
+
+        // SHOULD ABORT since double entry accounts cannot use transfer()
+        // must use specialized tx process
+
+
+        // cleanup
+        coin::destroy_burn_cap(burn_cap);
+        coin::destroy_mint_cap(mint_cap);
+    }
 }
