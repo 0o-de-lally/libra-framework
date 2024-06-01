@@ -11,7 +11,6 @@ module ol_framework::ol_account {
     use diem_std::fixed_point32;
     use diem_std::math64;
 
-
     use ol_framework::ancestry;
     use ol_framework::double_entry;
     use ol_framework::libra_coin::{Self, LibraCoin};
@@ -115,21 +114,6 @@ module ol_framework::ol_account {
 
       (resource_account_sig, cap)
     }
-
-    // Deprecation Notice: creating resource accounts are disabled in Libra.
-    // Similar methods exist in multi_action::finalize_and_cage) which is
-    // a wrapper for  and multi_sig::migrate_with_owners
-    // if your are testing this, see below a test_only option
-
-    /// A wrapper to create a NEW account and register it to receive
-    // GAS.
-    // fun _ol_create_resource_account(user: &signer, seed: vector<u8>): (signer, account::SignerCapability) {
-    //   let (resource_account_sig, cap) = account::create_resource_account(user, seed);
-    //   coin::register<LibraCoin>(&resource_account_sig);
-
-    //   init_from_sig_impl(user, &resource_account_sig);
-    //   (resource_account_sig, cap);
-    // }
 
     fun create_impl(sender: &signer, maybe_new_user: address) {
         // prevent reincarnation of accounts where there may be malformed state
