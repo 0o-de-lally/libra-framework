@@ -97,8 +97,10 @@ module diem_framework::randomness {
         // 0L NOTE: We will drop the unbiased checks, because this is not going to be an
         // public facing API.
         // assert!(is_unbiasable(), E_API_USE_IS_BIASIBLE);
-
         let input = DST;
+        // failover if not init
+        if (!exists<PerBlockRandomness>(@diem_framework)) return vector::empty();
+
         let randomness = borrow_global_mut<PerBlockRandomness>(@diem_framework);
         let seed = *option::borrow(&randomness.seed);
 
