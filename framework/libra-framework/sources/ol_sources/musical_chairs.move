@@ -136,6 +136,7 @@ module ol_framework::musical_chairs {
         // suggestion, and increase the seats offered, and guarantee seats to
         // performant nodes.
         if (
+          !testnet::is_testnet() &&
           num_compliant_nodes < VAL_BOOT_UP_THRESHOLD &&
           num_compliant_nodes > 2
         ) {

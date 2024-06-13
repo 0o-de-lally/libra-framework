@@ -19,7 +19,7 @@ module ol_framework::test_boundary {
   use diem_framework::timestamp;
   use diem_framework::diem_governance;
 
-  // use diem_std::debug::print;
+  use diem_std::debug::print;
 
   const Alice: address = @0x1000a;
   const Bob: address = @0x1000b;
@@ -126,8 +126,10 @@ module ol_framework::test_boundary {
 
     assert!(epoch_boundary::get_reconfig_success(), 7357002);
 
-    // all validators were compliant, should be +1 of the 10 vals
-    assert!(epoch_boundary::get_seats_offered() == 11, 7357003);
+    print(&epoch_boundary::get_seats_offered() );
+    // checck boot up mode, when validator set is less than 19.
+    // This should offer MORE seats than the compliant amount
+    assert!(epoch_boundary::get_seats_offered() == 14, 7357003);
 
     // NOTE: now MARLON is INCLUDED in this, and we filled all the seats on offer.
     // all vals had winning bids, but it was less than the seats on offer

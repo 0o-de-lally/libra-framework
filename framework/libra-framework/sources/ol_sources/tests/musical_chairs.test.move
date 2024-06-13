@@ -10,10 +10,10 @@ module ol_framework::test_musical_chairs {
 
     // use diem_std::debug::print;
 
+    // TEST CASE: validator set should increase by 1 if all vals are performing
     #[test(root = @ol_framework)]
     public entry fun eval_compliance_happy(root: signer) {
 
-      let musical_chairs_default_seats = 10;
       let vals = mock::genesis_n_vals(&root, 5);
       assert!(vector::length(&vals) == 5, 7357001);
 
@@ -32,8 +32,10 @@ module ol_framework::test_musical_chairs {
       musical_chairs::test_stop(&root, epoch, round);
 
 
-      assert!(vector::length(&outgoing_compliant_set) == 5, 7357005);
-      assert!(new_set_size == (musical_chairs_default_seats + 1), 7357006);
+      let out_len = vector::length(&outgoing_compliant_set);
+      assert!(out_len == 5, 7357005);
+
+      assert!(new_set_size == (out_len + 1), 7357006);
     }
 
     #[test(root = @ol_framework)]
