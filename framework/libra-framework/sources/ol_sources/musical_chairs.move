@@ -1,5 +1,6 @@
 module ol_framework::musical_chairs {
     use diem_framework::chain_status;
+    use diem_framework::randomness;
     use diem_framework::system_addresses;
     use diem_framework::stake;
     use ol_framework::grade;
@@ -19,6 +20,9 @@ module ol_framework::musical_chairs {
   /// we don't want to play the validator selection games
   /// before we're clear out of genesis
   const EPOCH_TO_START_EVAL: u64 = 2;
+  /// Number of vals needed before PoF becomes competitive for
+  /// performant nodes as well
+  const VAL_BOOT_UP_THRESHOLD: u64 = 19;
 
   /// we can't evaluate the performance of validators
   /// when there are too few rounds committed
@@ -77,39 +81,73 @@ module ol_framework::musical_chairs {
         });
     }
 
-    /// get the number of seats in the game
-    /// returns the list of compliant validators and the number of seats
-    /// we should offer in the next epoch
-    /// (compliant_vals, seats_offered)
     public(friend) fun stop_the_music( // sorry, had to.
         vm: &signer,
         epoch: u64,
         round: u64,
     ): (vector<address>, u64) acquires Chairs {
         system_addresses::assert_ol(vm);
+        // First we try to calculate what's the maximum number of seats we
+        // should offer
+        // If we are above a certain threshold we can start playing the musical
+        // chairs game.
+        let (compliant_vals, seats) = calc_max_seats(epoch, round);
 
+        // musical chairs, add randomness for sufficiently safe sized sets
+        if (seats > 40) {
+          let rand = randomness::u8_range(0, (seats/10 as u8));
+          seats = seats - (rand as u64);
+        };
+
+        let chairs = borrow_global_mut<Chairs>(@ol_framework);
+        chairs.seats_offered = seats;
+
+        (compliant_vals, seats)
+    }
+
+    /// get the number of seats in the game
+    /// returns the list of compliant validators and the number of seats
+    /// we should offer in the next epoch
+    /// (compliant_vals, seats_offered)
+    public fun calc_max_seats(
+        epoch: u64,
+        round: u64,
+    ): (vector<address>, u64) {
         let validators = stake::get_current_validators();
 
         let (compliant_vals, _non, fail_ratio) =
         eval_compliance_impl(validators, epoch, round);
 
-        let chairs = borrow_global_mut<Chairs>(@ol_framework);
-
         let num_compliant_nodes = vector::length(&compliant_vals);
 
+        let seats_offered = num_compliant_nodes;
 
-        // Error handle. We should not have gone into an epoch where we
-        // had MORE validators than seats offered.
-        // If this happens it's because we are in some kind of a fork condition.
-        // return with no changes
-        if (num_compliant_nodes > chairs.seats_offered) {
-          return (compliant_vals, chairs.seats_offered)
+        // Boot up
+        // After an upgrade or incident the network may need to rebuild the
+        // validator set from a small base.
+        // we should increase the available seats starting from a base of
+        // compliant nodes. And make it competitive for the unknown nodes.
+        // Instead of increasing the seats by +1 the compliant vals we should
+        // increase by compliant + (1/2 compliant - 1) or another
+        // safe threshold.
+        // Another effect is that with PoF we might be dropping compliant nodes,
+        //  in favor of unknown nodes with high bids.
+        // So in the case of a small validator set, we ignore the musical_chairs
+        // suggestion, and increase the seats offered, and guarantee seats to
+        // performant nodes.
+        if (
+          num_compliant_nodes < VAL_BOOT_UP_THRESHOLD &&
+          num_compliant_nodes > 2
+        ) {
+          seats_offered = num_compliant_nodes + (num_compliant_nodes/2 - 1);
+          return (compliant_vals, seats_offered)
         };
 
         // The happiest case. All filled seats performed well in the last epoch
-        if (fixed_point32::is_zero(*&fail_ratio)) { // handle this here to prevent multiplication error below
-          chairs.seats_offered = chairs.seats_offered + 1;
-          return (compliant_vals, chairs.seats_offered)
+        if (fixed_point32::is_zero(*&fail_ratio)) { // handle this here to
+        // prevent multiplication error below
+          seats_offered = seats_offered + 1;
+          return (compliant_vals, seats_offered)
         };
 
         // Conditions under which seats should be one more than the number of compliant nodes(<= 5%)
@@ -122,20 +160,20 @@ module ol_framework::musical_chairs {
           // If network is bootstrapping don't reduce the seat count below
           // compliant nodes,
 
-          chairs.seats_offered = num_compliant_nodes;
+          seats_offered = num_compliant_nodes;
 
         } else {
             // Ok case. If it's between 0 and 5% then we accept that margin as if it was fully compliant
-            chairs.seats_offered = chairs.seats_offered + 1;
+            seats_offered = num_compliant_nodes + 1;
         };
 
         // catch failure mode
         // mostly for genesis, or testnets
-        if (chairs.seats_offered < 4) {
-          chairs.seats_offered = 4;
+        if (seats_offered < 4) {
+          seats_offered = 4;
         };
 
-        (compliant_vals, chairs.seats_offered)
+        (compliant_vals, seats_offered)
     }
 
     // Update seat count to match filled seats post-PoF auction.
