@@ -14,7 +14,7 @@ on:
       - "release**"
       - "main**"
   schedule:
-    - cron:  '30 00 * * *'
+    - cron: '30 00 * * *'
 
 env:
   DIEM_FORGE_NODE_BIN_PATH: ${{github.workspace}}/diem-node
