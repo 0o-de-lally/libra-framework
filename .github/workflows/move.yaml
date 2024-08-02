@@ -34,7 +34,7 @@ jobs:
       - name: install libra cli (for faster Move compiles)
         shell: bash
         run: |
-          wget -O $HOME/.cargo/bin https://github.com/0LNetworkCommunity/libra-framework/releases/download/latest/libra
+          wget -O $HOME/.cargo/bin/libra https://github.com/0LNetworkCommunity/libra-framework/releases/download/latest/libra
           chmod +x $HOME/.cargo/bin/libra
           ls -l $HOME/.cargo/bin
 
