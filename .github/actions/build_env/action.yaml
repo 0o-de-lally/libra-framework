@@ -54,3 +54,10 @@ runs:
         sudo chmod 755 $DIEM_FORGE_NODE_BIN_PATH &&
         echo $DIEM_FORGE_NODE_BIN_PATH &&
         ls -l $DIEM_FORGE_NODE_BIN_PATH
+
+    - name: install libra cli (for faster Move compiles)
+      shell: bash
+      run: |
+        wget -O $HOME/.cargo/bin https://github.com/0LNetworkCommunity/libra-framework/releases/download/latest/libra
+        sudo chmod 755 $HOME/.cargo/bin/libra
+        ls -l $HOME/.cargo/bin

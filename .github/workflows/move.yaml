@@ -19,25 +19,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # NOTE: for debugging CI this allow shell access to github runner. Will print out tmate.io terminal url
-      # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
-      #   with:
-      #     detached: true
-      #   timeout-minutes: 15
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
+        timeout-minutes: 15
 
       - uses: actions/checkout@v3
 
-      - name: install diem (for move tests)
-        run: >
-          wget -O ${{github.workspace}}/diem https://github.com/0LNetworkCommunity/diem/releases/latest/download/diem &&
-          chmod +x ${{github.workspace}}/diem
+      # - name: install libra (for move tests)
+      #   run: >
+      #     wget -O ${{github.workspace}}/diem https://github.com/0LNetworkCommunity/diem/releases/latest/download/diem &&
+      #     chmod +x ${{github.workspace}}/diem
+      - name: install libra cli (for faster Move compiles)
+        shell: bash
+        run: |
+          wget -O $HOME/.cargo/bin https://github.com/0LNetworkCommunity/libra-framework/releases/download/latest/libra
+          chmod +x $HOME/.cargo/bin/libra
+          ls -l $HOME/.cargo/bin
 
-      - uses: Swatinem/rust-cache@v2.7.3
-        with:
-            shared-key: "libra-framework"
-            cache-all-crates: true
+      # - uses: Swatinem/rust-cache@v2.7.3
+      #   with:
+      #       shared-key: "libra-framework"
+      #       cache-all-crates: true
 
       # Move framework tests
       - name: move framework
         working-directory: ./framework/libra-framework
-        run: ${{github.workspace}}/diem move test
+        run: libra move test
