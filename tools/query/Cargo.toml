@@ -21,5 +21,11 @@ serde_json = { workspace = true }
 tokio = { workspace = true }
 
 [dev-dependencies]
+diem-validator-interface = { workspace = true }
+diem-vm = { workspace = true }
+
 hex = { workspace = true }
 libra-smoke-tests = { workspace = true }
+
+move-vm-types = { workspace = true }
+move-core-types = { workspace = true }

@@ -232,7 +232,7 @@ impl QueryType {
                 Ok(json!({ "migrated": res }))
             }
             QueryType::ComWalletSigners { account } => {
-                // Wont work at the moment as there is no community wallet that with governace structure
+                // Wont work at the moment as there is no community wallet that with governance structure
                 let _res = community_wallet_signers(&client, *account).await?;
                 Ok(json!({ "signers": "None"}))
             }

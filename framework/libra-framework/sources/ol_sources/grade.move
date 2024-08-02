@@ -18,7 +18,7 @@ module ol_framework::grade {
 
     /// what threshold of failed props should the network allow
     /// one validator before jailing?
-    const FAILED_PROPS_THRESHOLD_PCT: u64 =20;
+    const FAILED_PROPS_THRESHOLD_PCT: u64 = 20;
 
     /// percent of net proposals vs. leading val
     /// i.e. how far behind the leading validator by net proposals
