@@ -38,7 +38,8 @@ jobs:
 
       - name: build framework
         working-directory: ./framework
-        run: cargo r release
+        # NOTE: libra should have been installed at the build_env workflow
+        run: libra move framework release
 
       - uses: actions/upload-artifact@v4.3.1
         with:

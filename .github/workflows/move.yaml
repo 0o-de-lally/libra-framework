@@ -27,21 +27,13 @@ jobs:
 
       - uses: actions/checkout@v3
 
-      # - name: install libra (for move tests)
-      #   run: >
-      #     wget -O ${{github.workspace}}/diem https://github.com/0LNetworkCommunity/diem/releases/latest/download/diem &&
-      #     chmod +x ${{github.workspace}}/diem
+      # TODO: duplicated with build_env (which is too much of a heavy lift for this workflow)
       - name: install libra cli (for faster Move compiles)
         shell: bash
         run: |
           wget -O $HOME/.cargo/bin/libra https://github.com/0LNetworkCommunity/libra-framework/releases/latest/download/libra
           chmod +x $HOME/.cargo/bin/libra
           ls -l $HOME/.cargo/bin
-
-      # - uses: Swatinem/rust-cache@v2.7.3
-      #   with:
-      #       shared-key: "libra-framework"
-      #       cache-all-crates: true
 
       # Move framework tests
       - name: move framework
