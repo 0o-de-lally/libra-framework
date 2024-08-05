@@ -46,9 +46,10 @@ async fn try_read_manifest() {
     let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let db_path = crate_dir.join("temp_db/");
     let waypoint_str = "116:b4c9918ddb62469cc3e7e7b2a01b43aeac803470913b3a89afdcc44078df8d8a";
-    let manifest_path = crate_dir.join("fixtures/v7/epoch_ending_116-.be9b");
+    let manifest_path = crate_dir.join("fixtures/v7/epoch_ending_116-.be9b/epoch_ending.manifest");
+    dbg!(&manifest_path);
 
     let controller = epoch_controller(db_path, manifest_path, waypoint_str);
-    let res = controller.run(None).await.unwrap();
+    let res = controller.run(None).await.expect("run failed");
     dbg!(&res);
 }
