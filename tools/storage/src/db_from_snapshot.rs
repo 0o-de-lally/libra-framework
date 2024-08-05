@@ -23,9 +23,7 @@ pub fn trusted_waypoints(wp_str: &str) -> TrustedWaypointOpt {
     }
 }
 
-
 pub async fn manifest_to_db(new_db_path: PathBuf, manifest_path: PathBuf, waypoint_str: &str) {
-
     let epoch_restore_opts = restore_opts(manifest_path.to_str().expect("expect path str"));
     let global_restore_opts = GlobalRestoreOptions {
         run_mode: Arc::new(RestoreRunMode::Verify),
@@ -42,7 +40,6 @@ pub async fn manifest_to_db(new_db_path: PathBuf, manifest_path: PathBuf, waypoi
 
     EpochEndingRestoreController::new(epoch_restore_opts, global_restore_opts, db);
 }
-
 
 #[tokio::test]
 async fn try_read_manifest() {
