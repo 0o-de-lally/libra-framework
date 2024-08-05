@@ -29,3 +29,6 @@ diem/
 # exclude move coverage
 .coverage_map.mvcov
 .trace
+
+# mac
+.DS_Store
