@@ -10,7 +10,7 @@ pub fn init_storage(local_fs_dir: PathBuf) -> Result<Arc<dyn BackupStorage>> {
     Ok(Arc::new(LocalFs::new(local_fs_dir)))
 }
 
-pub fn restore_opts(manifest_path: &str) -> EpochEndingRestoreOpt {
+pub fn epoch_restore_opts(manifest_path: &str) -> EpochEndingRestoreOpt {
     EpochEndingRestoreOpt {
         manifest_handle: manifest_path.to_string(),
     }
@@ -23,8 +23,8 @@ pub fn trusted_waypoints(wp_str: &str) -> TrustedWaypointOpt {
     }
 }
 
-pub async fn manifest_to_db(new_db_path: PathBuf, manifest_path: PathBuf, waypoint_str: &str) {
-    let epoch_restore_opts = restore_opts(manifest_path.to_str().expect("expect path str"));
+pub fn epoch_controller(new_db_path: PathBuf, manifest_path: PathBuf, waypoint_str: &str) -> EpochEndingRestoreController {
+    let epoch_restore_opts = epoch_restore_opts(manifest_path.to_str().expect("expect path str"));
     let global_restore_opts = GlobalRestoreOptions {
         run_mode: Arc::new(RestoreRunMode::Verify),
         target_version: 0,
@@ -38,7 +38,7 @@ pub async fn manifest_to_db(new_db_path: PathBuf, manifest_path: PathBuf, waypoi
     };
     let db = init_storage(new_db_path).unwrap();
 
-    EpochEndingRestoreController::new(epoch_restore_opts, global_restore_opts, db);
+    EpochEndingRestoreController::new(epoch_restore_opts, global_restore_opts, db)
 }
 
 #[tokio::test]
@@ -48,5 +48,7 @@ async fn try_read_manifest() {
     let waypoint_str = "116:b4c9918ddb62469cc3e7e7b2a01b43aeac803470913b3a89afdcc44078df8d8a";
     let manifest_path = crate_dir.join("fixtures/v7/epoch_ending_116-.be9b");
 
-    manifest_to_db(db_path, manifest_path, waypoint_str).await;
+    let controller = epoch_controller(db_path, manifest_path, waypoint_str);
+    let res = controller.run(None).await.unwrap();
+    dbg!(&res);
 }
