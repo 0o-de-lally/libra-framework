@@ -46,11 +46,11 @@ module ol_framework::proof_of_fee {
   /// Upper bound threshold for bid percentages.
   const BID_UPPER_BOUND: u64 = 0950; // 95%
   /// Lower bound threshold for bid percentages.
-  const BID_LOWER_BOUND: u64 = 0500; // 50%
+  const BID_LOWER_BOUND: u64 = 0150; // 15%
   /// Short window period for recent bid trends.
-  const SHORT_WINDOW: u64 = 5; // 5 epochs
+  const SHORT_WINDOW: u64 = 10; // 10 epochs
   /// Long window period for extended bid trends.
-  const LONG_WINDOW: u64 = 10; // 10 epochs
+  const LONG_WINDOW: u64 = 30; // 30 epochs
   /// Margin for vouches
   const VOUCH_MARGIN: u64 = 2;
 
@@ -515,7 +515,6 @@ module ol_framework::proof_of_fee {
     fixed_point32::create_from_rational(bid_pct, 1000)
   }
 
-
   /// Calculates the reward adjustment based on bid history and nominal reward.
   /// @param median_history - The median history of bids.
   /// @param nominal_reward - The current nominal reward.
@@ -547,19 +546,19 @@ module ol_framework::proof_of_fee {
     if (nominal_reward > 0) {
       if (epochs_above > epochs_below) {
         if (epochs_above > LONG_WINDOW) {
-          let less_ten_pct = (nominal_reward / 10);
-          return (true, false, less_ten_pct)
+          let less_three_pct = 3 * (nominal_reward / 100);
+          return (true, false, less_three_pct)
         } else if (epochs_above > SHORT_WINDOW) {
-          let less_five_pct = (nominal_reward / 20);
-          return (true, false, less_five_pct)
+          let less_one_pct = (nominal_reward / 100);
+          return (true, false, less_one_pct)
         }
       } else {
         if (epochs_below > LONG_WINDOW) {
-          let increase_ten_pct = (nominal_reward / 10);
-          return (true, true, increase_ten_pct)
+          let increase_three_pct = 3 * (nominal_reward / 100);
+          return (true, true, increase_three_pct)
         } else if (epochs_below > SHORT_WINDOW) {
-          let increase_five_pct = (nominal_reward / 20);
-          return (true, true, increase_five_pct)
+          let increase_once_pct = (nominal_reward / 100);
+          return (true, true, increase_once_pct)
         }
       };
       return (true, false, 0)
