@@ -1,9 +1,7 @@
 name: publish cli
 on:
   push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+"
+    tags: # run this also on release candidates
       - "[0-9]+.[0-9]+.[0-9]*"
     branches:
       - "ci"
@@ -26,7 +24,6 @@ jobs:
 
       - name: checkout
         uses: actions/checkout@v3
-
 
       # note: building in the same cargo command will lead to "feature unification", which leads to a `diem-node` binary which fails.
       - name: libra release build
