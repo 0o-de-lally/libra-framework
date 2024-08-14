@@ -1,9 +1,10 @@
-name: publish bin
+name: publish cli
 on:
   push:
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
       - "[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]*"
     branches:
       - "ci"
 jobs:
@@ -66,17 +67,3 @@ jobs:
           tag: ${{ github.ref }}
           overwrite: true
           file_glob: true
-
-      # TODO
-      # - name: libra-framework release build
-      # # size and performance optimized binary with profile.cli
-      #   run: cargo b --release -p libra-framework
-
-      # - name: CLI publish
-      #   uses: svenstaro/upload-release-action@v2
-      #   with:
-      #     repo_token: ${{ secrets.GITHUB_TOKEN }}
-      #     file: target/release/libra-framework
-      #     tag: ${{ github.ref }}
-      #     overwrite: true
-      #     file_glob: true
