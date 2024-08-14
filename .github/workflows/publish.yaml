@@ -3,7 +3,6 @@ on:
   push:
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+"
       - "[0-9]+.[0-9]+.[0-9]*"
     branches:
       - "ci"
@@ -21,11 +20,12 @@ jobs:
       #   with:
       #     detached: true
       #   timeout-minutes: 15
-      - name: setup env
-        uses: ./.github/actions/build_env
 
       - name: checkout
         uses: actions/checkout@v3
+
+      - name: setup env
+        uses: ./.github/actions/build_env
 
 
       # note: building in the same cargo command will lead to "feature unification", which leads to a `diem-node` binary which fails.
