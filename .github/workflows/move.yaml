@@ -2,9 +2,9 @@ name: move framework tests
 
 on:
   push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+"
+    # tags:
+    #   - "[0-9]+.[0-9]+.[0-9]+"
+    #   - "[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+"
     branches: ["**"] # glob pattern to allow slash /
   pull_request:
     types:
