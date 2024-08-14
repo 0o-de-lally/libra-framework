@@ -21,38 +21,12 @@ jobs:
       #   with:
       #     detached: true
       #   timeout-minutes: 15
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-          # all of these default to true, but feel free to set to
-          # "false" if necessary for your workflow
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: false
-          docker-images: true
-          swap-storage: true
-
-      - uses: dtolnay/rust-toolchain@1.70.0
-        with:
-          components: rustfmt
-
-      ######## CACHE ########
-      - name: system packages
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: build-essential ca-certificates clang curl git libpq-dev libssl-dev pkg-config lsof lld libgmp-dev
-          version: 1.0
+      - name: setup env
+        uses: ./.github/actions/build_env
 
       - name: checkout
         uses: actions/checkout@v3
 
-      - name: sccache
-        uses: 0o-de-lally/sccache-action@local
 
       # note: building in the same cargo command will lead to "feature unification", which leads to a `diem-node` binary which fails.
       - name: libra release build
