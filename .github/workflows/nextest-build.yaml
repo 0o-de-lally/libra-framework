@@ -17,21 +17,15 @@ jobs:
     name: Build test artifacts
     runs-on: ubuntu-latest
     steps:
-      - uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: build-essential ca-certificates clang curl git libpq-dev libssl-dev pkg-config lsof lld
-          version: 1.0
 
       - uses: actions/checkout@v4
         with:
           # By default actions/checkout checks out a merge commit. Check out the PR head instead.
           # https://github.com/actions/checkout#checkout-pull-request-head-commit-instead-of-merge-commit
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: 1.77.2
-          override: true
+
+      - uses: ./.github/actions/build_env
+
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - name: Build and archive tests

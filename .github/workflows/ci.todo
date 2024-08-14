@@ -29,11 +29,6 @@ jobs:
 
       - uses: ./.github/actions/build_env
 
-      - uses: Swatinem/rust-cache@v2.7.3
-        with:
-          shared-key: "libra-framework"
-          cache-all-crates: true
-
       - name: build framework
         working-directory: ./framework
         # uses the libra binary to compile faster, without needing to compile the Move compiler
