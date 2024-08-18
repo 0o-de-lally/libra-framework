@@ -1,6 +1,6 @@
 use crate::setup;
 use clap::{self, Parser};
-use libra_config::validator_registration;
+use libra_config::validator_registration::{self, ValCredentials};
 use libra_smoke_tests::libra_smoke::LibraSmoke;
 use std::{fs, path::PathBuf};
 /// Twin of the network
@@ -25,9 +25,8 @@ pub enum Sub {
     /// Just apply a change to DB at rest
     Testnet {
         #[clap(long, short)]
-        /// Pubkey files for the testnet validators which will drive the Twin
-        /// should point to validator-identity.yaml
-        val_id_files: Vec<PathBuf>,
+        /// Registration files (operator.yaml) for testnet validators which will drive the Twin.
+        operator_pubkeys: Vec<PathBuf>,
     },
 }
 
@@ -43,8 +42,8 @@ impl TwinCli {
                 let mut smoke = LibraSmoke::new(Some(num_validators), None).await?;
                 setup::make_twin_swarm(&mut smoke, Some(db_path), true).await?;
             }
-            Sub::Testnet { val_id_files } => {
-                let creds = validator_registration::parse_pub_files_to_vec(val_id_files.clone());
+            Sub::Testnet { operator_pubkeys } => {
+                let creds = ValCredentials::new_from_file_list(operator_pubkeys.clone())?;
                 println!("Creating a rescue blob from the reference db");
 
                 let rescue_blob_path = setup::make_rescue_twin_blob(&db_path, creds).await?;

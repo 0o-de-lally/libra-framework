@@ -250,7 +250,8 @@ pub async fn make_twin_swarm(
     let reference_db = reference_db.unwrap_or_else(|| {
         smoke
             .swarm
-            .validators().next()
+            .validators()
+            .next()
             .unwrap()
             .config()
             .storage

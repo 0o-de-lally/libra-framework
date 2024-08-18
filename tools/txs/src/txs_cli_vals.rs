@@ -9,7 +9,7 @@ use libra_cached_packages::libra_stdlib::EntryFunctionCall::{
     StakeUpdateNetworkAndFullnodeAddresses, ValidatorUniverseRegisterValidator, VouchRevoke,
     VouchVouchFor,
 };
-use libra_config::validator_registration;
+use libra_config::validator_registration::ValCredentials;
 use libra_types::global_config_dir;
 use libra_wallet::validator_files::OPERATOR_FILE;
 use std::{fs, path::PathBuf};
@@ -107,7 +107,7 @@ impl ValidatorTxs {
                 }
             }
             ValidatorTxs::Register { operator_file } => {
-                let reg = validator_registration::registration_from_private_file(
+                let reg = ValCredentials::new_from_operator_file(
                     operator_file.to_owned(),
                 )?;
                 ValidatorUniverseRegisterValidator {

@@ -4,7 +4,7 @@ use diem_types::{
     account_address::AccountAddress,
     transaction::{Script, Transaction, WriteSetPayload},
 };
-use libra_config::validator_registration::parse_pub_files_to_vec;
+use libra_config::validator_registration::ValCredentials;
 use libra_framework::builder::framework_generate_upgrade_proposal::libra_compile_script;
 use move_core_types::language_storage::CORE_CODE_ADDRESS;
 use std::path::PathBuf;
@@ -30,9 +30,7 @@ pub struct RescueTxOpts {
     pub debug_vals: Option<Vec<AccountAddress>>,
     #[clap(long)]
     // TODO: This is duplicated with TwinCli, which has more features
-    /// testnet twin options
-    /// replaces the validator set with these new validators that need to be registered
-    /// must be in format of testnet_vals.yaml
+    /// replaces the validator set with validators from one or more operator.yaml
     pub twin_registration: Option<Vec<PathBuf>>,
 }
 
@@ -60,7 +58,7 @@ impl RescueTxOpts {
                 session_tools::publish_current_framework(&db_path, self.debug_vals.to_owned())?;
             Transaction::GenesisTransaction(WriteSetPayload::Direct(cs))
         } else if let Some(reg_files) = self.twin_registration.to_owned() {
-            let registrations = parse_pub_files_to_vec(reg_files);
+            let registrations = ValCredentials::new_from_file_list(reg_files)?;
             let cs = session_tools::twin_testnet(&db_path, registrations)?;
             Transaction::GenesisTransaction(WriteSetPayload::Direct(cs))
         } else {
