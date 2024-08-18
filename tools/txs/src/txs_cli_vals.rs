@@ -107,9 +107,7 @@ impl ValidatorTxs {
                 }
             }
             ValidatorTxs::Register { operator_file } => {
-                let reg = ValCredentials::new_from_operator_file(
-                    operator_file.to_owned(),
-                )?;
+                let reg = ValCredentials::new_from_operator_file(operator_file.to_owned())?;
                 ValidatorUniverseRegisterValidator {
                     consensus_pubkey: reg.consensus_pubkey,
                     proof_of_possession: reg.proof_of_possession,

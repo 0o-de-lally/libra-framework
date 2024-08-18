@@ -67,8 +67,7 @@ impl ValCredentials {
             .into_iter()
             .map(|p| {
                 println!("reading file: {}", p.display());
-                Self::new_from_operator_file(Some(p))
-                    .expect("expected to parse operator.yaml")
+                Self::new_from_operator_file(Some(p)).expect("expected to parse operator.yaml")
             })
             .collect();
         Ok(creds)
