@@ -27,7 +27,7 @@ async fn test_framework_upgrade_writeset() -> anyhow::Result<()> {
         script_path: None,
         framework_upgrade: true,
         debug_vals: None,
-        testnet_vals: None,
+        twin_registration: None,
     };
     r.run()?;
 

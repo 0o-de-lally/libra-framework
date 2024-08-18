@@ -66,7 +66,7 @@ async fn test_create_e2e_rescue_tx() -> anyhow::Result<()> {
         script_path: Some(script_path),
         framework_upgrade: false,
         debug_vals: None,
-        testnet_vals: None,
+        twin_registration: None,
     };
     let genesis_blob_path = rescue.run()?;
 
