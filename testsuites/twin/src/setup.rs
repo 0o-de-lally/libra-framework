@@ -353,7 +353,7 @@ async fn extract_credentials(marlon_node: &LocalNode) -> anyhow::Result<ValCrede
 
     assert_eq!(consensus_public_key_chain, consensus_pubkey);
     Ok(ValCredentials {
-        account,
+        account_address: account,
         consensus_pubkey,
         proof_of_possession,
         network_addresses,

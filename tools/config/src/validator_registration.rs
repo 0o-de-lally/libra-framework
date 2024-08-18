@@ -16,7 +16,7 @@ use std::{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ValCredentials {
-    pub account: AccountAddress,
+    pub account_address: AccountAddress,
     /// key for signing consensus transactions
     pub consensus_pubkey: Vec<u8>,
     /// proof that the node is in possession of the keys
@@ -53,7 +53,7 @@ pub fn registration_from_private_file(
     )?;
 
     Ok(ValCredentials {
-        account: oc.operator_account_address.into(),
+        account_address: oc.operator_account_address.into(),
         consensus_pubkey: oc.consensus_public_key.to_bytes().to_vec(),
         proof_of_possession: oc.consensus_proof_of_possession.to_bytes().to_vec(),
         network_addresses: bcs::to_bytes(&vec![val_net_protocol])?,
@@ -88,7 +88,7 @@ fn test_registration_pub_file_output() {
     use diem_temppath::TempPath;
 
     let vr = ValCredentials {
-        account: AccountAddress::ZERO,
+        account_address: AccountAddress::ZERO,
         consensus_pubkey: vec![],
         proof_of_possession: vec![],
         network_addresses: vec![],

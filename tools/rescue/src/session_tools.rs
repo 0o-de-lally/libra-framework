@@ -189,12 +189,12 @@ pub fn session_add_validators(
     //setup the allowed validators
     for cred in creds.iter() {
         let signer = MoveValue::Signer(AccountAddress::ONE);
-        let vector_val = MoveValue::vector_address(vec![cred.account]);
+        let vector_val = MoveValue::vector_address(vec![cred.account_address]);
         let args = vec![&signer, &vector_val];
         //configure allowed validators(it should be deprecated??)
         dbg!("configure_allowed_validators");
         libra_execute_session_function(session, "0x1::stake::configure_allowed_validators", args)?;
-        let signer = MoveValue::Signer(cred.account);
+        let signer = MoveValue::Signer(cred.account_address);
         let consensus_pubkey = MoveValue::vector_u8(cred.consensus_pubkey.clone());
         let proof_of_possession = MoveValue::vector_u8(cred.proof_of_possession.clone());
         let network_addresses = MoveValue::vector_u8(cred.network_addresses.clone());
@@ -237,7 +237,7 @@ pub fn session_add_validators(
             }
         };
     }
-    let validators = MoveValue::vector_address(creds.iter().map(|c| c.account).collect());
+    let validators = MoveValue::vector_address(creds.iter().map(|c| c.account_address).collect());
     let signer = MoveValue::Signer(AccountAddress::ONE);
     //set the new validators
     dbg!("set_validators");
