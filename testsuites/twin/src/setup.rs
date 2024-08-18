@@ -116,7 +116,10 @@ fn temp_backup_db(reference_db: &Path, temp_dir: &Path) -> anyhow::Result<PathBu
     Ok(db_path)
 }
 
-pub fn apply_rescue_on_db(db_to_change_path: &Path, rescue_blob: &Path) -> anyhow::Result<Waypoint> {
+pub fn apply_rescue_on_db(
+    db_to_change_path: &Path,
+    rescue_blob: &Path,
+) -> anyhow::Result<Waypoint> {
     let mut waypoint: Option<Waypoint> = None;
     let bootstrap = BootstrapOpts {
         db_dir: db_to_change_path.to_owned(),
