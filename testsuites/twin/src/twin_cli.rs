@@ -53,7 +53,7 @@ impl TwinCli {
 
                 let wp = setup::apply_rescue_on_db(&db_path, &rescue_blob_path)?;
 
-                println!("waypoint: {}", wp.to_string());
+                println!("waypoint: {}", wp);
             }
         }
         Ok(())
