@@ -6,7 +6,7 @@ use libra_wallet::validator_files::OPERATOR_FILE;
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 /// Public data structure for validators to register their nodes on chain
