@@ -1,6 +1,6 @@
 use crate::setup;
 use clap::{self, Parser};
-use libra_config::validator_registration::{self, ValCredentials};
+use libra_config::validator_registration::{ValCredentials};
 use libra_smoke_tests::libra_smoke::LibraSmoke;
 use std::{fs, path::PathBuf};
 /// Twin of the network
