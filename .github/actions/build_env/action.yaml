@@ -42,3 +42,5 @@ runs:
 
     # call own action for libra_cli
     - uses: 0LNetworkCommunity/libra-framework/.github/actions/get_cli@main
+    # test
+    - uses: ${{ github.action_repository }}/.github/actions/get_cli@${{ github.action_ref }}
