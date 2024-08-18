@@ -1,18 +1,15 @@
-use anyhow::{self, Context};
+use anyhow;
 use diem_genesis::config::OperatorConfiguration;
 use diem_types::account_address::AccountAddress;
 use libra_types::global_config_dir;
 use libra_wallet::validator_files::OPERATOR_FILE;
 use serde::{Deserialize, Serialize};
-use std::{
-    fs,
-    path::PathBuf,
-};
+use std::{fs, path::PathBuf};
 
 /// Public data structure for validators to register their nodes on chain
 /// creating this depends on access to private keys.
-///
-// TODO: this matches the  libra framework sdk ValidatorUniverseRegisterValidator, there may be other duplications elsewhere.
+
+// TODO: this matches the libra framework sdk ValidatorUniverseRegisterValidator, there may be other duplications elsewhere.
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ValCredentials {
@@ -43,21 +40,22 @@ impl ValCredentials {
             .validator_host
             .as_network_address(oc.validator_network_public_key)?;
 
-        let fullnode_host = oc
-            .full_node_host
-            .context("cannot find fullnode host in operator config file")?;
-        let vfn_fullnode_protocol =
-            fullnode_host
-                .as_network_address(oc.full_node_network_public_key.context(
-                    "cannot find fullnode network public key in operator config file",
-                )?)?;
+        let vfn_list = if let Some(vfn_host) = oc.full_node_host {
+            let key = oc
+                .full_node_network_public_key
+                .unwrap_or(oc.validator_network_public_key);
+            let cfg = vfn_host.as_network_address(key)?;
+            vec![cfg]
+        } else {
+            vec![]
+        };
 
         Ok(ValCredentials {
             account_address: oc.operator_account_address.into(),
             consensus_pubkey: oc.consensus_public_key.to_bytes().to_vec(),
             proof_of_possession: oc.consensus_proof_of_possession.to_bytes().to_vec(),
             network_addresses: bcs::to_bytes(&vec![val_net_protocol])?,
-            fullnode_addresses: bcs::to_bytes(&vec![vfn_fullnode_protocol])?,
+            fullnode_addresses: bcs::to_bytes(&vfn_list)?,
         })
     }
     /// create the list of validators that need to be created on chain
