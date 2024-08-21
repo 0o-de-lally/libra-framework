@@ -86,7 +86,7 @@ where
         &ChangeSetConfigs::unlimited_at_gas_feature_version(LATEST_GAS_FEATURE_VERSION),
     )?;
 
-    println!("session run sucessfully");
+    println!("session run successfully");
     Ok(change_set)
 }
 
@@ -126,8 +126,8 @@ pub fn upgrade_framework(session: &mut SessionExt) -> anyhow::Result<()> {
     Ok(())
 }
 
-// wrapper to exectute a function
-// call anythign you want, except #[test] functions
+// wrapper to execute a function
+// call anything you want, except #[test] functions
 // note this ignores the `public` and `friend` visibility
 pub fn libra_execute_session_function(
     session: &mut SessionExt,

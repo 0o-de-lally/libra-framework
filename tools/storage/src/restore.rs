@@ -3,8 +3,8 @@
 use std::path::Path;
 
 use crate::{
-    dbtool_init::{run_restore, RestoreTypes},
     restore_bundle::RestoreBundle,
+    runner::{run_restore, RestoreTypes},
 };
 
 pub async fn full_restore(db_destination: &Path, bundle: &RestoreBundle) -> anyhow::Result<()> {
