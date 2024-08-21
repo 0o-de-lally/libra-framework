@@ -5847,6 +5847,7 @@ dependencies = [
  "libra-query",
  "libra-rescue",
  "libra-smoke-tests",
+ "libra-storage",
  "libra-txs",
  "regex",
  "serde_json",
