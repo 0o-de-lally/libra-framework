@@ -37,7 +37,7 @@ pub fn get_backup_storage(local_fs_dir: PathBuf) -> Result<Arc<dyn BackupStorage
 }
 
 pub fn get_db_kv(db_dir: &Path) -> anyhow::Result<DiemDB> {
-    Ok(DiemDB::open_kv_only(
+    DiemDB::open_kv_only(
         db_dir.to_owned(),
         false,                       /* read_only */
         NO_OP_STORAGE_PRUNER_CONFIG, /* pruner config */
@@ -45,7 +45,7 @@ pub fn get_db_kv(db_dir: &Path) -> anyhow::Result<DiemDB> {
         false,
         BUFFERED_STATE_TARGET_ITEMS,
         DEFAULT_MAX_NUM_NODES_PER_LRU_CACHE_SHARD,
-    )?)
+    )
 }
 
 pub fn get_global_db_opts(

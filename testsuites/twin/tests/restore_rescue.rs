@@ -50,11 +50,11 @@ async fn test_full_restore() -> anyhow::Result<()> {
     println!("Create a rescue blob from the reference db");
 
     // let rescue_blob_path = Twin::make_rescue_twin_blob(&temp_db_path, creds).await?;
-    let rescue_blob_path = make_rescue_noop(&db_temp)?;
+    let rescue_blob_path = make_rescue_noop(db_temp)?;
 
     println!("Apply the rescue blob to the swarm db & bootstrap");
 
-    let wp = Twin::apply_rescue_on_db(&db_temp, &rescue_blob_path)?;
+    let wp = Twin::apply_rescue_on_db(db_temp, &rescue_blob_path)?;
 
     Ok(())
 }
