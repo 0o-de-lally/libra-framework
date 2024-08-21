@@ -67,7 +67,6 @@ impl Twin {
         println!("run session to create validator onboarding tx (rescue.blob)");
         let vmc = libra_run_session(
             db_path.to_path_buf(),
-            // |s| writeset_voodoo_events(s),
             |session| session_add_validators(session, creds, false),
             None,
             None,
@@ -121,7 +120,9 @@ impl Twin {
         Ok(db_path)
     }
 
-    fn apply_rescue_on_db(
+    /// using a rescue DB apply a rescue blob
+    // NOTE: this may be duplicated with libra-rescue
+    pub fn apply_rescue_on_db(
         db_to_change_path: &Path,
         rescue_blob: &Path,
     ) -> anyhow::Result<Waypoint> {
