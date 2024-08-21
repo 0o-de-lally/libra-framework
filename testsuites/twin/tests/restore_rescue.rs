@@ -1,6 +1,6 @@
 use diem_types::transaction::Transaction;
 use diem_types::transaction::WriteSetPayload;
-use libra_rescue::session_tools::{self,libra_run_session, writeset_voodoo_events};
+use libra_rescue::session_tools::{self, libra_run_session, writeset_voodoo_events};
 use libra_storage::{restore, restore_bundle::RestoreBundle};
 use libra_twin_tests::runner::Twin;
 use std::path::{Path, PathBuf};
@@ -41,7 +41,10 @@ async fn test_helper_setup_restore() -> anyhow::Result<PathBuf> {
 #[tokio::test]
 async fn test_full_restore() -> anyhow::Result<()> {
     // let db_temp = test_helper_setup_restore().await?;
-    let db_temp = Path::new("/tmp/fa27fe959d023d6efc0163f0ae71f47b");
+    // let db_temp = Path::new("/tmp/fa27fe959d023d6efc0163f0ae71f47b");
+    // let db_temp = Path::new("/root/.libra/rescue_db");
+    let db_temp = Path::new("/root/.libra/data/db");
+
     dbg!(&db_temp);
 
     println!("Create a rescue blob from the reference db");

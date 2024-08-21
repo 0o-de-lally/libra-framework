@@ -106,7 +106,6 @@ impl BootstrapOpts {
             output_waypoint
         );
 
-
         // Stop here if we are just trying to get info about DB
         if self.info {
             return Ok(None);
