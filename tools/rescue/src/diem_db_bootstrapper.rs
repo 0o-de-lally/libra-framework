@@ -86,22 +86,8 @@ impl BootstrapOpts {
             executed_trees.txn_accumulator().root_hash
         );
 
-        if self.info {
-            return Ok(None);
-        }
-
-        if self.info {
-            println!("num txs: {:?}", executed_trees.num_transactions());
-            println!("version: {:?}", executed_trees.version());
-            println!(
-                "root hash: {:?}",
-                executed_trees.txn_accumulator().root_hash
-            );
-
-            return Ok(None);
-        }
-
         if let Some(waypoint) = self.waypoint_to_verify {
+            println!("verifying waypoint");
             ensure!(
                 waypoint.version() == executed_trees.num_transactions(),
                 "Trying to generate waypoint at version {}, but DB has {} transactions.",
@@ -111,14 +97,20 @@ impl BootstrapOpts {
         }
 
         let committer = calculate_genesis::<DiemVM>(&db_rw, executed_trees, &genesis_txn)
-            .with_context(|| format_err!("Failed to calculate genesis."))?;
+            .with_context(|| format_err!("Failed to calculate genesis. The genesis transaction does not succeed, or a restore has been incomplete."))?;
+
+        let output_waypoint = committer.waypoint();
 
         println!(
             "Successfully calculated genesis. Got waypoint: {}",
-            committer.waypoint()
+            output_waypoint
         );
 
-        let output_waypoint = committer.waypoint();
+
+        // Stop here if we are just trying to get info about DB
+        if self.info {
+            return Ok(None);
+        }
 
         if let Some(waypoint) = self.waypoint_to_verify {
             ensure!(
@@ -131,6 +123,7 @@ impl BootstrapOpts {
         }
 
         if self.commit {
+            println!("committing rescue transaction");
             committer
                 .commit()
                 .with_context(|| format_err!("Committing genesis to DB."))?;

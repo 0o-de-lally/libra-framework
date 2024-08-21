@@ -136,6 +136,7 @@ impl Twin {
         };
 
         let waypoint_to_check = bootstrap.run()?.expect("could not get waypoint");
+        dbg!(&waypoint_to_check);
 
         // give time for any IO to finish
         std::thread::sleep(Duration::from_secs(1));
