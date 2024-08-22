@@ -37,20 +37,22 @@ async fn test_helper_setup_restore() -> anyhow::Result<PathBuf> {
     db_temp.persist();
     db_temp.create_as_dir()?;
 
-    restore::full_restore(db_temp.path(), &b).await?;
-
     // db would not yet have been bootstrapped with a genesis tx
     utils::bootstrap_without_node(db_temp.path(), fixtures_path.join("genesis.blob").as_ref())?;
+
+
+    restore::full_restore(db_temp.path(), &b).await?;
+
 
     Ok(db_temp.path().to_owned())
 }
 
 #[tokio::test]
 async fn test_full_restore_e2e() -> anyhow::Result<()> {
-    let db_temp = test_helper_setup_restore().await?;
+    // let db_temp = test_helper_setup_restore().await?;
     // let db_temp = Path::new("/tmp/fa27fe959d023d6efc0163f0ae71f47b");
-    // let db_temp = Path::new("/root/.libra/rescue_db");
-    // let db_temp = Path::new("/root/.libra/data/db");
+    let db_temp = Path::new("/root/.libra/data/db");
+    // let db_temp = Path::new("/root/.libra/rescue_db_two");
 
     dbg!(&db_temp);
 

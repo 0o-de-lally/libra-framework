@@ -13,7 +13,7 @@ use crate::{read_snapshot, restore, restore_bundle::RestoreBundle, utils};
 /// DB tools e.g.: backup, restore, export to json
 pub struct StorageCli {
     #[clap(subcommand)]
-    command: Option<Sub>,
+    command: Sub,
 }
 
 #[derive(Subcommand)]
@@ -24,22 +24,31 @@ pub enum Sub {
     Db(DBTool),
     /// simple restore from a bundle for one epoch
     EpochRestore {
+        /// backup bundle directory
         #[clap(short, long)]
         bundle_path: PathBuf,
+        /// dir to save db, will create directory
         #[clap(short, long)]
         destination_db: PathBuf,
+        /// clean start from a genesis blob
+        #[clap(short, long)]
+        genesis_tx_path: Option<PathBuf>,
     },
     /// Read a snapshot, parse and export to JSON
     ExportSnapshot {
+        /// dir of snapshot files
         #[clap(short, long)]
         manifest_path: PathBuf,
+        /// file path for the json export
         #[clap(short, long)]
         out_path: Option<PathBuf>,
     },
     /// try bootstrap
     TryBootstrap {
+        /// path to initialize database
         #[clap(short, long)]
         db_path: PathBuf,
+        /// genesis blob file path
         #[clap(short, long)]
         genesis_tx_path: PathBuf,
     },
@@ -52,28 +61,39 @@ impl StorageCli {
         let _mp = MetricsPusher::start(vec![]);
 
         match self.command {
-            Some(Sub::Db(tool)) => {
+            Sub::Db(tool) => {
                 tool.run().await?;
             }
-            Some(Sub::ExportSnapshot {
+            Sub::ExportSnapshot {
                 manifest_path,
                 out_path,
-            }) => {
+            } => {
                 read_snapshot::manifest_to_json(manifest_path.to_owned(), out_path.to_owned())
                     .await;
             }
-            Some(Sub::EpochRestore {
+            Sub::EpochRestore {
                 bundle_path,
                 destination_db,
-            }) => {
+                genesis_tx_path
+            } => {
                 if !bundle_path.exists() {
                     bail!("bundle directory not found: {}", &bundle_path.display());
                 };
                 if destination_db.exists() {
                     println!("you are trying to restore to a directory that already exists, and may have conflicting state: {}", &destination_db.display());
                 };
+
+
                 if !destination_db.exists() {
                     fs::create_dir_all(&destination_db)?;
+                }
+
+
+                // if db doesn't exist it needs to be bootstrapped first.
+                if let Some(p) = genesis_tx_path {
+                  println!("attempting to boostrap from genesis.blob from {}", &p.display());
+                  utils::bootstrap_without_node(&destination_db, &p)?;
+                  println!("DB bootstrapped with genesis tx");
                 }
 
                 // underlying tools get lost with relative paths
@@ -91,14 +111,14 @@ impl StorageCli {
                     bundle.epoch, bundle.version
                 );
             }
-            Some(Sub::TryBootstrap {
+            Sub::TryBootstrap {
                 db_path,
                 genesis_tx_path,
-            }) => {
+            } => {
                 utils::bootstrap_without_node(&db_path, &genesis_tx_path)?;
                 println!("DB bootstrapped with genesis tx");
             }
-            _ => {} // prints help
+            // _ => {} // prints help
         }
 
         Ok(())
