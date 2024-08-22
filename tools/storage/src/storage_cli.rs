@@ -5,7 +5,7 @@ use diem_logger::{Level, Logger};
 use diem_push_metrics::MetricsPusher;
 use std::{fs, path::PathBuf};
 
-use crate::{read_snapshot, restore, restore_bundle::RestoreBundle};
+use crate::{read_snapshot, restore, restore_bundle::RestoreBundle, utils};
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -36,6 +36,13 @@ pub enum Sub {
         #[clap(short, long)]
         out_path: Option<PathBuf>,
     },
+    /// try bootstrap
+    TryBootstrap {
+        #[clap(short, long)]
+        db_path: PathBuf,
+        #[clap(short, long)]
+        genesis_tx_path: PathBuf,
+    },
 }
 
 impl StorageCli {
@@ -63,10 +70,11 @@ impl StorageCli {
                     bail!("bundle directory not found: {}", &bundle_path.display());
                 };
                 if destination_db.exists() {
-                    bail!("you are trying to restore to a directory that already exists, and may have conflicting state: {}", &destination_db.display());
+                    println!("you are trying to restore to a directory that already exists, and may have conflicting state: {}", &destination_db.display());
                 };
-                assert!(!destination_db.exists());
-                fs::create_dir_all(&destination_db)?;
+                if !destination_db.exists() {
+                    fs::create_dir_all(&destination_db)?;
+                }
 
                 // underlying tools get lost with relative paths
                 let bundle_path = fs::canonicalize(bundle_path)?;
@@ -82,6 +90,13 @@ impl StorageCli {
                     "SUCCESS: restored to epoch: {}, version: {}",
                     bundle.epoch, bundle.version
                 );
+            }
+            Some(Sub::TryBootstrap {
+                db_path,
+                genesis_tx_path,
+            }) => {
+                utils::bootstrap_without_node(&db_path, &genesis_tx_path)?;
+                println!("DB bootstrapped with genesis tx");
             }
             _ => {} // prints help
         }

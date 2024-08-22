@@ -26,8 +26,8 @@ pub fn get_db_kv(db_dir: &Path) -> anyhow::Result<DiemDB> {
 /// read the genesis tx from file
 pub fn get_genesis_tx(genesis_blob_path: &Path) -> anyhow::Result<Transaction> {
     let genesis_transaction = {
-        let buf = fs::read(genesis_blob_path).unwrap();
-        bcs::from_bytes::<Transaction>(&buf).unwrap()
+        let buf = fs::read(genesis_blob_path)?;
+        bcs::from_bytes::<Transaction>(&buf)?
     };
     Ok(genesis_transaction)
 }
@@ -38,8 +38,17 @@ pub fn get_genesis_tx(genesis_blob_path: &Path) -> anyhow::Result<Transaction> {
 pub fn bootstrap_without_node(db_path: &Path, gen_tx_path: &Path) -> anyhow::Result<()> {
     let db = get_db_kv(db_path)?;
     let genesis_txn = get_genesis_tx(gen_tx_path)?;
+
+    // TODO: decide if we check against a waypoint string
+    // let gen_wp: Waypoint =
+    //     fs::read_to_string(gen_tx_path.parent().unwrap().join("waypoint.genesis"))?.parse()?;
+    // dbg!(&gen_wp);
+
     let db_rw = DbReaderWriter::new(db);
+
     let genesis_waypoint = generate_waypoint::<DiemVM>(&db_rw, &genesis_txn)?;
+
     maybe_bootstrap::<DiemVM>(&db_rw, &genesis_txn, genesis_waypoint)?;
+
     Ok(())
 }
