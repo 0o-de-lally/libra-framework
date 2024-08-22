@@ -12,7 +12,7 @@ use diem_vm::DiemVM;
 
 /// get a diem_db struct from path, just kv storage
 pub fn get_db_kv(db_dir: &Path) -> anyhow::Result<DiemDB> {
-    DiemDB::open_kv_only(
+    DiemDB::open(
         db_dir.to_owned(),
         false,                       /* read_only */
         NO_OP_STORAGE_PRUNER_CONFIG, /* pruner config */

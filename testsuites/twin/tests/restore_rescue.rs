@@ -51,8 +51,8 @@ async fn test_helper_setup_restore() -> anyhow::Result<PathBuf> {
 async fn test_full_restore_e2e() -> anyhow::Result<()> {
     // let db_temp = test_helper_setup_restore().await?;
     // let db_temp = Path::new("/tmp/fa27fe959d023d6efc0163f0ae71f47b");
-    let db_temp = Path::new("/root/.libra/data/db");
-    // let db_temp = Path::new("/root/.libra/rescue_db_two");
+    // let db_temp = Path::new("/root/.libra/data/db");
+    let db_temp = Path::new("/root/.libra/rescue_db_four");
 
     dbg!(&db_temp);
 
