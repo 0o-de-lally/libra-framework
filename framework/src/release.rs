@@ -4,7 +4,8 @@
 #![forbid(unsafe_code)]
 
 use diem_framework::{
-    docgen::DocgenOptions, BuildOptions, BuiltPackage, ReleaseBundle, ReleaseOptions, RELEASE_BUNDLE_EXTENSION
+    docgen::DocgenOptions, BuildOptions, BuiltPackage, ReleaseBundle, ReleaseOptions,
+    RELEASE_BUNDLE_EXTENSION,
 };
 use move_command_line_common::address::NumericalAddress;
 use once_cell::sync::Lazy;
@@ -156,6 +157,7 @@ impl ReleaseTarget {
 
     pub fn create_release(self, dev_mode: bool, out: Option<PathBuf>) -> anyhow::Result<()> {
         let options = self.create_release_options(dev_mode, out);
+
         #[cfg(unix)]
         {
             options.create_release()
@@ -178,7 +180,6 @@ impl ReleaseTarget {
     }
 }
 
-
 pub fn create_rust_struct_models(release_opts: &ReleaseOptions) -> anyhow::Result<()> {
     let ReleaseOptions {
         build_options,
@@ -186,34 +187,18 @@ pub fn create_rust_struct_models(release_opts: &ReleaseOptions) -> anyhow::Resul
         rust_bindings,
         output,
     } = release_opts.clone();
-    let mut released_packages = vec![];
-    let mut source_paths = vec![];
-    for (package_path, rust_binding_path) in packages.into_iter().zip(rust_bindings.into_iter())
-    {
+    // let mut released_packages = vec![];
+    // let mut source_paths = vec![];
+    for (package_path, _rust_binding_path) in packages.into_iter().zip(rust_bindings.into_iter()) {
         let built = BuiltPackage::build(package_path.clone(), build_options.clone())?;
-        if !rust_binding_path.is_empty() {
-            let abis = built
-                .extract_abis()
-                .ok_or_else(|| anyhow!("abis not available, can't generate sdk"))?;
-            Self::generate_rust_bindings(&abis, &PathBuf::from(rust_binding_path))?;
-        }
-        let released = ReleasePackage::new(built)?;
-        let size = bcs::to_bytes(&released)?.len();
-        println!(
-            "Including package `{}` size {}k",
-            released.name(),
-            size / 1000,
-        );
-        released_packages.push(released);
-        let relative_path = path_relative_to_crate(package_path.join("sources"));
-        source_paths.push(relative_path.display().to_string());
+        let modules = built.all_modules();
+        modules.for_each(|e| {
+          dbg!(&e.struct_defs);
+        })
     }
-    let bundle = ReleaseBundle::new(released_packages, source_paths);
-    std::fs::create_dir_all(output.parent().unwrap())?;
-    std::fs::write(&output, bcs::to_bytes(&bundle)?)?;
+
     Ok(())
 }
-
 
 // ===============================================================================================
 // Legacy Named Addresses
@@ -241,4 +226,12 @@ static NAMED_ADDRESSES: Lazy<BTreeMap<String, NumericalAddress>> = Lazy::new(|| 
 
 pub fn named_addresses() -> &'static BTreeMap<String, NumericalAddress> {
     &NAMED_ADDRESSES
+}
+
+
+#[test]
+fn try_get_defs() {
+  let target = ReleaseTarget::Head;
+  let opts = target.create_release_options(false, None);
+  create_rust_struct_models(&opts).expect("cannot generate models");
 }
