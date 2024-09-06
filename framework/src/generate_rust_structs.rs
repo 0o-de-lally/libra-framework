@@ -39,7 +39,7 @@ pub fn create_rust_struct_models(release_opts: &ReleaseOptions) -> anyhow::Resul
             }
         }
         println!("{:#?}", &file);
-        let out_path = output.unwrap_or(package_path.as_path().join("struct_map.rs"));
+        let out_path = output.join("struct_map.rs");
         let _ = fs::write(&out_path, file.as_bytes());
 
         std::process::Command::new("rustfmt")
@@ -99,11 +99,24 @@ impl MoveResource for {struct_name}Resource {{}}
 fn populate_fields(field_envs: Vec<(String, Type)>) -> String {
   let mut fields_str = "".to_string();
   for f in field_envs {
-    match f {
+    let ftype = match f.1 {
+        Type::Primitive(t) => t.to_string(),
+
+        Type::Vector(t) => {
+          match t {
+            Type::Primitive(t)=> {
+              format!("Vec<{}>", t.to_string())
+            },
+            _ => "todo!()".to_string(),
+          }
+        },
+        // Type::Struct(_, _, _) => todo!(),
+        // Type::TypeParameter(t) => todo!(),
+        _ => "todo!()".to_string()
+      };
+      fields_str = format!("{}\n{}: {:?}", fields_str, f.0, ftype);
 
     }
-    fields_str = format!("{}\n{}: {:?}", fields_str, f.0, f.1);
-  }
   fields_str
 }
 
