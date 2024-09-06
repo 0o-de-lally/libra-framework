@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use diem_framework::{
-    docgen::DocgenOptions, BuildOptions, ReleaseBundle, ReleaseOptions, RELEASE_BUNDLE_EXTENSION,
+    docgen::DocgenOptions, BuildOptions, BuiltPackage, ReleaseBundle, ReleaseOptions, RELEASE_BUNDLE_EXTENSION
 };
 use move_command_line_common::address::NumericalAddress;
 use once_cell::sync::Lazy;
@@ -177,6 +177,43 @@ impl ReleaseTarget {
         }
     }
 }
+
+
+pub fn create_rust_struct_models(release_opts: &ReleaseOptions) -> anyhow::Result<()> {
+    let ReleaseOptions {
+        build_options,
+        packages,
+        rust_bindings,
+        output,
+    } = release_opts.clone();
+    let mut released_packages = vec![];
+    let mut source_paths = vec![];
+    for (package_path, rust_binding_path) in packages.into_iter().zip(rust_bindings.into_iter())
+    {
+        let built = BuiltPackage::build(package_path.clone(), build_options.clone())?;
+        if !rust_binding_path.is_empty() {
+            let abis = built
+                .extract_abis()
+                .ok_or_else(|| anyhow!("abis not available, can't generate sdk"))?;
+            Self::generate_rust_bindings(&abis, &PathBuf::from(rust_binding_path))?;
+        }
+        let released = ReleasePackage::new(built)?;
+        let size = bcs::to_bytes(&released)?.len();
+        println!(
+            "Including package `{}` size {}k",
+            released.name(),
+            size / 1000,
+        );
+        released_packages.push(released);
+        let relative_path = path_relative_to_crate(package_path.join("sources"));
+        source_paths.push(relative_path.display().to_string());
+    }
+    let bundle = ReleaseBundle::new(released_packages, source_paths);
+    std::fs::create_dir_all(output.parent().unwrap())?;
+    std::fs::write(&output, bcs::to_bytes(&bundle)?)?;
+    Ok(())
+}
+
 
 // ===============================================================================================
 // Legacy Named Addresses
