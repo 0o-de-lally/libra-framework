@@ -1,11 +1,10 @@
-// Copyright © Aptos Foundation
+// Copyright © Diem
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
 use diem_framework::{
-    docgen::DocgenOptions, BuildOptions, BuiltPackage, ReleaseBundle, ReleaseOptions,
-    RELEASE_BUNDLE_EXTENSION,
+    build_model, docgen::DocgenOptions, BuildOptions, ReleaseBundle, ReleaseOptions, RELEASE_BUNDLE_EXTENSION
 };
 use move_command_line_common::address::NumericalAddress;
 use once_cell::sync::Lazy;
@@ -59,11 +58,11 @@ impl ReleaseTarget {
     pub fn packages(self) -> Vec<(&'static str, Option<&'static str>)> {
         let result = vec![
             ("move-stdlib", None),
-            ("vendor-stdlib", None),
-            (
-                "libra-framework",
-                Some("cached-packages/src/libra_framework_sdk_builder.rs"),
-            ),
+            // ("vendor-stdlib", None),
+            // (
+            //   "libra-framework",
+            //   Some("cached-packages/src/libra_framework_sdk_builder.rs"),
+            // ),
         ];
         // Currently we don't have experimental packages only included in particular targets.
         result
@@ -180,25 +179,6 @@ impl ReleaseTarget {
     }
 }
 
-pub fn create_rust_struct_models(release_opts: &ReleaseOptions) -> anyhow::Result<()> {
-    let ReleaseOptions {
-        build_options,
-        packages,
-        rust_bindings,
-        output,
-    } = release_opts.clone();
-    // let mut released_packages = vec![];
-    // let mut source_paths = vec![];
-    for (package_path, _rust_binding_path) in packages.into_iter().zip(rust_bindings.into_iter()) {
-        let built = BuiltPackage::build(package_path.clone(), build_options.clone())?;
-        let modules = built.all_modules();
-        modules.for_each(|e| {
-          dbg!(&e.struct_defs);
-        })
-    }
-
-    Ok(())
-}
 
 // ===============================================================================================
 // Legacy Named Addresses
@@ -226,12 +206,4 @@ static NAMED_ADDRESSES: Lazy<BTreeMap<String, NumericalAddress>> = Lazy::new(|| 
 
 pub fn named_addresses() -> &'static BTreeMap<String, NumericalAddress> {
     &NAMED_ADDRESSES
-}
-
-
-#[test]
-fn try_get_defs() {
-  let target = ReleaseTarget::Head;
-  let opts = target.create_release_options(false, None);
-  create_rust_struct_models(&opts).expect("cannot generate models");
 }

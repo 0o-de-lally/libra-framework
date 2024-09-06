@@ -2,6 +2,7 @@ pub mod builder;
 pub mod framework_cli;
 pub mod release;
 pub mod upgrade_fixtures;
+pub mod generate_rust_structs;
 
 //////// 0L ///////
 /// Returns the release bundle for the current code.
