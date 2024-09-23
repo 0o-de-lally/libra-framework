@@ -3,14 +3,27 @@ name = "LibraFramework"
 version = "1.0.0"
 
 [addresses]
-std = "0x1"
-diem_std = "0x1"
-diem_framework = "0x1"
-diem_token = "0x3"
-core_resources = "0xA550C18"
 vm_reserved = "0x0"
+core_resources = "0xA550C18" # legacy testnet handle
+
+# code publishing locations
+# NOTE: all std modules are imported via the vendor std here, so they use the same address as framework code.
+std = "0x1" # move std
+diem_std = "0x1" # vendor std
+diem_framework = "0x1" # ol and diem framework
 ol_framework = "0x1"
-root = "0x1"
+
+# domains of governance
+# OL is not a DAO, it's a collection of peer-to-peer agreements in different domains. Some of those domains have on-chain code to automate policy
+framework_domain = "0x1" # common tools for all accounts, excluding coin operations.
+coin_domain = "0x2" # policies regarding coins and all coin holders
+infra_pledge_domain = "0x3" # policies concerning infra pledge.
+donor_voice_domain = "0x4" # policies concerning donor voice account (community wallets).
+validators_domain = "0x5" # policies concerning validator selection.
+
+
+# TODO: Deprecated handles, should be removed
+diem_token = "0x3"
 
 [dependencies]
 VendorStdlib = { local = "../vendor-stdlib" }
