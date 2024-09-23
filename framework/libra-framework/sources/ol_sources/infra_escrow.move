@@ -9,31 +9,27 @@
 // segregated accounts.
 ///////////////////////////////////////////////////////////////////////////
 
-module ol_framework::infra_escrow{
+module infra_pledge_domain::infra_escrow{
     use std::error;
     use std::option::{Self, Option};
+    use std::signer;
     use diem_framework::coin;
     use diem_framework::transaction_fee;
     use diem_framework::system_addresses;
     use ol_framework::ol_account;
     use ol_framework::libra_coin::LibraCoin;
     use ol_framework::pledge_accounts;
-    // use ol_framework::slow_wallet;
-    // use std::fixed_point32;
-    // use std::signer;
-    // use diem_std::debug::print;
+
 
     friend diem_framework::genesis;
     friend ol_framework::epoch_boundary;
 
     const EGENESIS_REWARD: u64 = 0;
     /// for use on genesis, creates the infra escrow pledge policy struct
-    public(friend) fun initialize(framework: &signer) {
-        // NOTE: THIS MUST BE THE 0x0 address, because on epoch boundary it is that address @vm_reserved which will be calling the functions.
-        system_addresses::assert_diem_framework(framework);
-        // TODO: perhaps this policy needs to be published to a different address?
+    public(friend) fun initialize(infra_domain: &signer) {
+        assert!(signer::address_of(infra_domain) == @0x3);
         pledge_accounts::publish_beneficiary_policy(
-          framework, // only framework calls at genesis
+          infra_domain, // only framework calls at genesis
           b"infra escrow",
           90,
           true
@@ -43,7 +39,7 @@ module ol_framework::infra_escrow{
     /// VM can call down pledged funds.
     // NOTE: the signer MUST_BE 0x0 address
     fun infra_pledge_withdraw(vm: &signer, amount: u64): Option<coin::Coin<LibraCoin>> {
-        system_addresses::assert_ol(vm);
+        system_addresses::assert_vm(vm);
         pledge_accounts::withdraw_from_all_pledge_accounts(vm, amount)
     }
 
@@ -53,10 +49,10 @@ module ol_framework::infra_escrow{
     /// @return tuple of 2
     /// 0: if collection succeeded
     /// 1: how much was collected
-    public(friend) fun epoch_boundary_collection(root: &signer, amount: u64):
+    public(friend) fun epoch_boundary_collection(framework: &signer, amount: u64):
     (bool, u64) {
-        system_addresses::assert_ol(root);
-        let opt = pledge_accounts::withdraw_from_all_pledge_accounts(root, amount);
+        system_addresses::assert_diem_framework(framework);
+        let opt = pledge_accounts::withdraw_from_all_pledge_accounts(framework, amount);
 
         if (option::is_none(&opt)) {
           option::destroy_none(opt);
@@ -65,7 +61,7 @@ module ol_framework::infra_escrow{
         let c = option::extract(&mut opt);
         option::destroy_none(opt);
         let value = coin::value(&c);
-        transaction_fee::vm_pay_fee(root, @ol_framework, c); // don't attribute
+        transaction_fee::vm_pay_fee(framework, @ol_framework, c); // don't attribute
         // to the user
         return(true, value)
     }

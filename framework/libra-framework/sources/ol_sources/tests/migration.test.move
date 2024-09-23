@@ -2,7 +2,7 @@
 module ol_framework::test_migration {
   use ol_framework::genesis_migration;
   use ol_framework::mock;
-  // use ol_framework::infra_escrow;
+  // use infra_pledge_domain::infra_escrow;
   // use ol_framework::slow_wallet;
   // use ol_framework::ol_account;
   // use diem_framework::coin;

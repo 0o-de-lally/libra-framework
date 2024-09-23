@@ -82,7 +82,7 @@ module diem_framework::system_addresses {
 
 
     //////// 0L ////////
-
+    // TODO: Deprecated
     const ENOT_OL_ROOT_ADDRESS: u64 = 0;
 
     public fun is_ol_framework_address(addr: address): bool {

@@ -24,7 +24,7 @@ module diem_framework::epoch_boundary {
   use ol_framework::slow_wallet;
   use ol_framework::match_index;
   use ol_framework::proof_of_fee;
-  use ol_framework::infra_escrow;
+  use infra_pledge_domain::infra_escrow;
   use ol_framework::musical_chairs;
   use ol_framework::donor_voice_txs;
   use ol_framework::libra_coin::LibraCoin;
@@ -229,7 +229,7 @@ module diem_framework::epoch_boundary {
     // COMMIT NOTE: there's no reason to gate this, if th trigger is not
     // ready (which only happens on Main and Stage, then user will get an error)
     // assert!(!testnet::is_testnet(), ETRIGGER_EPOCH_MAINNET);
-    // must get root permission from governance.move
+    // must get framework_signer permission from governance.move
     system_addresses::assert_diem_framework(framework_signer);
     let _ = can_trigger(); // will abort if false
 
@@ -275,48 +275,46 @@ module diem_framework::epoch_boundary {
   // Contains all of 0L's business logic for end of epoch.
   // This removed business logic from reconfiguration.move
   // and prevents dependency cycling.
-  public(friend) fun epoch_boundary(root: &signer, closing_epoch: u64, epoch_round: u64)
+  public(friend) fun epoch_boundary(framework_signer: &signer, closing_epoch: u64, epoch_round: u64)
   acquires BoundaryStatus {
     print(&string::utf8(b"EPOCH BOUNDARY BEGINS"));
-    // either 0x0 or 0x1 can call, but we will always use framework signer
-    system_addresses::assert_ol(root);
-    let root = &create_signer::create_signer(@ol_framework);
+    system_addresses::assert_diem_framework(framework_signer);
     let status = borrow_global_mut<BoundaryStatus>(@ol_framework);
 
     print(&string::utf8(b"migrate_data"));
-    migrate_data(root);
+    migrate_data(framework_signer);
 
     print(&string::utf8(b"status reset"));
     *status = reset();
 
     // bill root service fees;
     print(&string::utf8(b"root_service_billing"));
-    root_service_billing(root, status);
+    root_service_billing(framework_signer, status);
 
     print(&string::utf8(b"process_donor_voice_accounts"));
     // run the transactions of donor directed accounts
-    let (count, amount, success) = donor_voice_txs::process_donor_voice_accounts(root, closing_epoch);
+    let (count, amount, success) = donor_voice_txs::process_donor_voice_accounts(framework_signer, closing_epoch);
     status.dd_accounts_count = count;
     status.dd_accounts_amount = amount;
     status.dd_accounts_success = success;
 
     print(&string::utf8(b"tower_state::reconfig"));
     // reset fee makers tracking
-    status.set_fee_makers_success = fee_maker::epoch_reset_fee_maker(root);
+    status.set_fee_makers_success = fee_maker::epoch_reset_fee_maker(framework_signer);
 
     print(&string::utf8(b"musical_chairs::stop_the_music"));
-    let (compliant_vals, n_seats) = musical_chairs::stop_the_music(root,
+    let (compliant_vals, n_seats) = musical_chairs::stop_the_music(framework_signer,
     closing_epoch, epoch_round);
     status.incoming_compliant_count = vector::length(&compliant_vals);
     status.incoming_compliant = compliant_vals;
     status.incoming_seats_offered = n_seats;
 
     print(&string::utf8(b"settle_accounts"));
-    settle_accounts(root, compliant_vals, status);
+    settle_accounts(framework_signer, compliant_vals, status);
 
     print(&string::utf8(b"slow_wallet::on_new_epoch"));
     // drip coins
-    let (s_success, s_amount) = slow_wallet::on_new_epoch(root);
+    let (s_success, s_amount) = slow_wallet::on_new_epoch(framework_signer);
     status.slow_wallet_drip_amount = s_amount;
     status.slow_wallet_drip_success = s_success;
 
@@ -326,21 +324,21 @@ module diem_framework::epoch_boundary {
     // keeps you walking through these tears.
 
     print(&string::utf8(b"process_incoming_validators"));
-    process_incoming_validators(root, status, compliant_vals, n_seats);
+    process_incoming_validators(framework_signer, status, compliant_vals, n_seats);
 
     print(&string::utf8(b"reward_thermostat"));
     let (t_success, t_increase, t_amount) =
-    proof_of_fee::reward_thermostat(root);
+    proof_of_fee::reward_thermostat(framework_signer);
     status.pof_thermo_success = t_success;
     status.pof_thermo_increase = t_increase;
     status.pof_thermo_amount = t_amount;
 
     print(&string::utf8(b"set_vouch_price"));
     let (nominal_reward, _, _, _) = proof_of_fee::get_consensus_reward();
-    vouch::set_vouch_price(root, nominal_reward);
+    vouch::set_vouch_price(framework_signer, nominal_reward);
 
     print(&string::utf8(b"subsidize_from_infra_escrow"));
-    let (i_success, i_fee) = subsidize_from_infra_escrow(root);
+    let (i_success, i_fee) = subsidize_from_infra_escrow(framework_signer);
     status.infra_subsidize_amount = i_fee;
     status.infra_subsidize_success = i_success;
 
@@ -351,11 +349,11 @@ module diem_framework::epoch_boundary {
 
   /// withdraw coins and settle accounts for validators and oracles
   /// returns the list of compliant_vals
-  fun settle_accounts(root: &signer, compliant_vals: vector<address>, status: &mut BoundaryStatus): vector<address> {
+  fun settle_accounts(framework_signer: &signer, compliant_vals: vector<address>, status: &mut BoundaryStatus): vector<address> {
     assert!(transaction_fee::is_fees_collection_enabled(), error::invalid_state(ETX_FEES_NOT_INITIALIZED));
 
     if (transaction_fee::system_fees_collected() > 0) {
-      let all_fees = transaction_fee::root_withdraw_all(root);
+      let all_fees = transaction_fee::root_withdraw_all(framework_signer);
       status.system_fees_collected = libra_coin::value(&all_fees);
 
       // Nominal fee set by the PoF thermostat
@@ -366,7 +364,7 @@ module diem_framework::epoch_boundary {
 
       // validators get the gross amount of the reward, since they already paid to enter. This results in a net payment equivalent to:
       // nominal_reward_to_vals - entry_fee.
-      let (compliant_vals, total_reward) = process_outgoing_validators(root, &mut all_fees, nominal_reward_to_vals, compliant_vals);
+      let (compliant_vals, total_reward) = process_outgoing_validators(framework_signer, &mut all_fees, nominal_reward_to_vals, compliant_vals);
       status.outgoing_vals_paid = compliant_vals;
       status.outgoing_total_reward = total_reward;
 
@@ -380,7 +378,7 @@ module diem_framework::epoch_boundary {
       // Commit note: deprecated with tower mining.
 
       // remainder gets burnt according to fee maker preferences
-      let (b_success, b_fees) = burn::epoch_burn_fees(root, &mut all_fees);
+      let (b_success, b_fees) = burn::epoch_burn_fees(framework_signer, &mut all_fees);
       status.epoch_burn_success = b_success;
       status.epoch_burn_fees = b_fees;
 
@@ -398,8 +396,8 @@ module diem_framework::epoch_boundary {
   /// NOTE: receives from reconfiguration.move a mutable borrow of a coin to pay reward
   /// NOTE: burn remaining fees from transaction fee account happens in reconfiguration.move (it's not a validator_universe concern)
   // Returns (compliant_vals, reward_deposited)
-  fun process_outgoing_validators(root: &signer, reward_budget: &mut Coin<LibraCoin>, reward_per: u64, compliant_vals: vector<address>): (vector<address>, u64){
-    system_addresses::assert_ol(root);
+  fun process_outgoing_validators(framework_signer: &signer, reward_budget: &mut Coin<LibraCoin>, reward_per: u64, compliant_vals: vector<address>): (vector<address>, u64){
+    system_addresses::assert_ol(framework_signer);
     let vals = stake::get_current_validators();
     let reward_deposited = 0;
 
@@ -413,13 +411,13 @@ module diem_framework::epoch_boundary {
       };
       let performed = vector::contains(&compliant_vals, addr);
       if (!performed) {
-        jail::jail(root, *addr);
+        jail::jail(framework_signer, *addr);
       } else {
         // vector::push_back(&mut compliant_vals, *addr);
         if (libra_coin::value(reward_budget) >= reward_per) {
           let user_coin = libra_coin::extract(reward_budget, reward_per);
           reward_deposited = reward_deposited + libra_coin::value(&user_coin);
-          rewards::process_single(root, *addr, user_coin, 1);
+          rewards::process_single(framework_signer, *addr, user_coin, 1);
         };
       };
 
@@ -430,11 +428,11 @@ module diem_framework::epoch_boundary {
     return (compliant_vals, reward_deposited)
   }
 
-  fun process_incoming_validators(root: &signer, status: &mut BoundaryStatus, compliant_vals: vector<address>, n_seats: u64) {
-    system_addresses::assert_ol(root);
+  fun process_incoming_validators(framework_signer: &signer, status: &mut BoundaryStatus, compliant_vals: vector<address>, n_seats: u64) {
+    system_addresses::assert_ol(framework_signer);
 
     // check amount of fees expected
-    let (auction_winners, all_bidders, only_qualified_bidders, entry_fee) = proof_of_fee::end_epoch(root, &compliant_vals, n_seats);
+    let (auction_winners, all_bidders, only_qualified_bidders, entry_fee) = proof_of_fee::end_epoch(framework_signer, &compliant_vals, n_seats);
     status.incoming_filled_seats = vector::length(&auction_winners);
     status.incoming_all_bidders = all_bidders;
     status.incoming_only_qualified_bidders = only_qualified_bidders;
@@ -444,41 +442,41 @@ module diem_framework::epoch_boundary {
     status.incoming_post_failover_check = post_failover_check;
 
     // showtime! try to reconfigure
-    let (actual_set, vals_missing_configs, success) = stake::maybe_reconfigure(root, post_failover_check);
+    let (actual_set, vals_missing_configs, success) = stake::maybe_reconfigure(framework_signer, post_failover_check);
     status.incoming_vals_missing_configs = vals_missing_configs;
     status.incoming_actual_vals = actual_set;
     status.incoming_reconfig_success = success;
 
-    let (_expected_fees, fees_paid, fee_success) = proof_of_fee::charge_epoch_fees(root, actual_set, entry_fee);
+    let (_expected_fees, fees_paid, fee_success) = proof_of_fee::charge_epoch_fees(framework_signer, actual_set, entry_fee);
     status.incoming_fees = fees_paid;
     status.incoming_fees_success = fee_success;
     // make sure musical chairs doesn't keep incrementing if we are persistently
     // offering more seats than can be filled
     let final_set_size = vector::length(&actual_set);
-    musical_chairs::set_current_seats(root, final_set_size);
+    musical_chairs::set_current_seats(framework_signer, final_set_size);
     status.incoming_final_set_size = final_set_size;
   }
 
   // set up rewards subsidy for coming epoch
-  fun subsidize_from_infra_escrow(root: &signer): (bool, u64) {
-    system_addresses::assert_ol(root);
+  fun subsidize_from_infra_escrow(framework_signer: &signer): (bool, u64) {
+    system_addresses::assert_ol(framework_signer);
     let (reward_per, _, _, _ ) = proof_of_fee::get_consensus_reward();
     let vals = stake::get_current_validators();
     let count_vals = vector::length(&vals);
     let total_epoch_budget = (count_vals * reward_per) + 1; // +1 for rounding
-    infra_escrow::epoch_boundary_collection(root, total_epoch_budget)
+    infra_escrow::epoch_boundary_collection(framework_signer, total_epoch_budget)
   }
 
   /// check qualifications of community wallets
   /// need to check every epoch so that wallets who no longer qualify are not biasing the Match algorithm.
-  fun reset_match_index_ratios(root: &signer) {
-    system_addresses::assert_ol(root);
+  fun reset_match_index_ratios(framework_signer: &signer) {
+    system_addresses::assert_ol(framework_signer);
     let list = match_index::get_address_list();
     let good = community_wallet_init::get_qualifying(list);
-    match_index::calc_ratios(root, good);
+    match_index::calc_ratios(framework_signer, good);
   }
 
-  // all services the root collective security is billing for
+  // all services the framework_signer collective security is billing for
   fun root_service_billing(vm: &signer, status: &mut BoundaryStatus) {
     let (security_bill_count, security_bill_amount, security_bill_success) = safe::root_security_fee_billing(vm);
     status.security_bill_count = security_bill_count;

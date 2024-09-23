@@ -53,7 +53,7 @@
 
         //use diem_std::debug::print;
 
-        friend ol_framework::infra_escrow;
+        friend infra_pledge_domain::infra_escrow;
         friend ol_framework::genesis_migration;
         friend ol_framework::genesis;
 

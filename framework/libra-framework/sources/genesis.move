@@ -33,7 +33,7 @@ module diem_framework::genesis {
     use ol_framework::proof_of_fee;
     use ol_framework::slow_wallet;
     use ol_framework::libra_coin;
-    use ol_framework::infra_escrow;
+    use infra_pledge_domain::infra_escrow;
     use ol_framework::safe;
     use ol_framework::donor_voice;
     use ol_framework::epoch_helper;

@@ -13,7 +13,7 @@ module ol_framework::test_reconfiguration {
   use diem_framework::reconfiguration;
   use ol_framework::epoch_helper;
   use ol_framework::ol_account;
-  use ol_framework::infra_escrow;
+  use infra_pledge_domain::infra_escrow;
 
    use diem_std::debug::print;
 
