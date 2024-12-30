@@ -62,7 +62,7 @@ pub async fn upgrade_multiple_impl(
         tx_cost: Some(TxCost::framework_upgrade()),
         estimate: false,
         legacy_address: false,
-        save_filename: None,
+        save_path: None,
         sign_only: false,
         ..Default::default()
     };

@@ -1,6 +1,10 @@
 use crate::{
-    publish::encode_publish_payload, submit_transaction::Sender, txs_cli_community::CommunityTxs,
-    txs_cli_governance::GovernanceTxs, txs_cli_user::UserTxs, txs_cli_vals::ValidatorTxs,
+    publish::encode_publish_payload,
+    submit_transaction::{self, Sender},
+    txs_cli_community::CommunityTxs,
+    txs_cli_governance::GovernanceTxs,
+    txs_cli_user::UserTxs,
+    txs_cli_vals::ValidatorTxs,
 };
 use anyhow::Result;
 use clap::Parser;
@@ -60,7 +64,7 @@ pub struct TxsCli {
 
     /// optional, saves signed transaction to specified file
     #[clap(long)]
-    pub save_filename: Option<PathBuf>,
+    pub save_path: Option<PathBuf>,
 
     /// optional, only sign and save tx to file
     #[clap(long, requires = "save_filename")]
@@ -70,11 +74,11 @@ pub struct TxsCli {
     #[clap(long)]
     pub estimate: bool,
 
-    /// offline only, exact address without lookup
+    /// offline only, sender's exact address (without lookup)
     #[clap(long, requires = "offline_seq_num")]
     pub offline_address: Option<AccountAddress>,
 
-    /// offline only, exact sequence number without lookup
+    /// offline only, exact sequence number (without lookup)
     #[clap(long, requires = "offline_address")]
     pub offline_seq_num: Option<u64>,
 
@@ -155,7 +159,7 @@ pub enum TxsSub {
         args: Option<String>,
     },
     /// Submit a signed transaction from file
-    Relay { bcs_file: PathBuf },
+    Relay { tx_file: PathBuf },
 }
 
 impl TxsCli {
@@ -164,6 +168,24 @@ impl TxsCli {
         // Load application configuration
         let app_cfg = AppCfg::load(self.config_path.clone())?;
         let profile = app_cfg.get_profile(None)?;
+
+        // Determine chain ID and URL for client
+        let chain_name = self.chain_id.unwrap_or(app_cfg.workspace.default_chain_id);
+        let url = if let Some(u) = self.url.as_ref() {
+            u.to_owned()
+        } else {
+            app_cfg.pick_url(Some(chain_name))?
+        };
+
+        let client = Client::new(url);
+
+        // exit early if this is a relay tx
+        if let Some(TxsSub::Relay { tx_file }) = &self.subcommand {
+            let sig_tx: SignedTransaction = bcs::from_bytes(&std::fs::read(tx_file)?)?;
+            let r = submit_transaction::submit_with_client(&client, &sig_tx).await?;
+            println!("Transaction submitted: {:#?}", r);
+            return Ok(());
+        }
 
         // Determine private key based on CLI options or prompts
         let pri_key = if let Some(pk) = &self.test_private_key {
@@ -181,14 +203,6 @@ impl TxsCli {
             legacy.child_0_owner.pri_key
         };
 
-        // Determine chain ID and URL for client
-        let chain_name = self.chain_id.unwrap_or(app_cfg.workspace.default_chain_id);
-        let url = if let Some(u) = self.url.as_ref() {
-            u.to_owned()
-        } else {
-            app_cfg.pick_url(Some(chain_name))?
-        };
-
         // Initialize sender
         let mut send = if let Some(addr) = &self.offline_address {
             Sender::new_offline(
@@ -201,8 +215,6 @@ impl TxsCli {
                 self.tx_cost.clone(),
             )?
         } else {
-            // Initialize client
-            let client = Client::new(url);
             Sender::new_with_lookup(
                 AccountKey::from_private_key(pri_key),
                 ChainId::new(chain_name.id()),
@@ -228,12 +240,6 @@ impl TxsCli {
 
         // Execute subcommand based on parsed input
         match &self.subcommand {
-            Some(TxsSub::Relay { bcs_file }) => {
-                let sig_tx: SignedTransaction = bcs::from_bytes(&std::fs::read(bcs_file)?)?;
-                let r = send.submit(&sig_tx).await?;
-                println!("Transaction submitted: {:#?}", r);
-                Ok(())
-            }
             Some(TxsSub::Transfer { to_account, amount }) => {
                 send.transfer(to_account.to_owned(), amount.to_owned())
                     .await?;

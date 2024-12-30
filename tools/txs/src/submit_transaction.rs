@@ -296,22 +296,12 @@ impl Sender {
 
         self.local_account.sign_with_transaction_builder(tb)
     }
-    /// submit to API and wait for the transaction on chain data
+    /// wrapper to submit with client
     pub async fn submit(
         &mut self,
         signed_trans: &SignedTransaction,
     ) -> anyhow::Result<TransactionOnChainData> {
-        let pending_trans = self.client.submit(signed_trans).await?.into_inner();
-
-        info!("pending tx hash: {}", &pending_trans.hash.to_string());
-
-        let res = self
-            .client
-            .wait_for_transaction_bcs(&pending_trans)
-            .await?
-            .into_inner();
-
-        Ok(res)
+        submit_with_client(&self.client, signed_trans).await
     }
 
     /// Evaluates the response of the last submitted transaction.
@@ -371,4 +361,20 @@ pub fn save_signed_tx_to_file(tx: &SignedTransaction, path: &Path) -> anyhow::Re
     let bytes = bcs::to_bytes(tx)?;
     std::fs::write(path, bytes)?;
     Ok(())
+}
+
+/// submit to API and wait for the transaction on-chain data
+pub async fn submit_with_client(
+    client: &Client,
+    signed_trans: &SignedTransaction,
+) -> anyhow::Result<TransactionOnChainData> {
+    let pending_trans = client.submit(signed_trans).await?.into_inner();
+
+    info!("pending tx hash: {}", &pending_trans.hash.to_string());
+
+    let res = client
+        .wait_for_transaction_bcs(&pending_trans)
+        .await?
+        .into_inner();
+    Ok(res)
 }
