@@ -57,6 +57,14 @@ pub struct TxsCli {
     #[clap(short, long)]
     pub url: Option<Url>,
 
+    /// optional, saves signed transaction to file, defaults to transaction_<timestamp>.bcs
+    #[clap(long)]
+    pub save_filename: Option<PathBuf>,
+
+    /// optional, only sign and save tx to file
+    #[clap(long, requires = "save_filename")]
+    pub sign_only: bool,
+
     /// optional, Only estimate the gas fees
     #[clap(long)]
     pub estimate_only: bool,
