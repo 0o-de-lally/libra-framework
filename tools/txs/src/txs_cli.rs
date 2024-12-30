@@ -10,6 +10,7 @@ use diem_sdk::{
     rest_client::Client,
     types::{account_address::AccountAddress, AccountKey},
 };
+use diem_types::transaction::SignedTransaction;
 use indoc::indoc;
 use libra_types::{
     core_types::app_cfg::{AppCfg, TxCost, TxType},
@@ -20,7 +21,7 @@ use std::path::PathBuf;
 use url::Url;
 
 #[derive(Parser, Default)]
-#[clap(name = env!("CARGO_PKG_NAME"), author, version, about, long_about = None, arg_required_else_help = true)]
+#[clap(name = env!("CARGO_PKG_NAME"), author, version, about, long_about = None, arg_required_else_help = true, subcommand_required = true)]
 /// Submit a transaction to the blockchain
 pub struct TxsCli {
     #[clap(subcommand)]
@@ -65,9 +66,21 @@ pub struct TxsCli {
     #[clap(long, requires = "save_filename")]
     pub sign_only: bool,
 
-    /// optional, Only estimate the gas fees
+    /// optional, only estimate the gas fees
     #[clap(long)]
     pub estimate: bool,
+
+    /// offline only, exact address without lookup
+    #[clap(long, requires = "offline_seq_num")]
+    pub offline_address: Option<AccountAddress>,
+
+    /// offline only, exact sequence number without lookup
+    #[clap(long, requires = "offline_address")]
+    pub offline_seq_num: Option<u64>,
+
+    /// offline only, expires in second from now
+    #[clap(long, requires = "offline_address")]
+    pub offline_expire_sec: Option<u64>,
 
     /// optional, use legacy (v5) 16-byte address format for a sender
     #[clap(long)]
@@ -141,6 +154,8 @@ pub enum TxsSub {
         )]
         args: Option<String>,
     },
+    /// Submit a signed transaction from file
+    Relay { bcs_file: PathBuf },
 }
 
 impl TxsCli {
@@ -174,17 +189,28 @@ impl TxsCli {
             app_cfg.pick_url(Some(chain_name))?
         };
 
-        // Initialize client
-        let client = Client::new(url);
-
         // Initialize sender
-        let mut send = Sender::new(
-            AccountKey::from_private_key(pri_key),
-            ChainId::new(chain_name.id()),
-            Some(client),
-            self.legacy_address,
-        )
-        .await?;
+        let mut send = if let Some(addr) = &self.offline_address {
+            Sender::new_offline(
+                AccountKey::from_private_key(pri_key),
+                addr.to_owned(),
+                self.offline_seq_num.expect("requires --offline-seq-num"),
+                ChainId::new(chain_name.id()),
+                self.offline_expire_sec
+                    .expect("requires --offline-expire-sec"),
+                self.tx_cost.clone(),
+            )?
+        } else {
+            // Initialize client
+            let client = Client::new(url);
+            Sender::new_with_lookup(
+                AccountKey::from_private_key(pri_key),
+                ChainId::new(chain_name.id()),
+                Some(client),
+                self.legacy_address,
+            )
+            .await?
+        };
 
         // Handle mutually exclusive options for transaction cost
         if self.tx_cost.is_some() && self.tx_profile.is_some() {
@@ -202,6 +228,12 @@ impl TxsCli {
 
         // Execute subcommand based on parsed input
         match &self.subcommand {
+            Some(TxsSub::Relay { bcs_file }) => {
+                let sig_tx: SignedTransaction = bcs::from_bytes(&std::fs::read(bcs_file)?)?;
+                let r = send.submit(&sig_tx).await?;
+                println!("Transaction submitted: {:#?}", r);
+                Ok(())
+            }
             Some(TxsSub::Transfer { to_account, amount }) => {
                 send.transfer(to_account.to_owned(), amount.to_owned())
                     .await?;

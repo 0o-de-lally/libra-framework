@@ -64,6 +64,7 @@ pub async fn upgrade_multiple_impl(
         legacy_address: false,
         save_filename: None,
         sign_only: false,
+        ..Default::default()
     };
 
     cli.run()

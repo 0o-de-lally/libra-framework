@@ -1,6 +1,5 @@
 //! Module for managing transaction sending and management with Diem blockchain.
 
-use crate::txs_cli::to_legacy_address;
 use anyhow::{bail, Context};
 use diem::common::types::{CliConfig, ConfigSearchMode};
 use diem_logger::prelude::*;
@@ -12,6 +11,7 @@ use diem_sdk::{
     },
     transaction_builder::TransactionBuilder,
     types::{
+        account_address::AccountAddress,
         chain_id::ChainId,
         transaction::{ExecutionStatus, SignedTransaction, TransactionPayload},
         AccountKey, LocalAccount,
@@ -29,6 +29,7 @@ use libra_types::{
 };
 use std::{
     path::{Path, PathBuf},
+    str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 use url::Url;
@@ -40,18 +41,18 @@ pub struct Sender {
     pub sign_only: bool,
     pub save_path: Option<PathBuf>,
     pub estimate: bool,
-    pub expires_secs: u64,
+    pub expiration_usecs: u64,
     client: Client,
     chain_id: ChainId,
     pub response: Option<TransactionOnChainData>,
 }
 
 impl Sender {
-    pub async fn new(
+    pub async fn new_with_lookup(
         account_key: AccountKey,
         chain_id: ChainId,
         client_opt: Option<Client>,
-        use_legacy_address: bool,
+        _use_legacy_address: bool,
     ) -> anyhow::Result<Self> {
         let client = match client_opt {
             Some(c) => c,
@@ -61,14 +62,7 @@ impl Sender {
         // Lookup the originating address and handle legacy address conversion if necessary
         let address = client
             .lookup_originating_address(account_key.authentication_key())
-            .await
-            .map(|address| {
-                if !use_legacy_address {
-                    return Ok(address);
-                }
-
-                to_legacy_address(&address)
-            })??;
+            .await?;
         info!("using address {}", &address);
 
         // Fetch sequence number for the account
@@ -81,7 +75,36 @@ impl Sender {
             local_account,
             chain_id,
             response: None,
-            expires_secs: Sender::default_expiry_usecs(),
+            expiration_usecs: Sender::default_expiry_usecs(),
+            sign_only: false,
+            save_path: None,
+            estimate: false,
+        })
+    }
+
+    pub fn new_offline(
+        account_key: AccountKey,
+        address: AccountAddress,
+        seq: u64,
+        chain_id: ChainId,
+        secs_to_expire: u64,
+        tx_cost: Option<TxCost>,
+    ) -> anyhow::Result<Self> {
+        let local_account = LocalAccount::new(address, account_key, seq);
+
+        let expiration_usecs = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            + secs_to_expire;
+
+        Ok(Self {
+            client: Client::new(Url::from_str("http://localhost")?), // will not connect
+            tx_cost: tx_cost.unwrap_or(TxCost::default_baseline_cost()),
+            local_account,
+            chain_id,
+            response: None,
+            expiration_usecs,
             sign_only: false,
             save_path: None,
             estimate: false,
@@ -141,7 +164,7 @@ impl Sender {
             sign_only: false,
             save_path: None,
             estimate: false,
-            expires_secs: Sender::default_expiry_usecs(),
+            expiration_usecs: Sender::default_expiry_usecs(),
         };
 
         Ok(s)
@@ -201,7 +224,7 @@ impl Sender {
                 sign_only: false,
                 save_path: None,
                 estimate: false,
-                expires_secs: Sender::default_expiry_usecs(),
+                expiration_usecs: Sender::default_expiry_usecs(),
             };
             return Ok(s);
         }
@@ -245,7 +268,7 @@ impl Sender {
         }
 
         if self.sign_only {
-            info!("sign only mode, not submitting transaction");
+            println!("sign only mode, not submitting transaction");
             if self.save_path.is_none() {
                 warn!("no save path provided, not saving signed transaction");
             }
@@ -267,7 +290,7 @@ impl Sender {
 
     /// Signs a transaction payload.
     pub fn sign_payload(&mut self, payload: TransactionPayload) -> SignedTransaction {
-        let tb = TransactionBuilder::new(payload, self.expires_secs, self.chain_id)
+        let tb = TransactionBuilder::new(payload, self.expiration_usecs, self.chain_id)
             .gas_unit_price(self.tx_cost.coin_price_per_unit)
             .max_gas_amount(self.tx_cost.max_gas_unit_for_tx);
 

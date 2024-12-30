@@ -17,7 +17,6 @@ use libra_wallet::account_keys;
 async fn smoke_transfer_existing_account() {
     let d = diem_temppath::TempPath::new();
 
-    //std::env::set_var("DIEM_FORGE_NODE_BIN_PATH", "/root/.cargo/diem-node");
     let mut s = LibraSmoke::new(Some(2), None) // going to transfer from validator #0 to validator #1
         .await
         .expect("could not start libra smoke");
@@ -26,9 +25,7 @@ async fn smoke_transfer_existing_account() {
         configure_validator::init_val_config_files(&mut s.swarm, 0, Some(d.path().to_owned()))
             .expect("could not init validator config");
 
-    // let s = LibraSmoke::new(Some(2)).await.expect("can't start swarm");
-
-    // 1. simple case: account already exitsts
+    // 1. simple case: account already exists
     let recipient = s.swarm.validators().nth(1).unwrap().peer_id(); // sending to second genesis node.
     let cli = TxsCli {
         subcommand: Some(Transfer {
@@ -57,7 +54,6 @@ async fn smoke_transfer_existing_account() {
 async fn smoke_transfer_create_account() -> Result<(), anyhow::Error> {
     let d = diem_temppath::TempPath::new();
 
-    //std::env::set_var("DIEM_FORGE_NODE_BIN_PATH", "/root/.cargo/diem-node");
     let mut s = LibraSmoke::new(None, None)
         .await
         .expect("could not start libra smoke");
@@ -100,9 +96,8 @@ async fn smoke_transfer_create_account() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-/// Estimate only. Esitmates will fail if the coin name is not set in the diem-node compiled binary.
+/// Estimate only. Estimates will fail if the coin name is not set in the diem-node compiled binary.
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-// #[ignore] // TODO: ignore this test until diem-platform 1.6.3 final lands
 async fn smoke_transfer_estimate() {
     let d = diem_temppath::TempPath::new();
 
@@ -137,7 +132,7 @@ async fn smoke_transfer_estimate() {
     // NOTE: This should not fail
 }
 
-// create v5 and v6 accouunts from the same seed phrase
+// create v5 and v6 accounts from the same seed phrase
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn send_v6_v5() -> anyhow::Result<()> {
     // create libra swarm and get app config for the first validator

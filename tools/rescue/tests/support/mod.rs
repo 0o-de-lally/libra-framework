@@ -159,17 +159,12 @@ pub async fn upgrade_multiple_impl(
             proposal_script_dir: script_dir.clone(),
             metadata_url: "http://allyourbase.com".to_string(),
         })),
-        mnemonic: None,
         test_private_key: Some(smoke.encoded_pri_key.clone()),
         chain_id: Some(NamedChain::TESTING),
         config_path: Some(d.path().to_owned().join("libra-cli-config.yaml")),
         url: Some(smoke.api_endpoint.clone()),
-        tx_profile: None,
         tx_cost: Some(TxCost::prod_baseline_cost()),
-        estimate: false,
-        legacy_address: false,
-        save_filename: None,
-        sign_only: false,
+        ..Default::default()
     };
 
     cli.run()
