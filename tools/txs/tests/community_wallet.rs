@@ -36,7 +36,7 @@ async fn migrate_community_wallet_with_flag() {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     cli_set_community_wallet.run()
@@ -77,7 +77,7 @@ async fn migrate_community_wallet() {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     cli_set_community_wallet.run()
@@ -115,7 +115,7 @@ async fn create_community_wallet_with_flag() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     cli_set_community_wallet.run()
@@ -174,7 +174,7 @@ async fn new_community_wallet_cant_transfer() -> Result<(), anyhow::Error> {
             url: Some(s.api_endpoint.clone()),
             tx_profile: None,
             tx_cost: Some(TxCost::default_baseline_cost()),
-            estimate_only: false,
+            estimate: false,
         };
 
         // Execute the transfer
@@ -211,7 +211,7 @@ async fn new_community_wallet_cant_transfer() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     cli_transfer.run()
@@ -238,7 +238,7 @@ async fn new_community_wallet_cant_transfer() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     cli_set_community_wallet.run()
@@ -265,7 +265,7 @@ async fn new_community_wallet_cant_transfer() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     match transfer_cli.run().await {
@@ -675,7 +675,7 @@ async fn community_wallet_payment() -> Result<(), anyhow::Error> {
             url: Some(s.api_endpoint.clone()),
             tx_profile: None,
             tx_cost: Some(TxCost::default_baseline_cost()),
-            estimate_only: false,
+            estimate: false,
         };
 
         // Execute funds transfer to the account
@@ -710,7 +710,7 @@ async fn community_wallet_payment() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     // Execute the transfer to the new admin account
@@ -738,7 +738,7 @@ async fn community_wallet_payment() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     // Execute community wallet creation
@@ -762,7 +762,7 @@ async fn community_wallet_payment() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
     cli_finalize_cage.run()
         .await
@@ -791,7 +791,7 @@ async fn community_wallet_payment() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,    };
+        estimate: false,    };
 
     // Execute the payment proposal
     cli_propose_payment.run()
@@ -868,8 +868,9 @@ async fn add_community_wallet_admin() -> Result<(), anyhow::Error> {
         url: Some(api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     cli_add_new_admin_proposal
@@ -928,8 +929,9 @@ async fn add_community_wallet_admin() -> Result<(), anyhow::Error> {
             url: Some(api_endpoint.clone()),
             tx_profile: None,
             tx_cost: Some(TxCost::default_baseline_cost()),
-            estimate_only: false,
+            estimate: false,
             legacy_address: false,
+            ..Default::default()
         };
 
         cli_add_new_admin_proposal
@@ -1106,8 +1108,9 @@ async fn remove_community_wallet_admin() -> Result<(), anyhow::Error> {
         url: Some(api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     cli_add_new_admin_proposal
@@ -1167,8 +1170,9 @@ async fn remove_community_wallet_admin() -> Result<(), anyhow::Error> {
             url: Some(api_endpoint.clone()),
             tx_profile: None,
             tx_cost: Some(TxCost::default_baseline_cost()),
-            estimate_only: false,
+            estimate: false,
             legacy_address: false,
+            ..Default::default()
         };
 
         cli_add_new_admin_proposal
@@ -1283,7 +1287,7 @@ async fn cancel_community_wallet_payment() -> Result<(), anyhow::Error> {
             url: Some(s.api_endpoint.clone()),
             tx_profile: None,
             tx_cost: Some(TxCost::default_baseline_cost()),
-            estimate_only: false,
+            estimate: false,
         };
 
         // Execute the transfer
@@ -1319,7 +1323,7 @@ async fn cancel_community_wallet_payment() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     cli_transfer.run()
@@ -1346,7 +1350,7 @@ async fn cancel_community_wallet_payment() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     cli_set_community_wallet.run()
@@ -1370,7 +1374,7 @@ async fn cancel_community_wallet_payment() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     cli_finalize_cage.run()
@@ -1397,7 +1401,7 @@ async fn cancel_community_wallet_payment() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     cli_propose_payment.run()
@@ -1427,7 +1431,7 @@ async fn cancel_community_wallet_payment() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     cli_propose_payment_signer_two.run()
@@ -1468,7 +1472,7 @@ async fn cancel_community_wallet_payment() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     // Execute the transfer
@@ -1492,7 +1496,7 @@ async fn cancel_community_wallet_payment() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
     };
 
     // Execute the VetoTx command
@@ -1548,8 +1552,9 @@ async fn setup_environment() -> (LibraSmoke, TempPath, AccountAddress, String, A
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     cli_transfer
@@ -1599,8 +1604,9 @@ async fn run_cli_transfer(
         url: Some(api_endpoint),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     // Execute the transfer
@@ -1630,8 +1636,9 @@ async fn run_cli_community_init(
         url: Some(api_endpoint),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     // Execute the transaction
@@ -1658,8 +1665,9 @@ async fn run_cli_claim_offer(
         url: Some(api_endpoint),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     cli_claim_offer
@@ -1685,8 +1693,9 @@ async fn run_cli_community_cage(
         url: Some(api_endpoint),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     cli_finalize_cage
@@ -1714,8 +1723,9 @@ async fn run_cli_community_propose_offer(
         url: Some(api_endpoint),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     cli_propose_offer
@@ -1804,8 +1814,9 @@ async fn test_offer_migration() -> Result<(), anyhow::Error> {
         url: Some(api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     init_gov_deprecated
@@ -1840,8 +1851,9 @@ async fn test_offer_migration() -> Result<(), anyhow::Error> {
         url: Some(api_endpoint),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     offer_migration

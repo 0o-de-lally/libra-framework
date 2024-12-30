@@ -19,7 +19,7 @@ use libra_wallet::account_keys::{get_keys_from_mnem, get_keys_from_prompt};
 use std::path::PathBuf;
 use url::Url;
 
-#[derive(Parser)]
+#[derive(Parser, Default)]
 #[clap(name = env!("CARGO_PKG_NAME"), author, version, about, long_about = None, arg_required_else_help = true)]
 /// Submit a transaction to the blockchain
 pub struct TxsCli {
@@ -57,7 +57,7 @@ pub struct TxsCli {
     #[clap(short, long)]
     pub url: Option<Url>,
 
-    /// optional, saves signed transaction to file, defaults to transaction_<timestamp>.bcs
+    /// optional, saves signed transaction to specified file
     #[clap(long)]
     pub save_filename: Option<PathBuf>,
 
@@ -67,7 +67,7 @@ pub struct TxsCli {
 
     /// optional, Only estimate the gas fees
     #[clap(long)]
-    pub estimate_only: bool,
+    pub estimate: bool,
 
     /// optional, use legacy (v5) 16-byte address format for a sender
     #[clap(long)]
@@ -203,7 +203,7 @@ impl TxsCli {
         // Execute subcommand based on parsed input
         match &self.subcommand {
             Some(TxsSub::Transfer { to_account, amount }) => {
-                send.transfer(to_account.to_owned(), amount.to_owned(), self.estimate_only)
+                send.transfer(to_account.to_owned(), amount.to_owned())
                     .await?;
                 Ok(())
             }

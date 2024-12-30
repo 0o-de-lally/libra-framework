@@ -60,8 +60,10 @@ pub async fn upgrade_multiple_impl(
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::framework_upgrade()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        save_filename: None,
+        sign_only: false,
     };
 
     cli.run()

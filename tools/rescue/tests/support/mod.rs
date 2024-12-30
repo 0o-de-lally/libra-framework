@@ -166,8 +166,10 @@ pub async fn upgrade_multiple_impl(
         url: Some(smoke.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::prod_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        save_filename: None,
+        sign_only: false,
     };
 
     cli.run()

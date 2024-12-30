@@ -1,3 +1,4 @@
+use diem_sdk::rest_client::diem_api_types::TransactionData;
 use libra_smoke_tests::libra_smoke::LibraSmoke;
 use libra_txs::submit_transaction::Sender;
 use libra_types::core_types::app_cfg::Profile;
@@ -26,10 +27,17 @@ async fn sender_back_and_forth() -> anyhow::Result<()> {
     // create an account for alice by transferring funds
     let mut s = Sender::from_app_cfg(&val_app_cfg, None).await?;
     let res = s
-        .transfer(alice.child_0_owner.account, 100.0, false)
+        .transfer(alice.child_0_owner.account, 100.0)
         .await?
         .unwrap();
-    assert!(res.info.status().is_success());
+    match res {
+        TransactionData::OnChain(transaction_on_chain_data) => {
+            assert!(transaction_on_chain_data.info.status().is_success());
+        }
+        _ => {
+            panic!("Expected OnChain transaction data");
+        }
+    }
 
     let mut p = Profile::new(alice.child_0_owner.auth_key, alice.child_0_owner.account);
     assert_eq!(alice_acct, &p.account);
@@ -45,11 +53,18 @@ async fn sender_back_and_forth() -> anyhow::Result<()> {
     assert_eq!(alice_acct, &alice_sender.local_account.address());
 
     let res = alice_sender
-        .transfer(ls.first_account.address(), 10.0, false)
+        .transfer(ls.first_account.address(), 10.0)
         .await?
         .unwrap();
 
-    assert!(res.info.status().is_success());
+    match res {
+        TransactionData::OnChain(transaction_on_chain_data) => {
+            assert!(transaction_on_chain_data.info.status().is_success());
+        }
+        _ => {
+            panic!("Expected OnChain transaction data");
+        }
+    }
 
     Ok(())
 }

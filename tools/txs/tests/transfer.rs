@@ -1,3 +1,4 @@
+use diem_sdk::rest_client::diem_api_types::TransactionData;
 use libra_smoke_tests::{configure_validator, helpers::get_libra_balance, libra_smoke::LibraSmoke};
 use libra_txs::{
     submit_transaction::Sender,
@@ -41,8 +42,9 @@ async fn smoke_transfer_existing_account() {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     cli.run()
@@ -81,8 +83,9 @@ async fn smoke_transfer_create_account() -> Result<(), anyhow::Error> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     cli.run()
@@ -124,8 +127,9 @@ async fn smoke_transfer_estimate() {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_cheap_txs_cost()),
-        estimate_only: true, // THIS IS THE TEST
+        estimate: true, // THIS IS THE TEST
         legacy_address: false,
+        ..Default::default()
     };
 
     cli.run().await.expect("could not get estimate");
@@ -150,10 +154,18 @@ async fn send_v6_v5() -> anyhow::Result<()> {
         // create an account for alice by transferring funds
         let mut s = Sender::from_app_cfg(&val_app_cfg, None).await?;
         let res = s
-            .transfer(alice.child_0_owner.account, 100.0, false)
+            .transfer(alice.child_0_owner.account, 100.0)
             .await?
             .unwrap();
-        assert!(res.info.status().is_success());
+        match res {
+            TransactionData::OnChain(transaction_on_chain_data) => {
+                assert!(transaction_on_chain_data.info.status().is_success());
+            }
+            _ => {
+                panic!("Expected OnChain transaction data");
+            }
+        }
+
         println!(
             "alice v6: {:?} auth: {:?} pri: {:?}",
             alice.child_0_owner.account,
@@ -175,8 +187,16 @@ async fn send_v6_v5() -> anyhow::Result<()> {
 
     {
         let mut s = Sender::from_app_cfg(&val_app_cfg, None).await?;
-        let res = s.transfer(alice_acc_v5, 200.0, false).await?.unwrap();
-        assert!(res.info.status().is_success());
+        let res = s.transfer(alice_acc_v5, 200.0).await?.unwrap();
+
+        match res {
+            TransactionData::OnChain(transaction_on_chain_data) => {
+                assert!(transaction_on_chain_data.info.status().is_success());
+            }
+            _ => {
+                panic!("Expected OnChain transaction data");
+            }
+        }
 
         let bal = get_libra_balance(&client, alice_acc_v5).await?;
         assert_eq!(

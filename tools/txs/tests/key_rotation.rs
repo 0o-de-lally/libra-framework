@@ -1,4 +1,7 @@
-use diem_sdk::crypto::{ed25519::Ed25519PrivateKey, Uniform, ValidCryptoMaterialStringExt};
+use diem_sdk::{
+    crypto::{ed25519::Ed25519PrivateKey, Uniform, ValidCryptoMaterialStringExt},
+    rest_client::diem_api_types::TransactionData,
+};
 use libra_smoke_tests::libra_smoke::LibraSmoke;
 use libra_txs::{
     submit_transaction::Sender,
@@ -27,10 +30,14 @@ async fn rotate_key() -> anyhow::Result<()> {
     // create an account for alice by transferring funds
     let mut s = Sender::from_app_cfg(&val_app_cfg, None).await?;
     let res = s
-        .transfer(alice.child_0_owner.account, 100.0, false)
+        .transfer(alice.child_0_owner.account, 100.0)
         .await?
         .unwrap();
-    assert!(res.info.status().is_success());
+    if let TransactionData::OnChain(t) = res {
+        assert!(t.info.status().is_success());
+    } else {
+        panic!("unexpected transaction data");
+    }
     println!(
         "alice: {:?} auth: {:?} pri: {:?}",
         alice.child_0_owner.account,
@@ -104,10 +111,17 @@ async fn offer_rotation_capability() -> anyhow::Result<()> {
     // create an account for alice by transferring funds
     let mut s = Sender::from_app_cfg(&val_app_cfg, None).await?;
     let res = s
-        .transfer(alice.child_0_owner.account, 100.0, false)
+        .transfer(alice.child_0_owner.account, 100.0)
         .await?
         .unwrap();
-    assert!(res.info.status().is_success());
+    match res {
+        TransactionData::OnChain(t) => {
+            assert!(t.info.status().is_success());
+        }
+        _ => {
+            panic!("Expected OnChain transaction data");
+        }
+    }
     println!(
         "alice: {:?} auth: {:?} pri: {:?}",
         alice.child_0_owner.account,
@@ -133,11 +147,16 @@ async fn offer_rotation_capability() -> anyhow::Result<()> {
 
     // create a new account by transferring funds
     let bob_account = ls.marlon_rando();
-    let res_bob = s
-        .transfer(bob_account.address(), 100.0, false)
-        .await?
-        .unwrap();
-    assert!(res_bob.info.status().is_success());
+    let res_bob = s.transfer(bob_account.address(), 100.0).await?.unwrap();
+
+    match res_bob {
+        TransactionData::OnChain(t) => {
+            assert!(t.info.status().is_success());
+        }
+        _ => {
+            panic!("Expected OnChain transaction data");
+        }
+    }
 
     let mut bob_sender =
         Sender::from_app_cfg(&val_app_cfg, Some(bob_account.address().to_string())).await?;
@@ -205,10 +224,15 @@ async fn revoke_rotation_capability() -> anyhow::Result<()> {
     // create an account for alice by transferring funds
     let mut s = Sender::from_app_cfg(&val_app_cfg, None).await?;
     let res = s
-        .transfer(alice.child_0_owner.account, 100.0, false)
+        .transfer(alice.child_0_owner.account, 100.0)
         .await?
         .unwrap();
-    assert!(res.info.status().is_success());
+    if let TransactionData::OnChain(t) = res {
+        assert!(t.info.status().is_success());
+    } else {
+        panic!("unexpected transaction data");
+    }
+
     println!(
         "alice: {:?} auth: {:?} pri: {:?}",
         alice.child_0_owner.account,
@@ -234,11 +258,12 @@ async fn revoke_rotation_capability() -> anyhow::Result<()> {
 
     // create a new account by transferring funds
     let bob_account = ls.marlon_rando();
-    let res_bob = s
-        .transfer(bob_account.address(), 100.0, false)
-        .await?
-        .unwrap();
-    assert!(res_bob.info.status().is_success());
+    let res_bob = s.transfer(bob_account.address(), 100.0).await?.unwrap();
+    if let TransactionData::OnChain(t) = res_bob {
+        assert!(t.info.status().is_success());
+    } else {
+        panic!("unexpected transaction data");
+    }
 
     let mut bob_sender =
         Sender::from_app_cfg(&val_app_cfg, Some(bob_account.address().to_string())).await?;

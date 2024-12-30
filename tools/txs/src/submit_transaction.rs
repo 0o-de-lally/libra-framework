@@ -7,7 +7,7 @@ use diem_logger::prelude::*;
 use diem_sdk::{
     crypto::{HashValue, PrivateKey},
     rest_client::{
-        diem_api_types::{TransactionOnChainData, UserTransaction},
+        diem_api_types::{TransactionData, TransactionOnChainData, UserTransaction},
         Client,
     },
     transaction_builder::TransactionBuilder,
@@ -17,6 +17,7 @@ use diem_sdk::{
         AccountKey, LocalAccount,
     },
 };
+
 use libra_types::{
     core_types::app_cfg::{AppCfg, TxCost},
     exports::{AuthenticationKey, Ed25519PrivateKey},
@@ -27,7 +28,7 @@ use libra_types::{
     },
 };
 use std::{
-    path::PathBuf,
+    path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
 use url::Url;
@@ -36,6 +37,10 @@ use url::Url;
 pub struct Sender {
     pub local_account: LocalAccount,
     pub tx_cost: TxCost,
+    pub sign_only: bool,
+    pub save_path: Option<PathBuf>,
+    pub estimate: bool,
+    pub expires_secs: u64,
     client: Client,
     chain_id: ChainId,
     pub response: Option<TransactionOnChainData>,
@@ -76,6 +81,10 @@ impl Sender {
             local_account,
             chain_id,
             response: None,
+            expires_secs: Sender::default_expiry_usecs(),
+            sign_only: false,
+            save_path: None,
+            estimate: false,
         })
     }
 
@@ -129,6 +138,10 @@ impl Sender {
             local_account,
             chain_id,
             response: None,
+            sign_only: false,
+            save_path: None,
+            estimate: false,
+            expires_secs: Sender::default_expiry_usecs(),
         };
 
         Ok(s)
@@ -185,6 +198,10 @@ impl Sender {
                 local_account,
                 chain_id,
                 response: None,
+                sign_only: false,
+                save_path: None,
+                estimate: false,
+                expires_secs: Sender::default_expiry_usecs(),
             };
             return Ok(s);
         }
@@ -199,13 +216,44 @@ impl Sender {
     pub async fn sign_submit_wait(
         &mut self,
         payload: TransactionPayload,
-    ) -> anyhow::Result<TransactionOnChainData> {
+    ) -> anyhow::Result<TransactionData> {
+        // sign the transaction
         if let TransactionPayload::Script(s) = &payload {
             let hash = HashValue::sha3_256_of(s.code());
             info!("script code hash: {}", &hash.to_hex_literal());
         }
 
-        let signed = self.sign_payload(payload);
+        let signed = self.sign_payload(payload.clone());
+
+        // display estimate
+        if self.estimate {
+            let res = self.estimate(payload).await?;
+            println!("{:#?}", &res);
+
+            let success = res[0].info.success;
+            println!("will succeed: {success}");
+            let gas = res[0].info.gas_used;
+            println!("gas used: {gas}");
+        }
+
+        // print the signed transaction
+        info!("{:?}", &signed);
+
+        if let Some(p) = &self.save_path {
+            save_signed_tx_to_file(&signed, p)?;
+            println!("transaction saved to {}", &p.display());
+        }
+
+        if self.sign_only {
+            info!("sign only mode, not submitting transaction");
+            if self.save_path.is_none() {
+                warn!("no save path provided, not saving signed transaction");
+            }
+
+            return Ok(TransactionData::from(signed));
+        }
+
+        // sending
         let spin = OLProgress::spin_steady(500, "awaiting transaction response".to_string());
         println!("sending transaction...");
         let r = self.submit(&signed).await?;
@@ -214,24 +262,17 @@ impl Sender {
         spin.finish_and_clear();
         debug!("{:?}", &r);
         OLProgress::complete("transaction success");
-        Ok(r)
+        Ok(TransactionData::from(r))
     }
 
     /// Signs a transaction payload.
     pub fn sign_payload(&mut self, payload: TransactionPayload) -> SignedTransaction {
-        let t = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        let time = t + (DEFAULT_TIMEOUT_SECS * 10);
-
-        let tb = TransactionBuilder::new(payload, time, self.chain_id)
+        let tb = TransactionBuilder::new(payload, self.expires_secs, self.chain_id)
             .gas_unit_price(self.tx_cost.coin_price_per_unit)
             .max_gas_amount(self.tx_cost.max_gas_unit_for_tx);
 
         self.local_account.sign_with_transaction_builder(tb)
     }
-
     /// submit to API and wait for the transaction on chain data
     pub async fn submit(
         &mut self,
@@ -292,4 +333,19 @@ impl Sender {
     pub fn client(&self) -> &Client {
         &self.client
     }
+
+    fn default_expiry_usecs() -> u64 {
+        let t = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        t + (DEFAULT_TIMEOUT_SECS * 10)
+    }
+}
+
+pub fn save_signed_tx_to_file(tx: &SignedTransaction, path: &Path) -> anyhow::Result<()> {
+    // convert tx to bcs bytes
+    let bytes = bcs::to_bytes(tx)?;
+    std::fs::write(path, bytes)?;
+    Ok(())
 }

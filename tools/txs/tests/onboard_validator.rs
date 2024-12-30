@@ -50,8 +50,9 @@ async fn smoke_onboard_validator() -> anyhow::Result<()> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     alice_cli
@@ -78,8 +79,9 @@ async fn smoke_onboard_validator() -> anyhow::Result<()> {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     rando_cli

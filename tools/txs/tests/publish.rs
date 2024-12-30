@@ -40,8 +40,9 @@ async fn smoke_publish() {
         url: Some(s.api_endpoint.clone()),
         tx_profile: None,
         tx_cost: Some(TxCost::default_baseline_cost()),
-        estimate_only: false,
+        estimate: false,
         legacy_address: false,
+        ..Default::default()
     };
 
     cli.run().await.expect("cli could not publish contract");
