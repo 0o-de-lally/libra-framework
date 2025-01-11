@@ -81,7 +81,7 @@ module ol_framework::lockbox {
   public(friend) fun new(locked_coins: Coin<LibraCoin>, duration_type: u64): Lockbox {
       // Validate that the duration is in the allowed list
       assert!(is_valid_duration(duration_type), error::invalid_argument(EINVALID_DURATION));
-      
+
       Lockbox {
         locked_coins,
         duration_type,
@@ -230,6 +230,10 @@ module ol_framework::lockbox {
   }
 
   ///////// GETTERS ////////
+  #[view]
+  public fun get_default_locks(): vector<u64> {
+    DEFAULT_LOCKS
+  }
 
   fun get_daily_pct(box: &Lockbox): FixedPoint32 {
     let days = math64::mul_div(box.duration_type, 365, 12);
