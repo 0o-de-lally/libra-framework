@@ -1,14 +1,9 @@
 module ol_framework::lockbox_migrate {
-  // use ol_framework::ol_account;
   use ol_framework::lockbox;
   use ol_framework::globals;
   use diem_std::math64;
-  // use diem_std::coin;
-  // use diem_std::signer;
   use std::vector;
-  // use ol_framework::libra_coin::LibraCoin;
-
-  // const DEFAULT_LOCKS: vector<u64> = vector[1*12, 4*12, 8*12, 16*12, 24*12, 32*12];
+  use diem_std::debug::print;
 
   /// future proof calc of 1 million coins with scaling
   // TODO: move this to a util in libra_coin
@@ -31,14 +26,10 @@ module ol_framework::lockbox_migrate {
     ]
   }
 
-  // include drop
-
   struct LockSpec has drop{
     amount: u64,
     duration: u64,
   }
-
-  // use diem_std::system_addresses;
 
   fun make_spec(total: u64): vector<LockSpec> {
 
@@ -49,20 +40,29 @@ module ol_framework::lockbox_migrate {
 
     // first tier is 1M coins
     // deduct these from consideration, they stay unlocked
+    if (total <= one_million) {
+      return vector::empty()
+    };
+
     total = total - one_million;
 
     // next tier is another bucket of 1 million coins
     let i = 0;
-    let len = vector::length(&locks);
+
+    let thresh = thresholds();
+    let len = vector::length(&thresh);
+
     while (i < len) {
+      print(&total);
       let duration = *vector::borrow(&locks, i);
-      if (total > one_million) {
+      let this_thresh = *vector::borrow(&thresh, i);
+      if (total > this_thresh) {
         vector::push_back(&mut specs, LockSpec{
-          amount: one_million,
+          amount: this_thresh,
           duration
         });
         // deduct
-        total = total - one_million;
+        total = total - this_thresh;
       } else {
         vector::push_back(&mut specs, LockSpec{
           amount: total,
@@ -73,76 +73,32 @@ module ol_framework::lockbox_migrate {
       i = i + 1;
     };
     return specs
-    // if (total > one_million) {
-    //   vector::push_back(&mut specs, LockSpec{
-    //     amount: one_million,
-    //     duration: vector::borrow(&locks, 1) // one year
-    //   });
-    //   // deduct
-    //   total = total - one_million;
-    // } else {
-    //   vector::push_back(&mut specs, LockSpec{
-    //     amount: total,
-    //     duration: vector::borrow(&locks, 1) // one year
-    //   });
-    //   return specs;
-    // };
-
-    // // next tier is a bucket of 5 million coins
-    // let five_million = 5 * one_million;
-
-    // if (total > five_million) {
-
-    //   vector::push_back(&mut specs, LockSpec{
-    //     amount: five_million,
-    //     duration: vector::borrow(&locks, 1) // one year
-    //   });
-    //   // deduct
-    //   total = total - five_million;
-    // };
-
-    // // next tier is 10m
-    // let ten_million = 5 * one_million;
-
-    // if (total > ten_million) {
-    //   vector::push_back(&mut specs, LockSpec{
-    //     amount: one_million,
-    //     duration: vector::borrow(&locks, 0)
-    //   });
-    //   total = total - ten_million;
-    // }
-
-
-
-    // return specs
   }
-  //////// UNIT TESTS ///////
-  #[test]
-  fun test_make_spec() {
-    use diem_std::debug::print;
-    let one_million = calc_one_million_coins();
-    let specs = make_spec(one_million);
-    print(&@0x1);
-    print(&specs);
+
+  fun check_spec(amount: u64, specs: &vector<LockSpec>): bool {
+
+    if (amount > calc_one_million_coins()) {
+      return true
+    };
+
+    let locked_amount = 0;
+
+    let len = vector::length(specs);
+    let i = 0;
+    while (i < len) {
+      let s = vector::borrow(specs, i);
+      locked_amount = locked_amount + s.amount;
+      i = i + 1;
+    };
+
+    if ((locked_amount + calc_one_million_coins()) == amount) {
+      return true
+    } else {
+      return false
+    }
   }
-}
-//   // returns the lock duration based on the amount
-//   fun migration_tiers(amount: u64): u64 {
-//     let decimal_places = coin::decimals<LibraCoin>();
-//     let scaling = math64::pow(10, (decimal_places as u64));
-//     let locks = lockbox::get_default_locks();
-//     // below 100K ignore
-//     if (amount < 100000 * scaling) {
-//       return 0
-//     } else if (amount < 5 * 1000000 * scaling) {
-//       return *vector::borrow(&locks, 1)
-//     } else if (amount < 10 * 1000000 * scaling) {
-//       return 90
-//     } else {
-//       return 120
-//     }
-//   }
-//   // Standard migration function
+
+  //   // Standard migration function
 //   public fun initialize_lockboxes(sig: &signer) {
 //     let (_unlocked, total) = ol_account::balance(signer::address_of(sig));
 
@@ -155,21 +111,40 @@ module ol_framework::lockbox_migrate {
 //   }
 // }
 
-  // // Master account override function
-  // public fun migrate_account(
-  //   framework: &signer,
-  //   account_to_migrate: address,
-  //   lockbox_duration: u64
-  // ) {
-  //   system_addresses::assert_diem_framework(framework);
+  //////// UNIT TESTS ///////
+  #[test]
+  fun test_make_spec() {
+    let one_million = calc_one_million_coins();
+    let specs = make_spec(one_million);
+    assert!(vector::length(&specs) == 0, 7357001);
 
-  //   let (unlocked, total) = ol_account::balance(account_to_migrate);
+    let specs = make_spec(one_million * 2);
+    assert!(vector::length(&specs) == 1, 7357002);
+    assert!((vector::borrow(&specs, 0)).amount == one_million, 7357003);
+    assert!((vector::borrow(&specs, 0)).duration == 12, 7357004);
 
-  //   let i = 0;
-  //   while (i < 10) {
-  //     Lockbox::create_lockbox(&account, lockbox_amount, lockbox_duration);
-  //     i = i + 1;
-  //   };
-  //     Lockbox::create_lockbox(&account, lockbox_amount, lockbox_duration);
-  //   }
-  // }
+    let specs = make_spec(one_million * 410);
+
+    print(&specs);
+    let check_is_true = check_spec(one_million * 410, &specs);
+    assert!(check_is_true, 7357005);
+
+    // iterate over the specs and check the amount match the thresholds()
+    let thresh = thresholds();
+    let len = vector::length(&specs);
+    let i = 0;
+    let total = 0;
+    while (i < (len - 1)) { // last one will be the remainder
+      let s = vector::borrow(&specs, i);
+      let this_thresh = *vector::borrow(&thresh, i);
+      assert!(s.amount == this_thresh, 7357006);
+      total = total + s.amount;
+      i = i + 1;
+    };
+    let last_spec = vector::pop_back(&mut specs);
+    print(&last_spec);
+    let remainder = last_spec.amount;
+    assert!((one_million * 410 - total - one_million) == remainder, 7357007);
+
+  }
+}
