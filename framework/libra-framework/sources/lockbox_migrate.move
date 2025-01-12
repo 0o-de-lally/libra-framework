@@ -1,18 +1,19 @@
 module ol_framework::lockbox_migrate {
   // use ol_framework::ol_account;
   use ol_framework::lockbox;
+  use ol_framework::globals;
   use diem_std::math64;
-  use diem_std::coin;
+  // use diem_std::coin;
   // use diem_std::signer;
   use std::vector;
-  use ol_framework::libra_coin::LibraCoin;
+  // use ol_framework::libra_coin::LibraCoin;
 
   // const DEFAULT_LOCKS: vector<u64> = vector[1*12, 4*12, 8*12, 16*12, 24*12, 32*12];
 
   /// future proof calc of 1 million coins with scaling
   // TODO: move this to a util in libra_coin
   fun calc_one_million_coins(): u64{
-    let decimal_places = coin::decimals<LibraCoin>();
+    let decimal_places = globals::get_coin_decimal_places();
     let scaling = math64::pow(10, (decimal_places as u64));
     1 * 1000000 * scaling
   }
@@ -40,12 +41,11 @@ module ol_framework::lockbox_migrate {
   // use diem_std::system_addresses;
 
   fun make_spec(total: u64): vector<LockSpec> {
-    let decimal_places = coin::decimals<LibraCoin>();
-    let scaling = math64::pow(10, (decimal_places as u64));
+
     let locks = lockbox::get_default_locks();
     let specs = vector::empty<LockSpec>();
 
-    let one_million = 1 * 1000000 * scaling;
+    let one_million = calc_one_million_coins();
 
     // first tier is 1M coins
     // deduct these from consideration, they stay unlocked
@@ -117,6 +117,7 @@ module ol_framework::lockbox_migrate {
     // return specs
   }
   //////// UNIT TESTS ///////
+  #[test]
   fun test_make_spec() {
     use diem_std::debug::print;
     let one_million = calc_one_million_coins();

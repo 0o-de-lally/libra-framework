@@ -340,7 +340,7 @@ module ol_framework::libra_coin {
             diem_framework,
             string::utf8(b"LibraCoin"),
             string::utf8(b"LIBRA"),
-            8, /* decimals */
+            globals::get_coin_decimal_places(), /* decimals */
             true, /* monitor_supply */
         );
 

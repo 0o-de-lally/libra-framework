@@ -12,6 +12,7 @@ module ol_framework::mock {
   use diem_framework::system_addresses;
   use diem_framework::transaction_fee;
   use ol_framework::grade;
+  use ol_framework::globals;
   use ol_framework::vouch;
   use ol_framework::slow_wallet;
   use ol_framework::proof_of_fee;
@@ -400,4 +401,16 @@ module ol_framework::mock {
   fun meta_test_minimal_account_init(framework: &signer, bob: address) {
     ol_mint_to(framework, bob, 123);
   }
+
+  #[test(root = @ol_framework)]
+  public entry fun test_coin_decimals(
+        root: signer,
+    ) {
+      let _set = genesis_n_vals(&root, 4);
+      ol_initialize_coin_and_fund_vals(&root, 1234567890, false);
+
+      let decimals_global = globals::get_coin_decimal_places();
+      let decimals_setting = coin::decimals<LibraCoin>();
+      assert!(decimals_global == decimals_setting, 7357001);
+    }
 }

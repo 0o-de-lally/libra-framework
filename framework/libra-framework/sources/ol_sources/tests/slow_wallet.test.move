@@ -18,7 +18,7 @@ module ol_framework::test_slow_wallet {
   use std::vector;
   use std::signer;
 
-   use diem_std::debug::print;
+  //  use diem_std::debug::print;
 
   #[test(root = @ol_framework)]
   // we are testing that genesis creates the needed struct
@@ -121,7 +121,6 @@ module ol_framework::test_slow_wallet {
     rewards::test_helper_pay_reward(&root, a, coin, 0);
 
     let (u, b) = ol_account::balance(a);
-    print(&b);
     assert!(b==500_000_100, 735702);
     assert!(u==100, 735703);
 
@@ -187,9 +186,6 @@ module ol_framework::test_slow_wallet {
     // slow transfer
     let b_balance = libra_coin::balance(@0x456);
     assert!(b_balance == transfer_amount, 735704);
-    // print(&alice_init_balance);
-    // print(&transfer_amount);
-    // print(&slow_wallet::unlocked_amount(@0x123));
 
     assert!(slow_wallet::unlocked_amount(@0x123) == (alice_init_balance - transfer_amount), 735705);
     assert!(slow_wallet::unlocked_amount(@0x456) == transfer_amount, 735706);
@@ -247,15 +243,12 @@ module ol_framework::test_slow_wallet {
   public entry fun test_human_read(
         root: signer,
     ) {
-        let _set = mock::genesis_n_vals(&root, 4);
-    mock::ol_initialize_coin_and_fund_vals(&root, 1234567890, false);
+      let _set = mock::genesis_n_vals(&root, 4);
+      mock::ol_initialize_coin_and_fund_vals(&root, 1234567890, false);
 
+      let (integer, decimal) = ol_account::balance_human(@0x1000a);
 
-        let (integer, decimal) = ol_account::balance_human(@0x1000a);
-
-        assert!(integer == 12, 7357001);
-        assert!(decimal == 34567890, 7357002);
-
+      assert!(integer == 1234, 7357001);
+      assert!(decimal == 567890, 7357002);
     }
-
 }
