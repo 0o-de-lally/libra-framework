@@ -320,6 +320,6 @@ jobs:
           cache-all-crates: true
           cache-on-failure: true
 
-      - name: twin
-        working-directory: ./testsuites/twin
+      - name: smoke twin
+        working-directory: ./testsuites/smoke
         run: cargo test --no-fail-fast
