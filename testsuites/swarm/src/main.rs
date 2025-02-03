@@ -1,7 +1,7 @@
 use clap::Parser;
-
+use libra_swarm::cli::SwarmCli;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    libra_twin_tests::runner::Twin::parse().run().await?;
+    SwarmCli::parse().run().await?;
     Ok(())
 }
