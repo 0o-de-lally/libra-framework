@@ -1,5 +1,5 @@
 [package]
-name = "libra-swarm"
+name = "libra-smoke"
 
 # Workspace inherited keys
 version = { workspace = true }
