@@ -29,7 +29,22 @@ use libra_rescue::{
 };
 use std::{fs, path::Path};
 
-use crate::runner::Twin;
+/// Swarm configs
+pub struct Twin {
+    /// path of snapshot db we want marlon to drive
+    #[clap(long, short)]
+    pub db_dir: PathBuf,
+    /// The operator.yaml file which contains registration information
+    #[clap(long, short)]
+    pub oper_file: Option<PathBuf>,
+    /// provide info about the DB state, e.g. version
+    #[clap(long, short)]
+    pub info: bool,
+
+    /// number of local validators to start
+    #[clap(long, short)]
+    pub count_vals: Option<u8>,
+}
 
 /// Setup the twin network with a synced db
 impl Twin {

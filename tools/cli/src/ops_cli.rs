@@ -7,7 +7,6 @@ use libra_storage::storage_cli::StorageCli;
 /// Node and DB operations tools
 pub enum OpsTool {
     Genesis(GenesisCli),
-    // #[clap(subcommand)]
     Storage(StorageCli),
     Rescue(RescueCli),
 }

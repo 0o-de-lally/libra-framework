@@ -1,26 +1,38 @@
-use clap::{self, Parser};
+use clap::{self, Parser, Subcommand};
 use libra_smoke_tests::libra_smoke::LibraSmoke;
 use std::{fs, path::PathBuf};
-/// Twin of the network
-#[derive(Parser)]
+use crate::twin::Twin;
+
 
 /// Set up a twin of the network, with a synced db
-pub struct Twin {
-    /// path of snapshot db we want marlon to drive
-    #[clap(long, short)]
-    pub db_dir: PathBuf,
-    /// The operator.yaml file which contains registration information
-    #[clap(long, short)]
-    pub oper_file: Option<PathBuf>,
+#[derive(Parser)]
+
+pub struct SwarmCli {
+    #[clap(subcommand)]
+    sub: Option<SwarmSub>,
     /// provide info about the DB state, e.g. version
     #[clap(long, short)]
     pub info: bool,
 
     /// number of local validators to start
     #[clap(long, short)]
-    pub count_vals: Option<u8>,
+    pub count_vals: Option<u8>
 }
-impl Twin {
+
+#[derive(Subcommand)]
+pub enum SwarmSub {
+    Twin {
+      /// path of snapshot db we want marlon to drive
+      #[clap(long, short)]
+      db_dir: PathBuf,
+      /// The operator.yaml file which contains registration information
+      #[clap(long, short)]
+      oper_file: Option<PathBuf>,
+    },
+    Simple {}
+}
+
+impl SwarmCli {
     /// Runner for the twin
     pub async fn run(&self) -> anyhow::Result<(), anyhow::Error> {
         let db_path = fs::canonicalize(&self.db_dir)?;
