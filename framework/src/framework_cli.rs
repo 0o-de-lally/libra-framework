@@ -163,7 +163,9 @@ pub fn make_template_files(
     let t = r#"
 script {
   // THIS IS A TEMPLATE GOVERNANCE SCRIPT
-  // you can generate this file with commandline tools: `libra-framework governance --output-dir --framework-local-dir`
+  // you can generate this file with commandline tools:
+  // `libra move framework governance --output-dir --framework-local-dir`
+
   use diem_framework::diem_governance;
   use std::vector;
 
