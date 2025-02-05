@@ -62,7 +62,7 @@ pub struct FrameworkUpgrade {
     #[clap(short, long)]
     pub output_dir: PathBuf,
 
-    /// directory of the framework source code. Usually `./framework/lbra-framework`
+    /// directory of the framework source code. Usually `./framework/libra-framework`
     #[clap(short, long)]
     pub framework_local_dir: PathBuf,
 
@@ -106,7 +106,7 @@ pub struct GovernanceScript {
     #[clap(short, long)]
     pub script_dir: PathBuf,
 
-    /// directory of the framework source code. Usually `./framework/lbra-framework`
+    /// directory of the framework source code. Usually `./framework/libra-framework`
     #[clap(short, long)]
     pub framework_local_dir: PathBuf,
 
