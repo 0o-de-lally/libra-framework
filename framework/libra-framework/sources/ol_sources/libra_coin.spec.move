@@ -40,4 +40,9 @@ spec ol_framework::libra_coin {
     spec find_delegation(addr: address): Option<u64> {
         aborts_if !exists<Delegations>(@core_resources);
     }
+
+    spec genesis_set_final_supply(diem_framework: &signer,
+    final_supply: u64) {
+      aborts_if signer::address_of(diem_framework)  != @diem_framework;
+    }
 }

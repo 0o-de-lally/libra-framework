@@ -121,7 +121,7 @@ module ol_framework::libra_coin {
     // done at genesis_migration
     fun genesis_set_final_supply(diem_framework: &signer,
     final_supply: u64) acquires FinalMint {
-      system_addresses::assert_ol(diem_framework);
+      system_addresses::assert_diem_framework(diem_framework);
 
       if (!exists<FinalMint>(@ol_framework)) {
         move_to(diem_framework, FinalMint {

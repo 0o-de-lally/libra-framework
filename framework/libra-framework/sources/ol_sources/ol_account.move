@@ -85,6 +85,7 @@ module ol_framework::ol_account {
     /// what limit should be set for new account creation while using transfer()
     const MAX_COINS_FOR_INITIALIZE: u64 = 1000 * 1000000;
 
+
     /// tracks the burns relative to each account
     struct BurnTracker has key {
       prev_supply: u64,
@@ -526,6 +527,8 @@ module ol_framework::ol_account {
         // whole chain of updates will be incorrect
         if (attributed_burn > 0) {
           spec {
+            assume (attributed_burn) < MAX_U64;
+            assume (state.cumu_burn + attributed_burn) < MAX_U64;
             assume (state.burn_at_last_calc + attributed_burn) < MAX_U64;
           };
 

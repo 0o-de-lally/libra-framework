@@ -33,8 +33,11 @@ spec ol_framework::ol_account {
     spec withdraw(sender: &signer, amount: u64): Coin<LibraCoin>{
         include AssumeCoinRegistered;
 
+
         let account_addr = signer::address_of(sender);
         aborts_if amount == 0;
+
+        aborts_if !exists<BurnTracker>(account_addr);
 
         let coin_store = global<coin::CoinStore<LibraCoin>>(account_addr);
         let balance = coin_store.coin.value;

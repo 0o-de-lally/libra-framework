@@ -17,12 +17,6 @@ module diem_framework::chain_id {
         move_to(diem_framework, ChainId { id })
     }
 
-    fun set_impl(vm: &signer, id: u8) acquires ChainId {
-        system_addresses::assert_ol(vm);
-        let state = borrow_global_mut<ChainId>(@diem_framework);
-        state.id = id;
-    }
-
     #[view]
     /// Return the chain ID of this instance.
     public fun get(): u8 acquires ChainId {
@@ -34,8 +28,13 @@ module diem_framework::chain_id {
         initialize(diem_framework, id);
     }
     #[test_only]
-    public fun set_for_test(vm: &signer, id: u8) acquires ChainId {
-        set_impl(vm, id);
+    public fun set_for_test(diem_framework: &signer, id: u8) acquires ChainId {
+        system_addresses::assert_ol(vm);
+        if (!exists<ChainId>(@diem_framework)) {
+          move_to(diem_framework, ChainId { id })
+        };
+        let state = borrow_global_mut<ChainId>(@diem_framework);
+        state.id = id;
     }
 
 
