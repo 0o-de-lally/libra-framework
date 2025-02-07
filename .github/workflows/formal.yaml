@@ -39,6 +39,14 @@ jobs:
           bash util/dev_setup.sh -byp
 
       # Move prover tests
-      - name: prover tests
-        working-directory: ./framework
-        run: make -f prover.mk prove
+      - name: stdlib tests
+        working-directory: ./framework/move-stdlib
+        run: libra move prove
+
+      # - name: vendor tests
+      #   working-directory: ./framework/vendor-stdlib
+      #   run: libra move prove -f chain_id guid
+
+      # - name: libra tests
+      #   working-directory: ./framework/libra-framework
+      #   run: libra move prove
