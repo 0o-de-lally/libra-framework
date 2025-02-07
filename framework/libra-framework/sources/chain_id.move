@@ -29,7 +29,7 @@ module diem_framework::chain_id {
     }
     #[test_only]
     public fun set_for_test(diem_framework: &signer, id: u8) acquires ChainId {
-        system_addresses::assert_ol(vm);
+        system_addresses::assert_ol(diem_framework);
         if (!exists<ChainId>(@diem_framework)) {
           move_to(diem_framework, ChainId { id })
         };
