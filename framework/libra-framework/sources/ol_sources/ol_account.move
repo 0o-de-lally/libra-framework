@@ -501,7 +501,7 @@ module ol_framework::ol_account {
       });
     }
 
-  // NOTE: this must be called before immediately after any coins are deposited or withrdrawn.
+  // NOTE: this must be called before immediately after any coins are deposited or withdrawn.
   fun maybe_update_burn_tracker_impl(addr: address) acquires BurnTracker {
     assert!(exists<BurnTracker>(addr), error::invalid_state(ENO_TRACKER_INITIALIZED));
     let state = borrow_global_mut<BurnTracker>(addr);
