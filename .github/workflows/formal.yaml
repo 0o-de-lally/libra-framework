@@ -40,8 +40,9 @@ jobs:
 
       # Move prover tests
       - name: stdlib tests
-        working-directory: ./framework/move-stdlib
-        run: libra move prove
+        working-directory: ./framework/
+        if: always()
+        run: make -f prover.mk prove-stdlib
 
       # - name: vendor tests
       #   working-directory: ./framework/vendor-stdlib
