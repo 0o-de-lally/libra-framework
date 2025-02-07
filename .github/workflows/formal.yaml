@@ -44,9 +44,9 @@ jobs:
         if: always()
         run: make -f prover.mk prove-stdlib
 
-      # - name: vendor tests
-      #   working-directory: ./framework/vendor-stdlib
-      #   run: libra move prove -f chain_id guid
+      - name: vendor tests
+        working-directory: ./framework
+        run: make -f prover.mk prove-vendor
 
       # - name: libra tests
       #   working-directory: ./framework/libra-framework
