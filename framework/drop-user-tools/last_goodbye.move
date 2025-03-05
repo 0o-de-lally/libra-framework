@@ -54,7 +54,7 @@ module ol_framework::last_goodbye {
   use diem_framework::coin;
   use diem_framework::system_addresses;
   use ol_framework::burn;
-  use ol_framework::libra_coin::LibraCoin;
+  use ol_framework::gas_coin::GasCoin;
   use ol_framework::pledge_accounts;
   use ol_framework::receipts;
   use ol_framework::jail;
@@ -121,9 +121,9 @@ module ol_framework::last_goodbye {
     let _coin_val = pledge_accounts::hard_fork_sanitize(vm, user);
 
         // do all the necessary coin accounting prior to removing the account.
-    let total_bal = coin::balance<LibraCoin>(user_addr);
+    let total_bal = coin::balance<GasCoin>(user_addr);
 
-    let all_coins_opt = coin::vm_withdraw<LibraCoin>(vm, user_addr,
+    let all_coins_opt = coin::vm_withdraw<GasCoin>(vm, user_addr,
     total_bal);
 
     // It ain't no use to sit and wonder why, babe

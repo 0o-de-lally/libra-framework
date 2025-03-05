@@ -10,7 +10,8 @@ module diem_framework::transaction_validation {
     use diem_framework::timestamp;
     use diem_framework::transaction_fee;
 
-    use ol_framework::libra_coin::{Self, LibraCoin};
+    use ol_framework::libra_coin;
+    use ol_framework::gas_coin::GasCoin;
     use ol_framework::activity;
     // use diem_std::debug::print;
 
@@ -108,7 +109,7 @@ module diem_framework::transaction_validation {
 
         let max_transaction_fee = txn_gas_price * txn_max_gas_units;
         assert!(
-            coin::is_account_registered<LibraCoin>(transaction_sender),
+            coin::is_account_registered<GasCoin>(transaction_sender),
             error::invalid_argument(PROLOGUE_ECANT_PAY_GAS_DEPOSIT),
         );
         let balance = libra_coin::balance(transaction_sender);

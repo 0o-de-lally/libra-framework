@@ -27,7 +27,7 @@ module diem_framework::epoch_boundary {
   use ol_framework::infra_escrow;
   use ol_framework::musical_chairs;
   use ol_framework::donor_voice_txs;
-  use ol_framework::libra_coin::LibraCoin;
+  use ol_framework::gas_coin::GasCoin;
   use ol_framework::community_wallet_init;
 
   use diem_std::debug::print;
@@ -425,7 +425,7 @@ module diem_framework::epoch_boundary {
   /// NOTE: receives from reconfiguration.move a mutable borrow of a coin to pay reward
   /// NOTE: burn remaining fees from transaction fee account happens in reconfiguration.move (it's not a validator_universe concern)
   // Returns (compliant_vals, reward_deposited)
-  fun process_outgoing_validators(root: &signer, reward_budget: &mut Coin<LibraCoin>, reward_per: u64, compliant_vals: vector<address>): (vector<address>, u64){
+  fun process_outgoing_validators(root: &signer, reward_budget: &mut Coin<GasCoin>, reward_per: u64, compliant_vals: vector<address>): (vector<address>, u64){
     system_addresses::assert_ol(root);
     let vals = stake::get_current_validators();
     let reward_deposited = 0;

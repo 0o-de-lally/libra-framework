@@ -1,14 +1,5 @@
-// Copyright (c) The Libra Core Contributors
-// SPDX-License-Identifier: Apache-2.0
-// Licensed under the Apache License, Version 2.0
-// Original source:
-// https://github.com/diem/diem/blob/782b31cb08eeb717ea2b6f3edbf616b13fd4cae8/language/move-lang/stdlib/modules/libra_coin.move
-// Original Commit:
-// https://github.com/diem/diem/commit/782b31cb08eeb717ea2b6f3edbf616b13fd4cae8
-
-
-module ol_framework::libra_coin {
-    // use std::string;
+module ol_framework::gas_coin {
+    use std::string;
     use std::error;
     use std::signer;
     use std::vector;
@@ -18,12 +9,12 @@ module ol_framework::libra_coin {
     use diem_framework::coin::{Self, Coin, MintCapability, BurnCapability};
     use diem_framework::system_addresses;
 
-    // use ol_framework::globals;
-    use ol_framework::gas_coin::{Self, GasCoin};
+    use ol_framework::globals;
 
     friend diem_framework::genesis;
     friend ol_framework::genesis_migration;
     friend ol_framework::pledge_accounts;
+    friend ol_framework::libra_coin;
 
     const MAX_U64: u128 = 18446744073709551615;
 
@@ -36,7 +27,7 @@ module ol_framework::libra_coin {
     /// Supply somehow above MAX_U64
     const ESUPPLY_OVERFLOW: u64 = 4;
 
-    struct LibraCoin has key { /* new games for society */}
+    struct GasCoin has key { /* new games for society */}
 
     struct FinalMint has key {
         value: u64,
@@ -57,15 +48,53 @@ module ol_framework::libra_coin {
     }
 
     /// Can only called during genesis to initialize the Diem coin.
-    public(friend) fun initialize(diem_framework: &signer) {
-      gas_coin::initialize(diem_framework);
+    public(friend) fun initialize(diem_framework: &signer) acquires FinalMint {
+        system_addresses::assert_diem_framework(diem_framework);
+
+        let (burn_cap, freeze_cap, mint_cap) = coin::initialize_with_parallelizable_supply<GasCoin>(
+            diem_framework,
+            string::utf8(b"GasCoin"),
+            string::utf8(b"GAS"),
+            globals::get_coin_decimal_places(), /* decimals  MATCHES LEGACY 0L */
+            true, /* monitor_supply */
+        );
+
+        // Diem framework needs mint cap to mint coins to initial validators. This will be revoked once the validators
+        // have been initialized.
+
+        move_to(diem_framework, MintCapStore { mint_cap });
+
+
+        coin::destroy_freeze_cap(freeze_cap);
+        coin::destroy_burn_cap(burn_cap);
+
+        genesis_set_final_supply(diem_framework, 1000)
     }
 
     /// FOR TESTS ONLY
     /// Can only called during genesis to initialize the Diem coin.
     public(friend) fun initialize_for_core(diem_framework: &signer):
-    (BurnCapability<GasCoin>, MintCapability<GasCoin>) {
-        gas_coin::initialize_for_core(diem_framework)
+    (BurnCapability<GasCoin>, MintCapability<GasCoin>) acquires FinalMint {
+        system_addresses::assert_diem_framework(diem_framework);
+
+        let (burn_cap, freeze_cap, mint_cap) = coin::initialize_with_parallelizable_supply<GasCoin>(
+            diem_framework,
+            string::utf8(b"GasCoin"),
+            string::utf8(b"GAS"),
+            globals::get_coin_decimal_places(), /* decimals  MATCHES LEGACY 0L */
+            true, /* monitor_supply */
+        );
+
+        // Diem framework needs mint cap to mint coins to initial validators. This will be revoked once the validators
+        // have been initialized.
+        move_to(diem_framework, MintCapStore { mint_cap });
+
+        coin::destroy_freeze_cap(freeze_cap);
+
+        genesis_set_final_supply(diem_framework, 100); // TODO: set this number
+        // in testnets
+
+        (burn_cap, mint_cap)
     }
 
     fun has_mint_capability(account: &signer): bool {
@@ -95,17 +124,25 @@ module ol_framework::libra_coin {
         state.value = final_supply
       }
     }
-
     #[test_only]
     public fun test_set_final_supply(diem_framework: &signer,
-    final_supply: u64) {
-      gas_coin::test_set_final_supply(diem_framework, final_supply);
+    final_supply: u64) acquires FinalMint {
+      system_addresses::assert_ol(diem_framework);
+
+      if (!exists<FinalMint>(@ol_framework)) {
+        move_to(diem_framework, FinalMint {
+          value: final_supply
+        });
+      } else {
+        let state = borrow_global_mut<FinalMint>(@ol_framework);
+        state.value = final_supply
+      }
     }
 
     #[view]
     /// get the original final supply from genesis
-    public fun get_final_supply(): u64 {
-      gas_coin::get_final_supply()
+    public fun get_final_supply(): u64 acquires FinalMint{
+      borrow_global<FinalMint>(@ol_framework).value
     }
 
 
@@ -113,26 +150,26 @@ module ol_framework::libra_coin {
     // from generic implementations
     /// libra coin value
     public fun value(coin: &Coin<GasCoin>): u64 {
-      gas_coin::value(coin)
+      coin::value<GasCoin>(coin)
     }
     /// simple libra coin balance at this address,
     /// without considering locks or index
     public fun balance(addr: address): u64 {
-      gas_coin::balance(addr)
+      coin::balance<GasCoin>(addr)
     }
 
     /// extract coin by splitting a coin
     public fun extract(coin: &mut Coin<GasCoin>, amount: u64): Coin<GasCoin> {
-      gas_coin::extract(coin, amount)
+      coin::extract<GasCoin>(coin, amount)
     }
     /// extract all remaining value from a coin
     public fun extract_all(coin: &mut Coin<GasCoin>): Coin<GasCoin> {
-      gas_coin::extract_all(coin)
+      coin::extract_all<GasCoin>(coin)
     }
 
     /// merge two libra coins back together
     public fun merge(dst_coin: &mut Coin<GasCoin>, source_coin: Coin<GasCoin>) {
-      gas_coin::merge(dst_coin, source_coin)
+      coin::merge<GasCoin>(dst_coin, source_coin)
     }
 
 
@@ -146,24 +183,40 @@ module ol_framework::libra_coin {
     /// get the gas coin supply. Helper which wraps coin::supply and extracts option type
     // NOTE: there is casting between u128 and u64, but 0L has final supply below the u64.
     public fun supply(): u64 {
-      gas_coin::supply()
+
+      let supply_opt = coin::supply<GasCoin>();
+      if (option::is_some(&supply_opt)) {
+        let value = *option::borrow(&supply_opt);
+        spec {
+          assume value < MAX_U64;
+        };
+        return (value as u64)
+      };
+      0
     }
     #[view]
     /// debugging view
     public fun supply_128(): u128 {
-      gas_coin::supply_128()
+      let supply_opt = coin::supply<GasCoin>();
+      if (option::is_some(&supply_opt)) {
+        return *option::borrow(&supply_opt)
+      };
+      0
     }
 
 
     #[test_only]
     public fun restore_mint_cap(diem_framework: &signer, mint_cap: MintCapability<GasCoin>) {
-        gas_coin::restore_mint_cap(diem_framework, mint_cap)
+        system_addresses::assert_diem_framework(diem_framework);
+        move_to(diem_framework, MintCapStore { mint_cap });
     }
 
     #[test_only]
     public fun extract_mint_cap(diem_framework: &signer):
-    MintCapability<GasCoin> {
-        gas_coin::extract_mint_cap(diem_framework)
+    MintCapability<GasCoin> acquires MintCapStore {
+        system_addresses::assert_diem_framework(diem_framework);
+        let MintCapStore { mint_cap } = move_from<MintCapStore>(@diem_framework);
+        mint_cap
     }
 
 
@@ -176,7 +229,20 @@ module ol_framework::libra_coin {
         core_resources: &signer,
         mint_cap: MintCapability<GasCoin>,
     ){
-      gas_coin::configure_accounts_for_test(diem_framework, core_resources, mint_cap)
+        system_addresses::assert_diem_framework(diem_framework);
+
+        // Mint the core resource account GasCoin for gas so it can execute system transactions.
+        coin::register<GasCoin>(core_resources);
+
+        let coins = coin::mint<GasCoin>(
+            1000000 * 1000000, // core resources can have 1M coins, MAX_U64 was
+            // causing arthmetic errors calling supply() on downcast
+            &mint_cap,
+        );
+        coin::deposit<GasCoin>(signer::address_of(core_resources), coins);
+
+        move_to(core_resources, MintCapStore { mint_cap });
+        move_to(core_resources, Delegations { inner: vector::empty() });
     }
 
     // NOTE: needed for smoke tests
@@ -256,12 +322,24 @@ module ol_framework::libra_coin {
         index
     }
 
-    // #[test_only]
-    // use diem_framework::aggregator_factory;
+    #[test_only]
+    use diem_framework::aggregator_factory;
 
     #[test_only]
-    public fun initialize_for_test(diem_framework: &signer): (BurnCapability<GasCoin>, MintCapability<GasCoin>) {
-       gas_coin::initialize_for_test(diem_framework)
+    public fun initialize_for_test(diem_framework: &signer): (BurnCapability<GasCoin>, MintCapability<GasCoin>) acquires FinalMint {
+        aggregator_factory::initialize_aggregator_factory_for_test(diem_framework);
+        let (burn_cap, freeze_cap, mint_cap) = coin::initialize_with_parallelizable_supply<GasCoin>(
+            diem_framework,
+            string::utf8(b"GasCoin"),
+            string::utf8(b"GAS"),
+            8, /* decimals */
+            true, /* monitor_supply */
+        );
+
+        genesis_set_final_supply(diem_framework, 0);
+
+        coin::destroy_freeze_cap(freeze_cap);
+        (burn_cap, mint_cap)
     }
     // COMMIT NOTE: Deduplicate the initialization by lazy initializing aggregator_factory.move
 }

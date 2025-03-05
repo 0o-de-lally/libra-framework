@@ -8,7 +8,7 @@ spec ol_framework::libra_coin {
         pragma aborts_if_is_partial;
         let addr = signer::address_of(diem_framework);
         ensures exists<MintCapStore>(addr);
-        ensures exists<coin::CoinInfo<LibraCoin>>(addr);
+        ensures exists<coin::CoinInfo<GasCoin>>(addr);
     }
 
     // spec destroy_mint_cap {

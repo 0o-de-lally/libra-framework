@@ -221,7 +221,7 @@ spec diem_framework::diem_governance {
     spec reconfigure(diem_framework: &signer) {
         use diem_framework::chain_status;
         use diem_framework::coin::CoinInfo;
-        use diem_framework::libra_coin::LibraCoin;
+        use diem_framework::gas_coin::GasCoin;
         use diem_framework::transaction_fee;
         // use diem_framework::staking_config;
 
@@ -234,7 +234,7 @@ spec diem_framework::diem_governance {
         requires chain_status::is_operating();
         requires timestamp::spec_now_microseconds() >= reconfiguration::last_reconfiguration_time();
         requires exists<stake::ValidatorFees>(@diem_framework);
-        requires exists<CoinInfo<LibraCoin>>(@diem_framework);
+        requires exists<CoinInfo<GasCoin>>(@diem_framework);
     }
 
     // /// Signer address must be @core_resources.

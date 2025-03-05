@@ -16,7 +16,7 @@ module ol_framework::infra_escrow{
     use diem_framework::transaction_fee;
     use diem_framework::system_addresses;
     use ol_framework::ol_account;
-    use ol_framework::libra_coin::LibraCoin;
+    use ol_framework::gas_coin::GasCoin;
     use ol_framework::pledge_accounts;
 
     // use diem_std::debug::print;
@@ -43,7 +43,7 @@ module ol_framework::infra_escrow{
 
     /// VM can call down pledged funds.
     // NOTE: the signer MUST_BE 0x0 address
-    fun infra_pledge_withdraw(vm: &signer, amount: u64): Option<coin::Coin<LibraCoin>> {
+    fun infra_pledge_withdraw(vm: &signer, amount: u64): Option<coin::Coin<GasCoin>> {
         system_addresses::assert_ol(vm);
         pledge_accounts::withdraw_from_all_pledge_accounts(vm, amount)
     }

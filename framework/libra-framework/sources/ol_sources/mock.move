@@ -17,7 +17,8 @@ module ol_framework::mock {
   use ol_framework::proof_of_fee;
   use ol_framework::validator_universe;
   use ol_framework::epoch_boundary;
-  use ol_framework::libra_coin::{Self, LibraCoin};
+  use ol_framework::libra_coin;
+use ol_framework::gas_coin::GasCoin;
   use ol_framework::ol_account;
   use ol_framework::epoch_helper;
   use ol_framework::musical_chairs;
@@ -158,7 +159,7 @@ module ol_framework::mock {
   public fun ol_mint_to(root: &signer, addr: address, amount: u64) {
     system_addresses::assert_ol(root);
 
-    let mint_cap = if (coin::is_coin_initialized<LibraCoin>()) {
+    let mint_cap = if (coin::is_coin_initialized<GasCoin>()) {
       libra_coin::extract_mint_cap(root)
     } else {
       coin_init_minimal(root)
@@ -172,7 +173,7 @@ module ol_framework::mock {
     let c = coin::test_mint(amount, &mint_cap);
     ol_account::deposit_coins(addr, c);
 
-    let b = coin::balance<LibraCoin>(addr);
+    let b = coin::balance<GasCoin>(addr);
     assert!(b == amount, 0001);
 
     libra_coin::restore_mint_cap(root, mint_cap);
@@ -183,7 +184,7 @@ module ol_framework::mock {
   drip: bool) {
     system_addresses::assert_ol(root);
 
-    let mint_cap = if (coin::is_coin_initialized<LibraCoin>()) {
+    let mint_cap = if (coin::is_coin_initialized<GasCoin>()) {
       libra_coin::extract_mint_cap(root)
     } else {
       coin_init_minimal(root)
@@ -211,7 +212,7 @@ module ol_framework::mock {
   #[test_only]
   // For unit test, we need to try to initialize the minimal state for
   // user transactions. In the case of a unit tests which does a genesis with validators, this will not attempt to re-initialize the state.
-  fun coin_init_minimal(root: &signer): coin::MintCapability<LibraCoin> {
+  fun coin_init_minimal(root: &signer): coin::MintCapability<GasCoin> {
     system_addresses::assert_ol(root);
 
     let (burn_cap, mint_cap) = libra_coin::initialize_for_test(root);

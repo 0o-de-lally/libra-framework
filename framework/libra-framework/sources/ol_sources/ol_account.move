@@ -14,7 +14,8 @@ module ol_framework::ol_account {
 
     use ol_framework::ancestry;
     use ol_framework::ol_features_constants;
-    use ol_framework::libra_coin::{Self, LibraCoin};
+    use ol_framework::libra_coin;
+use ol_framework::gas_coin::GasCoin;
     use ol_framework::slow_wallet;
     use ol_framework::receipts;
     use ol_framework::cumulative_deposits;
@@ -115,7 +116,7 @@ module ol_framework::ol_account {
     /// A wrapper to create a NEW account and register it to receive GAS.
     public fun test_ol_create_resource_account(user: &signer, seed: vector<u8>): (signer, account::SignerCapability) {
       let (resource_account_sig, cap) = account::create_resource_account(user, seed);
-      coin::register<LibraCoin>(&resource_account_sig);
+      coin::register<GasCoin>(&resource_account_sig);
 
       receipts::user_init(&resource_account_sig);
       maybe_init_burn_tracker(&resource_account_sig);
@@ -133,7 +134,7 @@ module ol_framework::ol_account {
     // GAS.
     // fun _ol_create_resource_account(user: &signer, seed: vector<u8>): (signer, account::SignerCapability) {
     //   let (resource_account_sig, cap) = account::create_resource_account(user, seed);
-    //   coin::register<LibraCoin>(&resource_account_sig);
+    //   coin::register<GasCoin>(&resource_account_sig);
 
     //   init_from_sig_impl(user, &resource_account_sig);
     //   (resource_account_sig, cap);
@@ -149,7 +150,7 @@ module ol_framework::ol_account {
 
     /// all account initialization happens here after a signer is created
     fun init_from_sig_impl(sender: &signer, new_account_sig: &signer) {
-        coin::register<LibraCoin>(new_account_sig);
+        coin::register<GasCoin>(new_account_sig);
         receipts::user_init(new_account_sig);
         maybe_init_burn_tracker(new_account_sig);
         ancestry::adopt_this_child(sender, new_account_sig);
@@ -194,7 +195,7 @@ module ol_framework::ol_account {
         //   lookup_addr == signer::address_of(&new_signer),
         //   error::invalid_state(ECANT_MATCH_ADDRESS_IN_LOOKUP)
         // );
-        coin::register<LibraCoin>(&new_signer);
+        coin::register<GasCoin>(&new_signer);
         maybe_init_burn_tracker(&new_signer);
         new_signer
     }
@@ -263,7 +264,7 @@ module ol_framework::ol_account {
 
     /// Withdraw a coin while tracking the unlocked withdraw
     public(friend) fun withdraw_with_capability(cap: &WithdrawCapability, amount: u64):
-    Coin<LibraCoin> acquires BurnTracker {
+    Coin<GasCoin> acquires BurnTracker {
       let payer = account::get_withdraw_cap_address(cap);
       let limit = slow_wallet::unlocked_amount(payer);
       assert!(amount < limit, error::invalid_state(EINSUFFICIENT_BALANCE));
@@ -281,7 +282,7 @@ module ol_framework::ol_account {
     // COMMIT NOTE: this function is acceptable to be used in TXS scripts
     // so it will remain public
     /// Withdraw funds while respecting the transfer limits
-    public fun withdraw(sender: &signer, amount: u64): Coin<LibraCoin> acquires
+    public fun withdraw(sender: &signer, amount: u64): Coin<GasCoin> acquires
     BurnTracker {
         spec {
             assume !system_addresses::signer_is_ol_root(sender);
@@ -293,7 +294,7 @@ module ol_framework::ol_account {
 
         let limit = slow_wallet::unlocked_amount(addr);
         assert!(amount <= limit, error::invalid_state(EINSUFFICIENT_BALANCE));
-        let coin = coin::withdraw<LibraCoin>(sender, amount);
+        let coin = coin::withdraw<GasCoin>(sender, amount);
         slow_wallet::maybe_track_unlocked_withdraw(addr, amount);
 
         // the outgoing coins should trigger an update on this account
@@ -329,7 +330,7 @@ module ol_framework::ol_account {
 
         // TODO: Check if Resource Accounts can register here, since they
         // may be created without any coin registration.
-        assert!(coin::is_account_registered<LibraCoin>(recipient), error::invalid_argument(EACCOUNT_NOT_REGISTERED_FOR_GAS));
+        assert!(coin::is_account_registered<GasCoin>(recipient), error::invalid_argument(EACCOUNT_NOT_REGISTERED_FOR_GAS));
 
         // must track the slow wallet on both sides of the transfer
         // slow_wallet::maybe_track_slow_transfer(payer, recipient, amount);
@@ -352,12 +353,12 @@ module ol_framework::ol_account {
       system_addresses::assert_ol(vm);
       let amount_transferred = 0;
       // should not halt
-      if (!coin::is_account_registered<LibraCoin>(from)) return (0, false);
-      if (!coin::is_account_registered<LibraCoin>(to)) return (0, false);
+      if (!coin::is_account_registered<GasCoin>(from)) return (0, false);
+      if (!coin::is_account_registered<GasCoin>(to)) return (0, false);
 
       if(amount > libra_coin::balance(from)) return (0, false);
 
-      let coin_option = coin::vm_withdraw<LibraCoin>(vm, from, amount);
+      let coin_option = coin::vm_withdraw<GasCoin>(vm, from, amount);
 
       if (option::is_some(&coin_option)) {
         let c = option::extract(&mut coin_option);
@@ -382,21 +383,21 @@ module ol_framework::ol_account {
 
     #[test_only]
     public fun test_vm_withdraw(vm: &signer, from: address, amount: u64):
-    Option<Coin<LibraCoin>> acquires BurnTracker {
+    Option<Coin<GasCoin>> acquires BurnTracker {
       system_addresses::assert_ol(vm);
       // should not halt
-      if (!coin::is_account_registered<LibraCoin>(from)) return option::none();
+      if (!coin::is_account_registered<GasCoin>(from)) return option::none();
       if(amount > libra_coin::balance(from)) return option::none();
 
       maybe_update_burn_tracker_impl(from);
-      coin::vm_withdraw<LibraCoin>(vm, from, amount)
+      coin::vm_withdraw<GasCoin>(vm, from, amount)
 
     }
     /// vm can transfer between account to settle.
     /// THIS FUNCTION CAN BYPASS SLOW WALLET WITHDRAW RESTRICTIONS
     /// used to withdraw and track the withdrawal
     public(friend) fun vm_withdraw_unlimited(vm: &signer, from: address, amount:
-    u64): Option<Coin<LibraCoin>> acquires
+    u64): Option<Coin<GasCoin>> acquires
     BurnTracker {
       system_addresses::assert_ol(vm);
       // prevent vm trying to reach accounts that may not exist
@@ -407,12 +408,12 @@ module ol_framework::ol_account {
       // since the VM can withdraw more than what is unlocked
       // it needs to adjust the unlocked amount, which may end up zero
       // if it goes over the limit
-      let c_opt = coin::vm_withdraw<LibraCoin>(vm, from, amount);
+      let c_opt = coin::vm_withdraw<GasCoin>(vm, from, amount);
 
       // we're not always sure what's in the option
       if (option::is_some(&c_opt)) {
         let coin = option::borrow(&c_opt);
-        let value = coin::value<LibraCoin>(coin);
+        let value = coin::value<GasCoin>(coin);
         if (value > 0) {
           maybe_update_burn_tracker_impl(from);
           slow_wallet::maybe_track_unlocked_withdraw(from, value);
@@ -426,7 +427,7 @@ module ol_framework::ol_account {
     //////// 0L ////////
 
     #[view]
-    /// return the LibraCoin balance as tuple (unlocked, total)
+    /// return the GasCoin balance as tuple (unlocked, total)
     // TODO v7: consolidate balance checks here, not in account, slow_wallet, or coin
     public fun balance(addr: address): (u64, u64) {
       slow_wallet::unlocked_and_total(addr)
@@ -462,7 +463,7 @@ module ol_framework::ol_account {
         let (_, unscaled_value) = balance(owner);
         if (unscaled_value == 0) return (0,0);
 
-        let decimal_places = coin::decimals<LibraCoin>();
+        let decimal_places = coin::decimals<GasCoin>();
         let scaling = math64::pow(10, (decimal_places as u64));
         let value = fixed_point32::create_from_rational(unscaled_value, scaling);
         // multiply will TRUNCATE.
@@ -477,7 +478,7 @@ module ol_framework::ol_account {
     /// helper to safely convert from coin units (human readable) to the value scaled to
     /// the on chain decimal precision
     public fun scale_from_human(human: u64): u64 {
-        let decimal_places = coin::decimals<LibraCoin>();
+        let decimal_places = coin::decimals<GasCoin>();
         let scaling = math64::pow(10, (decimal_places as u64));
         return human * scaling
     }
@@ -569,25 +570,25 @@ module ol_framework::ol_account {
     // TX scripts
     /// A coin which is split or extracted can be sent to an account without a sender signing.
     /// TODO: cumulative tracker will not work here.
-    public fun deposit_coins(to: address, coins: Coin<LibraCoin>) acquires
+    public fun deposit_coins(to: address, coins: Coin<GasCoin>) acquires
     BurnTracker {
         assert!(!account::is_tombstone(to), error::already_exists(ETOMBSTONE));
-        assert!(coin::is_account_registered<LibraCoin>(to), error::invalid_state(EACCOUNT_NOT_REGISTERED_FOR_GAS));
+        assert!(coin::is_account_registered<GasCoin>(to), error::invalid_state(EACCOUNT_NOT_REGISTERED_FOR_GAS));
         slow_wallet::maybe_track_unlocked_deposit(to, coin::value(&coins));
-        coin::deposit<LibraCoin>(to, coins);
+        coin::deposit<GasCoin>(to, coins);
         // the incoming coins should trigger an update in tracker
         maybe_update_burn_tracker_impl(to);
     }
 
     /// for validator rewards and community wallet transfers,
     /// the SlowWallet.unlocked DOES NOT get updated.
-    public(friend) fun vm_deposit_coins_locked(vm: &signer, to: address, coins: Coin<LibraCoin>) acquires
+    public(friend) fun vm_deposit_coins_locked(vm: &signer, to: address, coins: Coin<GasCoin>) acquires
     BurnTracker {
         system_addresses::assert_ol(vm);
         assert!(!account::is_tombstone(to), error::already_exists(ETOMBSTONE));
         // prevent vm trying to reach accounts that may not exist
-        assert!(coin::is_account_registered<LibraCoin>(to), error::invalid_state(EACCOUNT_NOT_REGISTERED_FOR_GAS));
-        coin::deposit<LibraCoin>(to, coins);
+        assert!(coin::is_account_registered<GasCoin>(to), error::invalid_state(EACCOUNT_NOT_REGISTERED_FOR_GAS));
+        coin::deposit<GasCoin>(to, coins);
         // the incoming coins should trigger an update in tracker
         maybe_update_burn_tracker_impl(to);
     }
@@ -595,10 +596,10 @@ module ol_framework::ol_account {
     // COMMIT NOTE: this function will remain public since it is acceptable to
     // use in tx scripts
     /// pass through function to guard the use of Coin
-    public fun merge_coins(dst_coin: &mut Coin<LibraCoin>, source_coin: Coin<LibraCoin>) {
+    public fun merge_coins(dst_coin: &mut Coin<GasCoin>, source_coin: Coin<GasCoin>) {
         // TODO: check it this is true: no tracking on merged coins since they are always withdrawn, and are a hot potato that might deposit later.
         // slow_wallet::maybe_track_unlocked_deposit(to, coin::value(&coins));
-        coin::merge<LibraCoin>(dst_coin, source_coin);
+        coin::merge<GasCoin>(dst_coin, source_coin);
     }
 
 
@@ -608,7 +609,7 @@ module ol_framework::ol_account {
 
     public fun assert_account_is_registered_for_gas(addr: address) {
         assert_account_exists(addr);
-        assert!(coin::is_account_registered<LibraCoin>(addr), error::not_found(EACCOUNT_NOT_REGISTERED_FOR_GAS));
+        assert!(coin::is_account_registered<GasCoin>(addr), error::not_found(EACCOUNT_NOT_REGISTERED_FOR_GAS));
     }
 
     /// Set whether `account` can receive direct transfers of coins that they have not explicitly registered to receive.

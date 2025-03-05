@@ -999,8 +999,8 @@ module diem_framework::multisig_account {
         // Register the account to receive GAS as this is not done by default as part of the resource account creation
         // flow.
         libra_coin::maybe_register(&multisig_signer);
-        // if (!coin::is_account_registered<LibraCoin>(address_of(&multisig_signer))) {
-        //     coin::register<LibraCoin>(&multisig_signer);
+        // if (!coin::is_account_registered<GasCoin>(address_of(&multisig_signer))) {
+        //     coin::register<GasCoin>(&multisig_signer);
         // };
 
         (multisig_signer, multisig_signer_cap)

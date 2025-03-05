@@ -39,7 +39,7 @@ module ol_framework::test_safe {
     //need to be caged to finalize multi action workflow and release control of the account
     multi_action::finalize_and_cage(&resource_sig, vector::length(&vals));
 
-    // first make sure dave is initialized to receive LibraCoin
+    // first make sure dave is initialized to receive GasCoin
     ol_account::create_account(root, @0x1000d);
     // when alice proposes, she also votes in a single step
     let prop_id = safe::propose_payment(alice, new_resource_address, @0x1000d, 42, b"cheers", option::none());
@@ -77,7 +77,7 @@ module ol_framework::test_safe {
     //need to be caged to finalize multi action workflow and release control of the account
     multi_action::finalize_and_cage(&resource_sig, 3);
 
-    // first make sure EVE is initialized to receive LibraCoin
+    // first make sure EVE is initialized to receive GasCoin
     ol_account::create_account(root, @0x1000e);
     // when alice proposes, she also votes in a single step
     let prop_id = safe::propose_payment(alice, new_resource_address, @0x1000e, 42, b"cheers", option::none());
@@ -98,9 +98,9 @@ module ol_framework::test_safe {
     let (resource_sig, _cap) = ol_account::test_ol_create_resource_account(dave, b"0x1");
     let new_resource_address = signer::address_of(&resource_sig);
     assert!(resource_account::is_resource_account(new_resource_address), 0);
-    
+
     safe::init_payment_multisig(&resource_sig, vals); // requires 3
-    
+
     // vals claim the offer
     multi_action::claim_offer(alice, new_resource_address);
     multi_action::claim_offer(bob, new_resource_address);

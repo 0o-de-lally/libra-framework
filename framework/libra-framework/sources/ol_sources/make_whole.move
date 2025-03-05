@@ -13,7 +13,8 @@ module ol_framework::make_whole {
   use std::signer;
   use diem_std::table::{Self, Table};
   use diem_framework::coin::Coin;
-  use ol_framework::libra_coin::{Self, LibraCoin};
+  use ol_framework::libra_coin;
+use ol_framework::gas_coin::GasCoin;
   use ol_framework::epoch_helper;
   use ol_framework::burn;
   use ol_framework::ol_account;
@@ -31,7 +32,7 @@ module ol_framework::make_whole {
 
   struct MakeWhole<phantom IncidentId> has key {
      // holds loose coins in escrow
-    escrow: Coin<LibraCoin>,
+    escrow: Coin<GasCoin>,
     // when the escrow finishes, coins burned
     expiration_epoch: u64,
     // list of unclaimed credits due
@@ -48,7 +49,7 @@ module ol_framework::make_whole {
 
   /// a sponsor can initiate an incident
   ///
-  public(friend) fun init_incident<T: key>(sponsor: &signer, coins: Coin<LibraCoin>,
+  public(friend) fun init_incident<T: key>(sponsor: &signer, coins: Coin<GasCoin>,
   burn_unclaimed: bool) {
     // Don't let your mouth write no check that your tail can't cash.
     let sponsor_addr = signer::address_of(sponsor);

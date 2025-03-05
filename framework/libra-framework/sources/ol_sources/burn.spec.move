@@ -12,20 +12,20 @@ spec ol_framework::burn {
         ensures global<BurnCounter>(@ol_framework).lifetime_recycled == 0; // Ensures lifetime_recycled is initialized to 0
     }
 
-    spec burn_and_track(coin: Coin<LibraCoin>) {
+    spec burn_and_track(coin: Coin<GasCoin>) {
         requires exists<BurnCounter>(@ol_framework); // Requires a BurnCounter to exist
         aborts_if !exists<BurnCounter>(@ol_framework); // Aborts if no BurnCounter exists
-        ensures global<BurnCounter>(@ol_framework).lifetime_burned == 
+        ensures global<BurnCounter>(@ol_framework).lifetime_burned ==
             old(global<BurnCounter>(@ol_framework).lifetime_burned) + coin::value(coin); // Ensures lifetime_burned is incremented by the coin value
         pragma aborts_if_is_partial = true; // Allows partial aborts
     }
 
     spec set_send_community(sender: &signer, community: bool) {
         let addr = signer::address_of(sender);
-        
+
         // No aborts_if conditions needed since function handles both cases
         aborts_if false; // Never aborts
-        
+
         // Postconditions
         ensures exists<UserBurnPreference>(addr); // Ensures UserBurnPreference exists for the address
         ensures global<UserBurnPreference>(addr).send_community == community; // Ensures send_community is set correctly

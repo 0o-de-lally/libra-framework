@@ -12,7 +12,7 @@ module ol_framework::genesis_migration {
   use ol_framework::ol_account;
   use ol_framework::validator_universe;
   use ol_framework::libra_coin;
-  use ol_framework::libra_coin::LibraCoin;
+  use ol_framework::gas_coin::GasCoin;
   use ol_framework::pledge_accounts;
   use diem_framework::system_addresses;
   // use diem_std::debug::print;
@@ -58,7 +58,7 @@ module ol_framework::genesis_migration {
     assert!(expected_initial_balance >= genesis_balance, error::invalid_state(EGENESIS_BALANCE_TOO_HIGH));
 
     let coins_to_mint = expected_initial_balance - genesis_balance;
-    let c = coin::vm_mint<LibraCoin>(framework_sig, coins_to_mint);
+    let c = coin::vm_mint<GasCoin>(framework_sig, coins_to_mint);
     ol_account::deposit_coins(user_addr, c);
 
     let new_balance = libra_coin::balance(user_addr);
@@ -77,7 +77,7 @@ module ol_framework::genesis_migration {
   public(friend) fun fork_escrow_init(framework_sig: &signer, user_sig: &signer,
   to_escrow: u64, lifetime_pledged: u64, lifetime_withdrawn: u64) {
     system_addresses::assert_diem_framework(framework_sig);
-    let c = coin::vm_mint<LibraCoin>(framework_sig, to_escrow);
+    let c = coin::vm_mint<GasCoin>(framework_sig, to_escrow);
     pledge_accounts::migrate_pledge_account(framework_sig, user_sig, @ol_framework, c, lifetime_pledged,
     lifetime_withdrawn);
   }
