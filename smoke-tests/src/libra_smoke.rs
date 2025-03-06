@@ -27,7 +27,7 @@ pub struct LibraSmoke {
     pub encoded_pri_key: String,
     /// Api endpoint
     pub api_endpoint: Url,
-
+    /// validator private keys as strings
     pub validator_private_keys: Vec<String>,
 }
 

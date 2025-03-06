@@ -3,8 +3,7 @@ module ol_framework::gas_coin {
     use std::error;
     use std::signer;
     use std::vector;
-    use std::option::{Self, Option};
-    // use diem_std::debug::print;
+    use std::option;
 
     use diem_framework::coin::{Self, Coin, MintCapability, BurnCapability};
     use diem_framework::system_addresses;
@@ -278,49 +277,49 @@ module ol_framework::gas_coin {
       mint_to_impl(root, dst_addr, amount);
     }
 
-    /// Only callable in tests and testnets where the core resources account exists.
-    /// Create delegated token for the address so the account could claim MintCapability later.
-    public entry fun delegate_mint_capability(account: signer, to: address) acquires Delegations {
-        system_addresses::assert_core_resource(&account);
-        let delegations = &mut borrow_global_mut<Delegations>(@core_resources).inner;
-        let i = 0;
-        while (i < vector::length(delegations)) {
-            let element = vector::borrow(delegations, i);
-            assert!(element.to != to, error::invalid_argument(EALREADY_DELEGATED));
-            i = i + 1;
-        };
-        vector::push_back(delegations, DelegatedMintCapability { to });
-    }
+    // /// Only callable in tests and testnets where the core resources account exists.
+    // /// Create delegated token for the address so the account could claim MintCapability later.
+    // public entry fun delegate_mint_capability(account: signer, to: address) acquires Delegations {
+    //     system_addresses::assert_core_resource(&account);
+    //     let delegations = &mut borrow_global_mut<Delegations>(@core_resources).inner;
+    //     let i = 0;
+    //     while (i < vector::length(delegations)) {
+    //         let element = vector::borrow(delegations, i);
+    //         assert!(element.to != to, error::invalid_argument(EALREADY_DELEGATED));
+    //         i = i + 1;
+    //     };
+    //     vector::push_back(delegations, DelegatedMintCapability { to });
+    // }
 
-    /// Only callable in tests and testnets where the core resources account exists.
-    /// Claim the delegated mint capability and destroy the delegated token.
-    public entry fun claim_mint_capability(account: &signer) acquires Delegations, MintCapStore {
-        let maybe_index = find_delegation(signer::address_of(account));
-        assert!(option::is_some(&maybe_index), EDELEGATION_NOT_FOUND);
-        let idx = *option::borrow(&maybe_index);
-        let delegations = &mut borrow_global_mut<Delegations>(@core_resources).inner;
-        let DelegatedMintCapability { to: _ } = vector::swap_remove(delegations, idx);
+    // /// Only callable in tests and testnets where the core resources account exists.
+    // /// Claim the delegated mint capability and destroy the delegated token.
+    // public entry fun claim_mint_capability(account: &signer) acquires Delegations, MintCapStore {
+    //     let maybe_index = find_delegation(signer::address_of(account));
+    //     assert!(option::is_some(&maybe_index), EDELEGATION_NOT_FOUND);
+    //     let idx = *option::borrow(&maybe_index);
+    //     let delegations = &mut borrow_global_mut<Delegations>(@core_resources).inner;
+    //     let DelegatedMintCapability { to: _ } = vector::swap_remove(delegations, idx);
 
-        // Make a copy of mint cap and give it to the specified account.
-        let mint_cap = borrow_global<MintCapStore>(@core_resources).mint_cap;
-        move_to(account, MintCapStore { mint_cap });
-    }
+    //     // Make a copy of mint cap and give it to the specified account.
+    //     let mint_cap = borrow_global<MintCapStore>(@core_resources).mint_cap;
+    //     move_to(account, MintCapStore { mint_cap });
+    // }
 
-    fun find_delegation(addr: address): Option<u64> acquires Delegations {
-        let delegations = &borrow_global<Delegations>(@core_resources).inner;
-        let i = 0;
-        let len = vector::length(delegations);
-        let index = option::none();
-        while (i < len) {
-            let element = vector::borrow(delegations, i);
-            if (element.to == addr) {
-                index = option::some(i);
-                break
-            };
-            i = i + 1;
-        };
-        index
-    }
+    // fun find_delegation(addr: address): Option<u64> acquires Delegations {
+    //     let delegations = &borrow_global<Delegations>(@core_resources).inner;
+    //     let i = 0;
+    //     let len = vector::length(delegations);
+    //     let index = option::none();
+    //     while (i < len) {
+    //         let element = vector::borrow(delegations, i);
+    //         if (element.to == addr) {
+    //             index = option::some(i);
+    //             break
+    //         };
+    //         i = i + 1;
+    //     };
+    //     index
+    // }
 
     #[test_only]
     use diem_framework::aggregator_factory;

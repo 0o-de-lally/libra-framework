@@ -27,17 +27,17 @@ spec ol_framework::libra_coin {
     //     pragma verify = false;
     // }
 
-    // Only callable in tests and testnets.not needed verify.
-    spec delegate_mint_capability {
-        pragma verify = false;
-    }
+    // // Only callable in tests and testnets.not needed verify.
+    // spec delegate_mint_capability {
+    //     pragma verify = false;
+    // }
 
-    // Only callable in tests and testnets.not needed verify.
-    spec claim_mint_capability(account: &signer) {
-        pragma verify = false;
-    }
+    // // Only callable in tests and testnets.not needed verify.
+    // spec claim_mint_capability(account: &signer) {
+    //     pragma verify = false;
+    // }
 
-    spec find_delegation(addr: address): Option<u64> {
-        aborts_if !exists<Delegations>(@core_resources);
-    }
+    // spec find_delegation(addr: address): Option<u64> {
+    //     aborts_if !exists<Delegations>(@core_resources);
+    // }
 }
