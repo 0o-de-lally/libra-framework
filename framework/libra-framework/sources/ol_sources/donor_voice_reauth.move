@@ -83,7 +83,7 @@ module ol_framework::donor_voice_reauth {
     /// is within the AUTHORIZE_WINDOW.
     public fun has_activity_in_last_year(dv_account: address): bool {
 
-      let latest_tx = activity::get_last_activity_usecs(dv_account);
+      let latest_tx = activity::get_last_touch_usecs(dv_account);
       let now = timestamp::now_seconds();
 
       let one_year_ago = 0;
