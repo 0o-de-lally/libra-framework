@@ -24,6 +24,7 @@ pub enum UserTxs {
     SetSlow(SetSlowTx),
     RotationCapability(RotationCapabilityTx),
     RotateKey(RotateKeyTx),
+    Vouch(VouchTx),
 }
 
 impl UserTxs {
@@ -51,6 +52,9 @@ impl UserTxs {
                         println!("ERROR: could not offer rotation capability, message: {}", e);
                     }
                 }
+            }
+            UserTxs::Vouch(vouch_tx) => {
+                vouch_tx.run(sender).await?;
             }
         }
 
@@ -321,4 +325,27 @@ pub fn revoke_rotation_capability(
     let payload = libra_stdlib::account_revoke_rotation_capability(delegate_account);
 
     Ok(payload)
+}
+
+#[derive(clap::Args)]
+/// Vouch for accounts
+pub struct VouchTx {
+    #[clap(short, long)]
+    /// Vouch for another account, usually for validators
+    vouch_for: AccountAddress,
+    #[clap(short, long)]
+    /// Revoke a vouch for an account
+    revoke: bool,
+}
+
+impl VouchTx {
+    pub async fn run(&self, sender: &mut Sender) -> anyhow::Result<()> {
+        let payload = if self.revoke {
+            libra_stdlib::vouch_txs_revoke(self.vouch_for)
+        } else {
+            libra_stdlib::vouch_txs_vouch_for(self.vouch_for)
+        };
+        sender.sign_submit_wait(payload).await?;
+        Ok(())
+    }
 }
