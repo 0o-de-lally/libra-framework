@@ -345,7 +345,14 @@ impl VouchTx {
         } else {
             libra_stdlib::vouch_txs_vouch_for(self.vouch_for)
         };
-
+        // You've got a lotta nerve to say you are my friend
+        // When I was down you just stood there grinnin'
+        // You've got a lotta nerve to say you got a helping hand to lend
+        // You just want to be on the side that's winnin'
+        // You say I let you down, ya know its not like that
+        // If you're so hurt, why then don't you show it?
+        // You say you've lost your faith, but that's not where its at
+        // You have no faith to lose, and ya know it
         sender.sign_submit_wait(payload).await?;
         Ok(())
     }
