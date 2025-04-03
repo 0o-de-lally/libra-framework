@@ -24,7 +24,7 @@ async fn test_twin_smoke_from_v7_rescue_and_upgrade() -> anyhow::Result<()> {
             .try_parse_abi()
             .expect("failed to parse module");
         if let Some(m) = &new_m.abi {
-            return m.name.to_string().contains("libra_coin");
+            return m.name.to_string().contains("founder");
         }
         false
     });
