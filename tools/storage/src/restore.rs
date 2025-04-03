@@ -1,6 +1,7 @@
 // Do a full restoration given a RestoreBundle with verified manifests
 
 use anyhow::{bail, Context, Result};
+use diem_logger::{info, warn};
 use flate2::read::GzDecoder;
 use glob::glob;
 use std::fs::{self, File};
@@ -28,25 +29,24 @@ pub async fn maybe_decompress_gz_files(bundle_dir: &Path) -> Result<()> {
         let gz_path = entry?;
         let output_path = gz_path.with_extension("");
 
-        println!("Found compressed file: {}", gz_path.display());
-        println!("Decompressing to: {}", output_path.display());
+        info!("Found compressed file: {}", gz_path.display());
+        info!("Decompressing to: {}", output_path.display());
 
         let gz_file = File::open(&gz_path)?;
         let mut decoder = GzDecoder::new(gz_file);
         let mut outfile = File::create(&output_path)?;
 
         let bytes_copied = copy(&mut decoder, &mut outfile)?;
-        println!("Decompressed {} bytes", bytes_copied);
 
         // Remove the original .gz file after successful decompression
         fs::remove_file(&gz_path)?;
-        println!("Removed original gz file: {}", gz_path.display());
+        info!("Removed original gz file: {}", gz_path.display());
     }
 
     if !found_files {
-        println!("No .gz files found in {}", bundle_dir.display());
+        info!("No .gz files found in {}", bundle_dir.display());
     } else {
-        println!("Decompression completed");
+        info!("Decompression completed");
     }
 
     Ok(())
