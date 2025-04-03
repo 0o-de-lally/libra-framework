@@ -1,7 +1,7 @@
 // Do a full restoration given a RestoreBundle with verified manifests
 
 use anyhow::{bail, Context, Result};
-use diem_logger::{info, warn};
+use diem_logger::info;
 use flate2::read::GzDecoder;
 use glob::glob;
 use std::fs::{self, File};
@@ -14,7 +14,7 @@ use crate::{
 };
 
 pub async fn maybe_decompress_gz_files(bundle_dir: &Path) -> Result<()> {
-    println!(
+    info!(
         "Starting decompression in directory: {}",
         bundle_dir.display()
     );
@@ -37,6 +37,7 @@ pub async fn maybe_decompress_gz_files(bundle_dir: &Path) -> Result<()> {
         let mut outfile = File::create(&output_path)?;
 
         let bytes_copied = copy(&mut decoder, &mut outfile)?;
+        info!("Decompressed {} bytes", bytes_copied);
 
         // Remove the original .gz file after successful decompression
         fs::remove_file(&gz_path)?;
@@ -100,7 +101,7 @@ pub async fn epoch_restore(bundle_path: PathBuf, destination_db: PathBuf) -> Res
 
     full_restore(&destination_db, &bundle).await?;
 
-    println!(
+    info!(
         "SUCCESS: restored to epoch: {}, version: {}",
         bundle.epoch, bundle.version
     );
