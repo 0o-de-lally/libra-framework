@@ -1,12 +1,10 @@
-
 /// Maintains the version number for the blockchain.
 module ol_framework::founder {
   use std::signer;
   use ol_framework::root_of_trust;
   use ol_framework::vouch_score;
 
-  /// the threshold score for a user to be considered vouched
-  const THRESHOLD_SCORE: u64 = 2;
+
 
   #[test_only]
   use ol_framework::testnet;
@@ -17,6 +15,28 @@ module ol_framework::founder {
   #[test_only]
   friend ol_framework::test_filo_migration;
 
+  /*
+    Founder Status
+
+    The founder status is a special designation that identifies pre-v8 accounts that have established
+    a web of trust with other users. This is critical for anti-sybil security, as it helps verify
+    that accounts are operated by real human users rather than bots or sock puppet accounts.
+
+    By requiring a minimum vouch score (implemented in vouch_metrics.move), the system can ensure
+    that an account has meaningful connections with other accounts in the network. This is done by:
+
+    1. Calculating the score of each voucher based on their social distance
+    2. Summing these scores to determine if they exceed a threshold (currently 2)
+    3. Only setting founder status as "has_human_friends" when this threshold is met
+
+    This works in conjunction with the anti-sybil protections in vouch.move, which prevent
+    rapid vouching and revoking to create fake identities.
+  */
+
+  /// The threshold score for a user to be considered well-vouched
+  /// Moved from vouch_metrics to make this module self-contained for founder validation
+  const THRESHOLD_SCORE: u64 = 2;
+
   struct Founder has key {
     has_human_friends: bool
   }
@@ -24,10 +44,11 @@ module ol_framework::founder {
   public(friend) fun migrate(user_sig: &signer) {
     if (!exists<Founder>(signer::address_of(user_sig))) {
       move_to<Founder>(user_sig, Founder {
-        has_human_friends: false // ooh is's lonely at the top
+        has_human_friends: false // ooh it's lonely at the top
       });
     }
   }
+
 
   // DANGER: open to any friend function
   public(friend) fun maybe_set_friendly_founder(user: address) acquires Founder {

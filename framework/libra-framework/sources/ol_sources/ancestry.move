@@ -6,6 +6,7 @@ module ol_framework::ancestry {
     use diem_framework::system_addresses;
 
     friend ol_framework::vouch;
+    friend ol_framework::vouch_metrics;
     friend ol_framework::ol_account;
     friend ol_framework::community_wallet_init;
     friend ol_framework::vouch_score;
@@ -85,6 +86,8 @@ module ol_framework::ancestry {
       found
     }
 
+    /// get the degree (hops) between two accounts
+    /// if they are related. Assumes ancestor is in the tree of User.
     /// get the degree (hops) between two accounts
     /// if they are related. Assumes ancestor is in the tree of User.
     public(friend) fun get_degree(ancestor: address, user: address): Option<u64> acquires Ancestry {
@@ -269,6 +272,19 @@ module ol_framework::ancestry {
         vm,
         child_sig,
         migrate_tree
+      );
+    }
+
+    #[test_only]
+    public fun test_adopt(
+      framework: &signer,
+      parent_sig: &signer,
+      child_sig: &signer
+    ) acquires Ancestry {
+      system_addresses::assert_diem_framework(framework);
+      adopt_this_child(
+        parent_sig,
+        child_sig
       );
     }
 }

@@ -26,8 +26,6 @@ module ol_framework::mock {
   use ol_framework::infra_escrow;
   use ol_framework::testnet;
 
-  // use diem_std::debug::print;
-
   const ENO_GENESIS_END_MARKER: u64 = 1;
   const EDID_NOT_ADVANCE_EPOCH: u64 = 2;
   /// coin supply does not match expected
@@ -343,6 +341,51 @@ module ol_framework::mock {
   }
 
 
+  #[test_only]
+  /// Creates a vouching network where target_account has a vouch score of 100
+  /// This will create validators if they don't exist, and set up vouches
+  /// @param framework - framework signer
+  /// @param target_account - the account that will have a vouch score of 100
+  /// @return validators - the list of validators created/used for vouching
+  public fun mock_vouch_score_50(framework: &signer, target_account: address): vector<address> {
+    system_addresses::assert_diem_framework(framework);
+
+    let parent_account = @0xdeadbeef;
+    ol_account::create_account(framework, parent_account);
+    ol_mint_to(framework, parent_account, 10000);
+
+    // Get the current validator set instead of creating a new genesis
+    // TODO: replace for root of trust implementation
+    let vals = stake::get_current_validators();
+
+    // Do the typical onboarding process: by transfer
+    let parent_sig = account::create_signer_for_test(parent_account);
+    let target_signer = account::create_signer_for_test(target_account);
+    ol_account::transfer(&parent_sig, target_account, 1000);
+    // vouch will be missing unless the initialized it through filo_migration
+    vouch::init(&target_signer);
+
+
+    // Each validator vouches
+    let i = 0;
+    while (i < vector::length(&vals)) {
+        let val_addr = *vector::borrow(&vals, i);
+        let val_signer = account::create_signer_for_test(val_addr);
+
+        // Initialize vouch module for validator if not already done
+        vouch::vouch_for(&val_signer, target_account);
+
+        i = i + 1;
+    };
+
+    // Verify the score is exactly 50
+    let score = vouch::calculate_total_vouch_quality(target_account);
+    assert!(score == 50, 735700);
+
+
+    vals
+  }
+
   //////// META TESTS ////////
   #[test(root=@ol_framework)]
   /// test we can trigger an epoch reconfiguration.
@@ -417,5 +460,19 @@ module ol_framework::mock {
     timestamp::set_time_has_started_for_testing(framework);
     chain_id::initialize_for_test(framework, 4);
     ol_mint_to(framework, bob, 123);
+  }
+
+  #[test(root = @ol_framework)]
+  fun test_mock_vouch_score_50(root: &signer) {
+    // Set up genesis with validators first
+    let _vals = genesis_n_vals(root, 4);
+    ol_initialize_coin_and_fund_vals(root, 10000, true);
+    // Set up a target account that should receive a vouch score of ~100
+    let target_address = @0x12345;
+
+    mock_vouch_score_50(root, target_address);
+
+    let score = vouch::calculate_total_vouch_quality(target_address);
+    assert!(score == 50, 735700);
   }
 }
