@@ -1,116 +1,118 @@
-**Title:** Lazy Trust Scoring and Revocation Handling in Constrained Environments
+**Title:** Lazy Trust Scoring with Distributed Storage in Constrained Environments
 
 **Context:**
-We're working in a constrained compute/storage environment (e.g., a blockchain VM) and need to compute trust scores for user accounts. Each user can vouch for or revoke trust in another user. Our goal is to approximate how closely a node is connected to a fixed list of 20 trusted "root" accounts, with minimal storage and on-demand computation.
+We're working in a constrained compute/storage environment (e.g., a blockchain VM) and need to compute trust scores for user accounts. Each user can vouch for other users. Our goal is to approximate how closely a node is connected to a fixed list of trusted "root" accounts, with minimal storage and on-demand computation.
 
 ---
 
 ### 1. Problem Definition
-- Each account can establish a **vouch (trust)** or **revoke (distrust)** relationship with another.
+- Each account can **vouch for** other accounts to establish trust.
 - We need to compute a **trust score** for each account that approximates closeness to the trusted roots.
-- Due to constraints, storing full edge data and recomputing the graph on every change is infeasible.
+- Due to constraints, computing the entire graph on every change is infeasible.
 
 ---
 
-### 2. Core Design: Dual Trust Graphs
-We split the trust network into two parallel, append-only graphs:
+### 2. Core Design: Distributed Trust Graph with Lazy Evaluation
 
-#### A. Vouch Graph
-- Directed edges from user A to user B indicate that A vouches for B.
-- Trust propagates outward from the root nodes.
+#### A. Distributed Storage Model
+- Each user stores their own "active vouches" list.
+- Trust data is stored at the user level, not centralized.
+- Scores are computed on-demand rather than tracking a global state.
 
-#### B. Revoke Graph
-- Directed edges indicate a revocation of trust.
-- This separately propagates negative influence.
+#### B. Explicit Revocation Handling
+- Revocation is handled by removing addresses from active vouches.
+- No separate revocation graph needed, simplifying the model.
+- When a user revokes trust, all downstream scores are marked as stale.
 
 **Final Trust Score:**
-```text
-total_score(node) = f(vouch_score(node), revoke_score(node))
-```
-Common combining functions:
-- `max(0, vouch_score - revoke_score)`
-- `vouch_score / (1 + revoke_score)`
-- `alpha * vouch_score - beta * revoke_score`
-
-This approach allows non-destructive updates and naturally supports lazy evaluation.
+Score depends on frequency of reaching a node via random walks from roots through the vouch graph.
 
 ---
 
-### 3. Lazy PageRank Approximation Strategies
+### 3. Implementation Features and Optimizations
 
-To keep scores fresh and recomputation light, we apply **lazy approximations** of PageRank.
+#### A. Monte Carlo Trust Score Approximation
+- Uses random walks from root nodes to approximate PageRank.
+- For each target address, simulates N walks of a configurable depth.
+- Counts the number of times the target is reached during these walks.
+- Avoids centralized score computation or full graph traversal.
 
-#### A. Monte Carlo PageRank (Random Walks)
-- Simulate random walks from root nodes.
-- At query time, run N walks of limited depth (e.g., 3–5 hops).
-- Count the number of times each node is hit and normalize the score.
+#### B. DAG-Enforced Traversal with Cycle Detection
+- Treats the graph as a DAG during traversals to avoid cycles.
+- Each walk tracks visited nodes to prevent re-entry.
+- This handling optimizes score computation and prevents artificial inflation.
 
-**Pros:**
-- Fully on-demand, no graph materialization needed
-- Separate walks for vouch and revoke graphs
-- Easy to normalize and combine
+#### C. Lazy Score Invalidation and Caching
+- Each node stores a cached score and timestamp.
+- Scores are recomputed only when stale or expired.
+- When trust relationships change, affected nodes are marked as stale.
+- Uses a transitive staleness propagation to ensure downstream accuracy.
 
-#### B. Personalized PageRank (PPR) with Bookmarks
-- Root nodes initiate walks with reset probability.
-- Use memoization and time-decay to cache trust scores lazily.
-
-#### C. Local Push (Forward Push)
-- Propagate trust from updated nodes only when residual trust > epsilon.
-- Useful for sparse, changing graphs.
-
----
-
-### 4. Handling Revocations
-Revocations often require full recomputation in naive models. We avoid this by:
-
-#### A. Treating Revokes as a Separate Graph
-- Revokes are appended to a separate graph.
-- No destructive updates: trust scores remain until offset by revoke score.
-
-#### B. Lazy Score Expiry or Invalidation
-- Each node stores `trust_score`, `updated_at`, and TTL.
-- If a vouch is revoked, the corresponding trust score decays naturally or gets marked for lazy recomputation.
-
-#### C. Optional: Reverse Indexing for High-Trust Nodes
-- For root or near-root nodes, keep a reverse index of downstreams to invalidate trust more directly.
+#### D. Circuit Breaker for Recursive Operations
+- Implemented a hard limit of 1000 processed addresses for any recursive operation.
+- Prevents stack overflows in complex trust networks or denial-of-service attacks.
+- Ensures predicable resource usage for mark-as-stale operations.
 
 ---
 
-### 5. Suggested Implementation Pattern
+### 4. Implementations Details
 
-- Store per-node metadata:
+#### A. Per-User Trust Record Structure
 ```plaintext
-trust_score_vouch
-trust_score_revoke
-last_updated_block
+UserTrustRecord {
+    active_vouches: vector<address>,
+    cached_score: u64,
+    score_computed_at_timestamp: u64,
+    is_stale: bool,
+}
 ```
-- On user interaction or trust query:
-  1. Run N random walks from root nodes on both graphs.
-  2. Combine hit counts into a final score.
-  3. Cache result with expiration logic.
+
+#### B. Score Computation Flow
+1. Check if cached score is valid (not stale & within TTL)
+2. If valid, return cached score
+3. Otherwise, compute fresh score via Monte Carlo walks
+4. Update cache with new score and timestamp
+
+#### C. Handling Trust Changes
+When user A changes their vouches (adding/removing):
+1. Update A's active_vouches list
+2. Mark affected nodes as stale
+3. Recursively propagate staleness to downstream nodes
+4. Apply circuit breaker to prevent excessive computation
 
 ---
 
-### 6. Alternatives Considered and Rejected
+### 5. Key Benefits of This Implementation
 
-#### A. Full Graph Storage with Matrix PageRank
-- **Why not:** Storage costs are prohibitive on-chain, and updating the matrix is not feasible after every edge change.
+#### A. Storage Efficiency
+- No centralized graph storage
+- Each user stores only their outbound trust edges
+- Minimal metadata required per user
 
-#### B. Recomputing Global PageRank on Every Write
-- **Why not:** Requires reprocessing the entire graph on every vouch/revoke, which is computationally infeasible.
+#### B. Computation Efficiency
+- On-demand score calculation
+- Cached results with staleness tracking
+- Cycle detection to prevent redundant walks
+- Circuit breaker to ensure bounded computation
 
-#### C. Merkleized DAG for Trust Paths
-- **Why not:** Complex to implement and verify path validity across multiple hops, and not suitable for frequent edge churn.
-
-#### D. Limiting Trust to One-Hop Relationships
-- **Why not:** Too simplistic, doesn’t capture transitive trust which is central to PageRank-style models.
+#### C. Resilience and Safety Features
+- Protection against stack overflows through a circuit breaker
+- Cycle detection in both score calculation and staleness propagation
+- Self-healing through automatic cache expiration
 
 ---
 
-### 7. Summary
-By modeling trust and revocation as dual graphs and using lazy Monte Carlo approximations, we can:
-- Avoid global recomputation
-- Achieve scalable, query-based trust evaluations
-- Support revocation as a natural, non-destructive influence
+### 6. Future Improvements
 
-This design supports flexible, real-time trust evaluation even in constrained environments like blockchain VMs.
+#### A. Randomization
+- Currently using deterministic neighbor selection for testing
+- Could be enhanced with proper randomization for production
+
+#### B. Parallelization
+- Monte Carlo approach naturally supports parallelization
+- Could run multiple walks simultaneously for faster score computation
+
+#### C. Prioritized Recalculation
+- Could prioritize recalculating scores for high-impact nodes first
+
+This implementation provides an efficient, scalable approach to trust scoring that works well in constrained environments while maintaining accuracy and responsiveness.
