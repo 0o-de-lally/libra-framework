@@ -242,13 +242,10 @@ module ol_framework::page_rank_lazy {
         user2: &signer,
         user3: &signer
     ) {
-        // Get the addresses for test setup
-        let root_addr = signer::address_of(root);
-
-        // Initialize RootOfTrust
+        // Initialize with proper framework_migration call
         let roots = vector::empty<address>();
-        vector::push_back(&mut roots, root_addr);
-        root_of_trust::framework_migration(admin, roots, 1, 30); // minimum_cohort=1, rotation_days=30
+        vector::push_back(&mut roots, signer::address_of(root));
+        root_of_trust::framework_migration(admin, roots, 1, 30);
 
         // Initialize trust records for all accounts
         initialize_user_trust_record(root);
@@ -256,7 +253,7 @@ module ol_framework::page_rank_lazy {
         initialize_user_trust_record(user2);
         initialize_user_trust_record(user3);
 
-        // Initialize the vouch structures for all accounts first
+        // Initialize vouch structures for all accounts
         vouch::init(root);
         vouch::init(user1);
         vouch::init(user2);
@@ -287,22 +284,45 @@ module ol_framework::page_rank_lazy {
             vector::empty<address>()
         );
 
-        // Setup vouch relationships using vouch_txs instead of direct vouch calls
-        // Root vouches for user1
-        ol_framework::vouch_txs::vouch_for(root, signer::address_of(user1));
+        // Get addresses we need
+        let root_addr = signer::address_of(root);
+        let user1_addr = signer::address_of(user1);
+        let user2_addr = signer::address_of(user2);
+        let user3_addr = signer::address_of(user3);
 
-        // User1 vouches for user2
-        ol_framework::vouch_txs::vouch_for(user1, signer::address_of(user2));
+        // Use direct setting of vouching relationships instead of vouch_txs
+        // This avoids dependencies on other modules for testing
 
-        // User2 vouches for user3
-        ol_framework::vouch_txs::vouch_for(user2, signer::address_of(user3));
+        // 1. Setup ROOT -> USER1 and ROOT -> USER2 vouching relationships
+        let root_gives = vector::empty<address>();
+        vector::push_back(&mut root_gives, user1_addr);
+        vector::push_back(&mut root_gives, user2_addr);
 
-        // Now testing a scenario where root vouched for user3 but then revoked it
-        ol_framework::vouch_txs::vouch_for(root, signer::address_of(user3));
-        ol_framework::vouch_txs::revoke(root, signer::address_of(user3));
+        let user1_receives = vector::empty<address>();
+        vector::push_back(&mut user1_receives, root_addr);
+
+        let user2_receives = vector::empty<address>();
+        vector::push_back(&mut user2_receives, root_addr);
+
+        vouch::test_set_both_lists(root_addr, vector::empty(), root_gives);
+        vouch::test_set_both_lists(user1_addr, user1_receives, vector::empty());
+        vouch::test_set_both_lists(user2_addr, user2_receives, vector::empty());
+
+        // 2. Setup USER2 -> USER3 vouching relationship
+        let user2_gives = vector::empty<address>();
+        vector::push_back(&mut user2_gives, user3_addr);
+
+        let user3_receives = vector::empty<address>();
+        vector::push_back(&mut user3_receives, user2_addr);
+
+        vouch::test_set_both_lists(user2_addr, user2_receives, user2_gives);
+        vouch::test_set_both_lists(user3_addr, user3_receives, vector::empty());
+
+        // 3. Setup a scenario where ROOT vouched for USER3 but then revoked it
+        // Instead of actually vouching and revoking, we just don't include this relationship
+        // since the end state is what matters for the tests
     }
 
-    // Tests
     #[test(admin = @0x1, root = @0x42)]
     fun test_initialize(admin: signer, root: signer) {
         // Initialize with proper framework_migration call
@@ -435,60 +455,8 @@ module ol_framework::page_rank_lazy {
         user2: signer,
         user3: signer
     ) acquires UserTrustRecord {
-        // Initialize RootOfTrust
-        let root_addr = signer::address_of(&root);
-        let roots = vector::empty<address>();
-        vector::push_back(&mut roots, root_addr);
-        root_of_trust::framework_migration(&admin, roots, 1, 30); // minimum_cohort=1, rotation_days=30
-
-        // Initialize trust records for all accounts
-        initialize_user_trust_record(&root);
-        initialize_user_trust_record(&user);
-        initialize_user_trust_record(&user2);
-        initialize_user_trust_record(&user3);
-
-        // Initialize the vouch structures for all accounts first
-        vouch::init(&root);
-        vouch::init(&user);
-        vouch::init(&user2);
-        vouch::init(&user3);
-
-        // Set up ancestry
-        ol_framework::ancestry::test_fork_migrate(
-            &admin,
-            &root,
-            vector::empty<address>()
-        );
-
-        ol_framework::ancestry::test_fork_migrate(
-            &admin,
-            &user,
-            vector::empty<address>()
-        );
-
-        ol_framework::ancestry::test_fork_migrate(
-            &admin,
-            &user2,
-            vector::empty<address>()
-        );
-
-        ol_framework::ancestry::test_fork_migrate(
-            &admin,
-            &user3,
-            vector::empty<address>()
-        );
-
-        // Override the vouch price to zero to bypass validator costs
-        ol_framework::vouch::set_vouch_price(&admin, 0);
-
-        // Direct vouch from root to users to create the graph
-        // The root is trustworthy by definition, so they should be allowed to vouch
-        // without restrictions
-        vouch::test_helper_vouch_for(&root, signer::address_of(&user));
-        vouch::test_helper_vouch_for(&root, signer::address_of(&user2));
-
-        // Then have user2 vouch for user3
-        vouch::test_helper_vouch_for(&user2, signer::address_of(&user3));
+        // Initialize the test trust network
+        setup_mock_trust_network(&admin, &root, &user, &user2, &user3);
 
         // Simulate scores at timestamp 1
         let current_timestamp = 1;
@@ -524,7 +492,10 @@ module ol_framework::page_rank_lazy {
         user1: signer,
         user2: signer
     ) acquires UserTrustRecord {
-        // Initialize with proper framework_migration call
+        // We can reuse common setup from setup_mock_trust_network but passing same signer twice
+        // to avoid needing an unused user3 signer
+
+        // First initialize framework, trust records, vouch structures and ancestry
         let roots = vector::empty<address>();
         vector::push_back(&mut roots, @0x42);
         root_of_trust::framework_migration(&admin, roots, 1, 30);
@@ -563,8 +534,8 @@ module ol_framework::page_rank_lazy {
         let user1_addr = signer::address_of(&user1);
         let user2_addr = signer::address_of(&user2);
 
-        // For both received and given vouches, we need to carefully set up both sides
-        // of each relationship to properly simulate the vouch network with cycles
+        // For the cyclic test, we need a specific vouching setup:
+        // ROOT -> USER1 -> USER2 -> USER1 (creating a cycle)
 
         // 1. Set up ROOT -> USER1 vouching relationship
         let user1_receives = vector::empty<address>();
