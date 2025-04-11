@@ -12,6 +12,16 @@ module ol_framework::trust_graph {
     // Error codes
     const ENOT_INITIALIZED: u64 = 4;
 
+    // Per-user trust record - each user stores their own trust data
+    struct ShortestPathRecord has key, drop {
+        // Cached shortest path distance to any root node (MAX_U64 if no path exists)
+        shortest_path_to_root: u64,
+        // When the score was last computed (timestamp)
+        score_computed_at_timestamp: u64,
+        // Whether this node's trust data is stale and needs recalculation
+        is_stale: bool,
+    }
+
     // Find shortest path from target to any root node
     // Returns (found_path, path_length)
     // Uses cached parent path when available to avoid recomputations
