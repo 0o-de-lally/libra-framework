@@ -1,28 +1,20 @@
 module ol_framework::page_rank_lazy {
-    use std::error;
     use std::signer;
     use std::vector;
+    use ol_framework::root_of_trust;
 
     // Constants
-    const MAX_ROOTS: u64 = 20;
     const DEFAULT_WALK_DEPTH: u64 = 4;
     const DEFAULT_NUM_WALKS: u64 = 10;
+    const DEFAULT_INWARD_MAX_DEPTH: u64 = 10; // Maximum depth for inward path search
     const SCORE_TTL_SECONDS: u64 = 1000; // Score validity period in seconds
     const MAX_PROCESSED_ADDRESSES: u64 = 1000; // Circuit breaker to prevent stack overflow
+    const DEFAULT_ROOT_REGISTRY: address = @0x1; // Default registry address for root of trust
 
     // Error codes
-    const EROOT_LIMIT_EXCEEDED: u64 = 1;
     const ENODE_NOT_FOUND: u64 = 2;
-    const EALREADY_INITIALIZED: u64 = 3;
     const ENOT_INITIALIZED: u64 = 4;
-    const EUNAUTHORIZED: u64 = 5;
     const EPROCESSING_LIMIT_REACHED: u64 = 6;
-
-    // Data structures
-    struct TrustRegistry has key {
-        // Root nodes (trusted by default)
-        roots: vector<address>,
-    }
 
     // Per-user trust record - each user stores their own trust data
     struct UserTrustRecord has key, drop {
@@ -34,23 +26,8 @@ module ol_framework::page_rank_lazy {
         score_computed_at_timestamp: u64,
         // Whether this node's trust data is stale and needs recalculation
         is_stale: bool,
-    }
-
-    // Initialize the trust registry
-    public fun initialize(account: &signer, initial_roots: vector<address>) {
-        // Ensure only the framework address can initialize the system
-        assert!(signer::address_of(account) == @0x1, error::permission_denied(EUNAUTHORIZED));
-
-        let addr = signer::address_of(account);
-
-        assert!(!exists<TrustRegistry>(addr), error::already_exists(EALREADY_INITIALIZED));
-        assert!(vector::length(&initial_roots) <= MAX_ROOTS, error::invalid_argument(EROOT_LIMIT_EXCEEDED));
-
-        move_to(account, TrustRegistry {
-            roots: initial_roots,
-        });
-
-        // Root accounts will initialize themselves when needed
+        // Cached shortest path distance to any root node (MAX_U64 if no path exists)
+        shortest_path_to_root: u64,
     }
 
     // A user vouches for another user
@@ -64,6 +41,7 @@ module ol_framework::page_rank_lazy {
                 cached_score: 0,
                 score_computed_at_timestamp: 0,
                 is_stale: true,
+                shortest_path_to_root: 0xFFFFFFFFFFFFFFFF, // MAX_U64, indicating no path calculated yet
             });
         };
 
@@ -100,17 +78,12 @@ module ol_framework::page_rank_lazy {
     }
 
     // Calculate or retrieve cached trust score
-    public fun get_trust_score(addr: address, current_timestamp: u64): u64 acquires TrustRegistry, UserTrustRecord {
-        let registry_addr = @0x1; // Registry address
-
-        assert!(exists<TrustRegistry>(registry_addr), error::not_found(ENOT_INITIALIZED));
-
+    public fun get_trust_score(addr: address, current_timestamp: u64): u64 acquires UserTrustRecord {
         // If user has no trust record, they have no score
         if (!exists<UserTrustRecord>(addr)) {
             return 0
         };
 
-        let registry = borrow_global<TrustRegistry>(registry_addr);
         let user_record = borrow_global<UserTrustRecord>(addr);
 
         // Check if cached score is still valid and not stale
@@ -122,7 +95,9 @@ module ol_framework::page_rank_lazy {
         };
 
         // Cache is stale or expired - compute fresh score
-        let score = compute_score_monte_carlo(addr, &registry.roots, current_timestamp);
+        // Get roots from root_of_trust module instead of local registry
+        let roots = root_of_trust::get_current_roots_at_registry(DEFAULT_ROOT_REGISTRY);
+        let score = compute_score_monte_carlo(addr, &roots, current_timestamp);
 
         // Update the cache
         let user_record_mut = borrow_global_mut<UserTrustRecord>(addr);
@@ -280,6 +255,11 @@ module ol_framework::page_rank_lazy {
         };
     }
 
+    // // Get inward trust score based on shortest path calculation from trust_graph module
+    // public fun get_inward_trust_score(addr: address, current_timestamp: u64): u64 {
+    //     trust_graph::calculate_inward_path_score(addr, current_timestamp)
+    // }
+
     // For testing only - initialize a user trust record for testing
     #[test_only]
     public fun initialize_user_trust_record(account: &signer) {
@@ -291,18 +271,12 @@ module ol_framework::page_rank_lazy {
                 cached_score: 0,
                 score_computed_at_timestamp: 0,
                 is_stale: true,
+                shortest_path_to_root: 0xFFFFFFFFFFFFFFFF, // MAX_U64, indicating no path calculated yet
             });
         };
     }
 
     // Testing helpers
-    #[test_only]
-    public fun initialize_test_registry(admin: &signer) {
-        let roots = vector::empty<address>();
-        vector::push_back(&mut roots, @0x42);
-        initialize(admin, roots);
-    }
-
     #[test_only]
     public fun setup_mock_trust_network(
         admin: &signer,
@@ -311,10 +285,13 @@ module ol_framework::page_rank_lazy {
         user2: &signer,
         user3: &signer
     ) acquires UserTrustRecord {
-        // Setup roots
+        // Get the addresses for test setup
+        let root_addr = signer::address_of(root);
+
+        // Setup mock roots in root_of_trust module using the correct initialization
         let roots = vector::empty<address>();
-        vector::push_back(&mut roots, signer::address_of(root));
-        initialize(admin, roots);
+        vector::push_back(&mut roots, root_addr);
+        root_of_trust::framework_migration(admin, roots, 1, 30); // minimum_cohort=1, rotation_days=30
 
         // Initialize trust records for all accounts
         initialize_user_trust_record(root);
@@ -340,22 +317,22 @@ module ol_framework::page_rank_lazy {
     // Tests
     #[test(admin = @0x1, root = @0x42)]
     fun test_initialize(admin: signer, root: signer) {
-        initialize_test_registry(&admin);
+        // Initialize with proper framework_migration call
+        let roots = vector::empty<address>();
+        vector::push_back(&mut roots, @0x42);
+        root_of_trust::framework_migration(&admin, roots, 1, 30);
 
-        // In the test environment, we need to explicitly initialize the user trust record
-        // because our initialize function can't create resources at other addresses
         initialize_user_trust_record(&root);
-
         let root_addr = signer::address_of(&root);
-
-        // In real testing we would verify the scores properly
-        assert!(exists<TrustRegistry>(@0x1), 73570001);
         assert!(exists<UserTrustRecord>(root_addr), 73570002);
     }
 
     #[test(admin = @0x1, root = @0x42, user = @0x43)]
     fun test_vouch(admin: signer, root: signer, user: signer) acquires UserTrustRecord {
-        initialize_test_registry(&admin);
+        // Initialize with proper framework_migration call
+        let roots = vector::empty<address>();
+        vector::push_back(&mut roots, @0x42);
+        root_of_trust::framework_migration(&admin, roots, 1, 30);
 
         let root_addr = signer::address_of(&root);
         let user_addr = signer::address_of(&user);
@@ -370,7 +347,10 @@ module ol_framework::page_rank_lazy {
 
     #[test(admin = @0x1, root = @0x42, user = @0x43)]
     fun test_revoke(admin: signer, root: signer, user: signer) acquires UserTrustRecord {
-        initialize_test_registry(&admin);
+        // Initialize with proper framework_migration call
+        let roots = vector::empty<address>();
+        vector::push_back(&mut roots, @0x42);
+        root_of_trust::framework_migration(&admin, roots, 1, 30);
 
         let root_addr = signer::address_of(&root);
         let user_addr = signer::address_of(&user);
@@ -398,7 +378,7 @@ module ol_framework::page_rank_lazy {
         user: signer,
         user2: signer,
         user3: signer
-    ) acquires TrustRegistry, UserTrustRecord {
+    ) acquires UserTrustRecord {
         setup_mock_trust_network(&admin, &root, &user, &user2, &user3);
 
         // Simulate scores at timestamp 1
@@ -435,9 +415,11 @@ module ol_framework::page_rank_lazy {
         root: signer,
         user1: signer,
         user2: signer
-    ) acquires TrustRegistry, UserTrustRecord {
-        // Initialize trust registry
-        initialize_test_registry(&admin);
+    ) acquires UserTrustRecord {
+        // Initialize with proper framework_migration call
+        let roots = vector::empty<address>();
+        vector::push_back(&mut roots, @0x42);
+        root_of_trust::framework_migration(&admin, roots, 1, 30);
 
         // Initialize user records
         initialize_user_trust_record(&root);
@@ -475,4 +457,15 @@ module ol_framework::page_rank_lazy {
         // In a non-cyclic Monte Carlo approach, users farther from root should have lower scores
         assert!(user1_score >= user2_score, 73570022);
     }
+
+
+    public fun vouches_for(voucher_addr: address, target_addr: address): bool acquires UserTrustRecord {
+        let record = borrow_global<UserTrustRecord>(voucher_addr);
+        vector::contains(&record.active_vouches, &target_addr)
+    }
+
+    // // Get inward trust score based on shortest path calculation from trust_graph module
+    // public fun get_inward_trust_score(addr: address, current_timestamp: u64): u64 {
+    //     ol_framework::trust_graph::calculate_inward_path_score(addr, current_timestamp)
+    // }
 }

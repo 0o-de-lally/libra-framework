@@ -38,6 +38,9 @@ module ol_framework::root_of_trust {
     use diem_framework::system_addresses;
     use diem_framework::timestamp;
 
+    friend ol_framework::page_rank_lazy;
+
+
     #[test_only]
     friend ol_framework::root_of_trust_tests;
 
@@ -179,11 +182,5 @@ module ol_framework::root_of_trust {
         } else {
             false
         }
-    }
-
-    #[test_only]
-    /// Function for testing initialization
-    fun test_init(_user_sig: &signer) {
-        // TODO: Add test initialization logic
     }
 }
