@@ -567,39 +567,33 @@ module ol_framework::page_rank_lazy {
         // of each relationship to properly simulate the vouch network with cycles
 
         // 1. Set up ROOT -> USER1 vouching relationship
-
-        // USER1 receives vouch from ROOT
         let user1_receives = vector::empty<address>();
         vector::push_back(&mut user1_receives, root_addr);
-        vouch::test_set_received_list(user1_addr, user1_receives);
 
-        // ROOT gives vouch to USER1 - we need to set up the outgoing vouches manually
         let root_gives = vector::empty<address>();
         vector::push_back(&mut root_gives, user1_addr);
-        vouch::test_set_given_list(root_addr, root_gives);
+
+        vouch::test_set_both_lists(root_addr, vector::empty(), root_gives);
+        vouch::test_set_both_lists(user1_addr, user1_receives, vector::empty());
 
         // 2. Set up USER1 -> USER2 relationship
-
-        // USER2 receives vouch from USER1
         let user2_receives = vector::empty<address>();
         vector::push_back(&mut user2_receives, user1_addr);
-        vouch::test_set_received_list(user2_addr, user2_receives);
 
-        // USER1 gives vouch to USER2
         let user1_gives = vector::empty<address>();
         vector::push_back(&mut user1_gives, user2_addr);
-        vouch::test_set_given_list(user1_addr, user1_gives);
+
+        vouch::test_set_both_lists(user1_addr, user1_receives, user1_gives);
+        vouch::test_set_both_lists(user2_addr, user2_receives, vector::empty());
 
         // 3. Set up USER2 -> USER1 relationship (creating the cycle)
-
-        // USER1 also receives vouch from USER2 (in addition to ROOT)
         vector::push_back(&mut user1_receives, user2_addr);
-        vouch::test_set_received_list(user1_addr, user1_receives);
 
-        // USER2 gives vouch to USER1
         let user2_gives = vector::empty<address>();
         vector::push_back(&mut user2_gives, user1_addr);
-        vouch::test_set_given_list(user2_addr, user2_gives);
+
+        vouch::test_set_both_lists(user1_addr, user1_receives, user1_gives);
+        vouch::test_set_both_lists(user2_addr, user2_receives, user2_gives);
 
         // Get scores at timestamp 1
         let current_timestamp = 1;
