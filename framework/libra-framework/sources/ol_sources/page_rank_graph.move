@@ -1,4 +1,4 @@
-module ol_framework::page_rank {
+module ol_framework::page_rank_graph {
     use std::error;
     use std::signer;
     use std::vector;
