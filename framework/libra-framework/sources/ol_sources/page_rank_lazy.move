@@ -7,7 +7,7 @@ module ol_framework::page_rank_lazy {
     const MAX_ROOTS: u64 = 20;
     const DEFAULT_WALK_DEPTH: u64 = 4;
     const DEFAULT_NUM_WALKS: u64 = 10;
-    const SCORE_TTL_BLOCKS: u64 = 1000; // Score validity period
+    const SCORE_TTL_SECONDS: u64 = 1000; // Score validity period in seconds
 
     // Error codes
     const EROOT_LIMIT_EXCEEDED: u64 = 1;
@@ -28,13 +28,10 @@ module ol_framework::page_rank_lazy {
         vouches: vector<address>,
         // Accounts this user has revoked
         revokes: vector<address>,
-        // Cached trust score with expiry (directly embedded, not optional)
-        cached_score: CachedScore,
-    }
-
-    struct CachedScore has store, drop, copy {
-        score: u64,
-        computed_at_block: u64,
+        // Cached trust score (flattened)
+        cached_score: u64,
+        // When the score was last computed (timestamp)
+        score_computed_at_timestamp: u64,
     }
 
     // Initialize the trust registry
@@ -77,7 +74,8 @@ module ol_framework::page_rank_lazy {
             move_to(account, UserTrustRecord {
                 vouches: vector::empty(),
                 revokes: vector::empty(),
-                cached_score: CachedScore { score: 0, computed_at_block: 0 },
+                cached_score: 0,
+                score_computed_at_timestamp: 0,
             });
         };
 
@@ -101,7 +99,8 @@ module ol_framework::page_rank_lazy {
             move_to(account, UserTrustRecord {
                 vouches: vector::empty(),
                 revokes: vector::empty(),
-                cached_score: CachedScore { score: 0, computed_at_block: 0 },
+                cached_score: 0,
+                score_computed_at_timestamp: 0,
             });
         };
 
@@ -131,10 +130,10 @@ module ol_framework::page_rank_lazy {
         let user_record = borrow_global<UserTrustRecord>(addr);
 
         // Check if cached score is still valid
-        if (current_block < user_record.cached_score.computed_at_block + SCORE_TTL_BLOCKS
-            && user_record.cached_score.computed_at_block > 0) {
+        if (current_block < user_record.score_computed_at_timestamp + SCORE_TTL_SECONDS
+            && user_record.score_computed_at_timestamp > 0) {
             // Cache is fresh, return it
-            return user_record.cached_score.score
+            return user_record.cached_score
         };
 
         // Cache is stale or not initialized - compute fresh score
@@ -142,10 +141,8 @@ module ol_framework::page_rank_lazy {
 
         // Now we can borrow mutably to update the cache
         let user_record_mut = borrow_global_mut<UserTrustRecord>(addr);
-        user_record_mut.cached_score = CachedScore {
-            score,
-            computed_at_block: current_block,
-        };
+        user_record_mut.cached_score = score;
+        user_record_mut.score_computed_at_timestamp = current_block;
 
         score
     }
@@ -288,7 +285,8 @@ module ol_framework::page_rank_lazy {
         if (exists<UserTrustRecord>(user)) {
             let record = borrow_global_mut<UserTrustRecord>(user);
             // Set to default values to invalidate the cache
-            record.cached_score = CachedScore { score: 0, computed_at_block: 0 };
+            record.cached_score = 0;
+            record.score_computed_at_timestamp = 0;
         };
     }
 
@@ -301,7 +299,8 @@ module ol_framework::page_rank_lazy {
             move_to(account, UserTrustRecord {
                 vouches: vector::empty(),
                 revokes: vector::empty(),
-                cached_score: CachedScore { score: 0, computed_at_block: 0 },
+                cached_score: 0,
+                score_computed_at_timestamp: 0,
             });
         };
     }
