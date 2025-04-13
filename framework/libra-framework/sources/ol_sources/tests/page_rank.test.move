@@ -643,14 +643,29 @@ module ol_framework::test_page_rank {
     addresses
   }
 
-  // Helper to create a vouch relationship
+  // Helper to create a vouch relationship with limit checking
   fun create_vouch(voucher: address, recipient: address) {
-    // Try to find the signer for this address - in a real test we'd have the signers
-    // But here we'll use the direct vouch test helper function
-
-    // Using the correct test helper function from vouch module
     if (vouch::is_init(voucher) && vouch::is_init(recipient)) {
+      // Don't attempt to create self-vouches
+      if (voucher == recipient) {
+        return
+      };
+
+      // To respect production limits, first check if the voucher has any remaining vouches
+      if (vouch::get_remaining_vouches(voucher) == 0) {
+        return
+      };
+
+      // Also check for existing vouch to avoid duplicate attempt
+      let (given_vouches, _) = vouch::get_given_vouches(voucher);
+      if (vector::contains(&given_vouches, &recipient)) {
+        return
+      };
+
+      // Create a dummy signer for the voucher
       let dummy_signer = account::create_signer_for_test(voucher);
+
+      // Use test_helper_vouch_for which bypasses the ancestry check but still respects other limits
       vouch::test_helper_vouch_for(&dummy_signer, recipient);
     }
   }
