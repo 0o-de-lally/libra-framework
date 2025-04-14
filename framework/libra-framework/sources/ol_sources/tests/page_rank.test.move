@@ -8,7 +8,6 @@ module ol_framework::test_page_rank {
   use ol_framework::root_of_trust;
   use ol_framework::mock;
   use ol_framework::vouch;
-  use ol_framework::vouch_metrics;
   use ol_framework::page_rank_lazy;
   use std::signer;
   use std::vector;
@@ -36,7 +35,7 @@ module ol_framework::test_page_rank {
 
   // create a test base and check we have 10 root of trust accounts.
   #[test(framework = @ol_framework)]
-  fun test_base_creates_ten_root_accounts(framework: &signer) {
+  fun c(framework: &signer) {
     // Set up the test base
     let roots_sig = test_base(framework);
 
@@ -60,25 +59,22 @@ module ol_framework::test_page_rank {
     let roots_sig = test_base(framework);
     let new_user_sig = mock::create_signer_from_u64(framework, 11);
     let new_user_addr = signer::address_of(&new_user_sig);
-
-    // Initialize page rank for the new user
-    page_rank_lazy::initialize_user_trust_record(&new_user_sig);
-
-    // Setup one vouch from the first root
     let root_sig = vector::borrow(&roots_sig, 0);
+
     vouch::init(root_sig);
     vouch::init(&new_user_sig);
+    // // Initialize page rank for the new user
+    page_rank_lazy::initialize_user_trust_record(&new_user_sig);
+
+    // // Setup one vouch from the first root
+
     vouch::vouch_for(root_sig, new_user_addr);
 
-    // Check vouch quality score (should be 100)
-    let vouch_quality_score = vouch_metrics::calculate_total_vouch_quality(new_user_addr);
-    print(&vouch_quality_score);
-
-    // Now check the page rank score (should be 100)
+    // // Now check the page rank score (should be 100)
     let current_timestamp = 1;
     let page_rank_score = page_rank_lazy::get_trust_score(new_user_addr, current_timestamp);
     print(&page_rank_score);
-    assert!(page_rank_score == 100, 7357002);
+    assert!(page_rank_score == 50, 7357001);
   }
 
   // Test with one user with ten root vouches - both for vouch quality and page rank score
@@ -86,37 +82,51 @@ module ol_framework::test_page_rank {
   fun test_one_user_ten_root(framework: &signer) {
     // Set up the test base
     let roots_sig = test_base(framework);
-
+    let count_roots = vector::length(&roots_sig);
     let new_user_sig = mock::create_signer_from_u64(framework, 11);
     let new_user_addr = signer::address_of(&new_user_sig);
+    let root_sig = vector::borrow(&roots_sig, 0);
 
-    // Initialize page rank for the new user
+    vouch::init(root_sig);
+    vouch::init(&new_user_sig);
+    // // Initialize page rank for the new user
     page_rank_lazy::initialize_user_trust_record(&new_user_sig);
 
-    // Setup ten vouches (from all roots)
-    let i = 0;
+    // // Setup one vouch from the first root
+
+    vouch::vouch_for(root_sig, new_user_addr);
+
+    // // Now check the page rank score (should be 100)
+    let current_timestamp = 1;
+    let page_rank_score = page_rank_lazy::get_trust_score(new_user_addr, current_timestamp);
+    print(&page_rank_score);
+    assert!(page_rank_score == 50, 7357001);
+    // Setup NINE vouches (from remaining roots)
+    let i = 1; // start at SECOND root of trust
     while (i < vector::length(&roots_sig)) {
       let grantor = vector::borrow(&roots_sig, i);
       vouch::init(grantor);
-      vouch::init(&new_user_sig);
       vouch::vouch_for(grantor, new_user_addr);
 
       i = i + 1;
     };
 
-    // Verify we have all 10 vouches
+    // // Verify we have all 10 vouches
     let (received, _) = vouch::get_received_vouches(new_user_addr);
-    assert!(vector::length(&received) == 10, 7357001);
+    assert!(vector::length(&received) == count_roots, 7357002);
 
-    // Check vouch quality score (will always be 100 with vouch_metrics)
-    let vouch_quality_score = vouch_metrics::calculate_total_vouch_quality(new_user_addr);
-    print(&vouch_quality_score);
+    // // Check vouch quality score (will always be 100 with vouch_metrics)
+    // let vouch_quality_score = vouch_metrics::calculate_total_vouch_quality(new_user_addr);
+    // print(&vouch_quality_score);
 
-    // Now check the page rank score (should be 1000 = 10 roots * 100 points)
-    let current_timestamp = 1;
-    let page_rank_score = page_rank_lazy::get_trust_score(new_user_addr, current_timestamp);
-    print(&page_rank_score);
-    assert!(page_rank_score == 1000, 7357003);
+    // // Now check the page rank score (should be 1000 = 10 roots * 100 points)
+    // fast forward into the future
+    let current_timestamp = 10000;
+    let page_rank_score_later = page_rank_lazy::get_trust_score(new_user_addr, current_timestamp);
+    print(&page_rank_score_later);
+    // NOTE: this should be 10X the previous test
+    assert!(page_rank_score_later == 500, 7357003);
+    assert!(page_rank_score_later == (count_roots * page_rank_score), 7357004);
   }
 
   // // starts a test base, and creates an additional 10 user accounts

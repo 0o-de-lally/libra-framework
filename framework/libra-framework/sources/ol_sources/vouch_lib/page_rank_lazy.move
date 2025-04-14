@@ -2,6 +2,7 @@ module ol_framework::page_rank_lazy {
     use std::signer;
     use std::vector;
     use ol_framework::vouch;
+    use ol_framework::root_of_trust;
 
     // Constants
     const DEFAULT_WALK_DEPTH: u64 = 4;
@@ -79,7 +80,7 @@ module ol_framework::page_rank_lazy {
 
         // Cache is stale or expired - compute fresh score
         // Default roots to system account if no registry
-        let roots = vector[@0x1]; // Simplified to use hardcoded root
+        let roots = root_of_trust::get_current_roots_at_registry(@diem_framework);
 
         // Compute score using selected algorithm
         let score = compute_trust_score(&roots, addr, algorithm);
@@ -153,6 +154,9 @@ module ol_framework::page_rank_lazy {
         };
 
         // Get all neighbors this node vouches for
+        if (!vouch::is_init(current)) {
+            return 0
+        };
         let (neighbors, _) = vouch::get_given_vouches(current);
         let neighbor_count = vector::length(&neighbors);
 
@@ -351,11 +355,18 @@ module ol_framework::page_rank_lazy {
         initialize_user_trust_record(user2);
         initialize_user_trust_record(user3);
 
-        // Initialize vouch structures for all accounts
+        // Ensure full initialization of vouch structures for all accounts
+        // The init function should create both ReceivedVouches and GivenVouches structures
         vouch::init(root);
         vouch::init(user1);
         vouch::init(user2);
         vouch::init(user3);
+
+        // Verify that all resources are initialized correctly before proceeding
+        assert!(vouch::is_init(signer::address_of(root)), 99);
+        assert!(vouch::is_init(signer::address_of(user1)), 99);
+        assert!(vouch::is_init(signer::address_of(user2)), 99);
+        assert!(vouch::is_init(signer::address_of(user3)), 99);
 
         // Initialize ancestry for test accounts to ensure they're unrelated
         ol_framework::ancestry::test_fork_migrate(
