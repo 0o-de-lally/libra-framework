@@ -6,6 +6,7 @@ module ol_framework::vouch {
     use ol_framework::epoch_helper;
     use diem_framework::system_addresses;
     use ol_framework::vouch_metrics;
+    use std::string::utf8;
 
     use diem_std::debug::print;
 
@@ -150,7 +151,6 @@ module ol_framework::vouch {
     // init the struct on a validators account.
     public(friend) fun init(new_account_sig: &signer) {
       let acc = signer::address_of(new_account_sig);
-
       // if (exists<MyVouches>(acc)) {
       //   // let migration handle the initialization of new structs
       //   return
@@ -429,6 +429,8 @@ module ol_framework::vouch {
     /// prevents spending a vouch that would not be counted.
     /// to add a vouch and ignore this check use insist_vouch
     public(friend) fun vouch_for(grantor: &signer, friend_account: address) acquires ReceivedVouches, GivenVouches, VouchesLifetime {
+      print(&utf8(b"vouch for"));
+      print(&friend_account);
       vouch_impl(grantor, friend_account, true);
     }
 

@@ -98,19 +98,6 @@ module ol_framework::root_of_trust {
     //     vouch_score::evaluate_score_for_registry(list, user)
     // }
 
-    #[view]
-    /// Check if rotation is possible for a given registry
-    public fun can_rotate(registry: address): bool acquires RootOfTrust {
-        if (!exists<RootOfTrust>(registry)) {
-            false
-        } else {
-            let root_of_trust = borrow_global<RootOfTrust>(registry);
-            let elapsed_secs = timestamp::now_seconds() - root_of_trust.last_updated_secs;
-            let required_secs = root_of_trust.rotate_window_days * SECONDS_IN_DAY;
-            elapsed_secs >= required_secs
-        }
-    }
-
     /// Rotate the root of trust set by adding and removing addresses
     public(friend) fun rotate_roots(user_sig: &signer, adds: vector<address>, removes: vector<address>) acquires RootOfTrust {
         let user_addr = signer::address_of(user_sig);
@@ -162,6 +149,12 @@ module ol_framework::root_of_trust {
     }
 
     #[view]
+    /// checks if registry is initialized
+    public fun is_initialized(registry: address): bool {
+        exists<RootOfTrust>(registry)
+    }
+
+    #[view]
     /// Get the current set of root addresses
     public fun get_current_roots_at_registry(registry: address): vector<address> acquires RootOfTrust {
        // return empty vector if the root of trust is not initialized
@@ -182,6 +175,19 @@ module ol_framework::root_of_trust {
             vector::contains(&list, &account)
         } else {
             false
+        }
+    }
+
+    #[view]
+    /// Check if rotation is possible for a given registry
+    public fun can_rotate(registry: address): bool acquires RootOfTrust {
+        if (!exists<RootOfTrust>(registry)) {
+            false
+        } else {
+            let root_of_trust = borrow_global<RootOfTrust>(registry);
+            let elapsed_secs = timestamp::now_seconds() - root_of_trust.last_updated_secs;
+            let required_secs = root_of_trust.rotate_window_days * SECONDS_IN_DAY;
+            elapsed_secs >= required_secs
         }
     }
 }
