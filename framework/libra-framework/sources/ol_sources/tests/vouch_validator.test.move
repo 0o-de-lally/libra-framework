@@ -198,8 +198,6 @@ module ol_framework::test_validator_vouch {
     mock::create_validator_accounts(root, 2, false);
     vouch::set_vouch_price(root, 0);
 
-    let _remaining = vouch::get_remaining_vouches(signer::address_of(alice));
-
     let users = mock::create_test_end_users(root, 10, 0);
     let i = 0;
     while (i < 10) {
