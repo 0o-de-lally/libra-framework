@@ -84,8 +84,10 @@ module ol_framework::test_page_rank {
       i = i + 1;
     };
 
-    let remaining = vouch::get_remaining_vouches(new_user_addr);
-    print(&remaining);
+    let (received, _) = vouch::get_received_vouches(new_user_addr);
+    assert!(vector::length(&received) == 10, 7357001);
+    // let remaining = vouch::get_remaining_vouches(new_user_addr);
+    // print(&remaining);
     let score = vouch::calculate_total_vouch_quality(new_user_addr);
     print(&score);
   }

@@ -126,9 +126,10 @@ module ol_framework::page_rank_lazy {
             while (root_idx < roots_len) {
                 let root = *vector::borrow(roots, root_idx);
 
-                // Direct match
+                // Direct match - target is itself a root of trust
                 if (root == target) {
-                    score = score + 1;
+                    // Direct matches get full score
+                    score = score + 100;
                 } else {
                     // Start a walk from this root
                     let visited = vector::empty<address>();
@@ -136,13 +137,15 @@ module ol_framework::page_rank_lazy {
 
                     if (is_exhaustive) {
                         // Full graph walk - explore all paths
-                        score = score + walk_from_node(root, target, &mut visited, 1, max_depth, is_exhaustive);
+                        // Initial power is 100 (full trust) at the root
+                        // Will diminish with path length
+                        score = score + walk_from_node_with_decay(root, target, &mut visited, 1, max_depth, 100);
                     } else {
-                        // Monte Carlo - do a single random walk
-                        let found_target = random_walk_from_node(root, target, &mut visited, max_depth);
-                        if (found_target) {
-                            score = score + 1;
-                        };
+                        // Monte Carlo - do a single random walk with decay
+                        // Initial power is 100 (full trust) at the root
+                        // Will diminish with path length
+                        let path_score = random_walk_from_node_with_decay(root, target, &mut visited, max_depth, 100);
+                        score = score + path_score;
                     };
                 };
 
@@ -155,24 +158,25 @@ module ol_framework::page_rank_lazy {
         score
     }
 
-    // Full graph traversal from a single node - returns weighted score
-    fun walk_from_node(
+    // Full graph traversal from a single node with trust decay (50% per hop)
+    // Returns weighted score based on all paths found
+    fun walk_from_node_with_decay(
         current: address,
         target: address,
         visited: &mut vector<address>,
         current_depth: u64,
         max_depth: u64,
-        is_exhaustive: bool
+        current_power: u64,
     ): u64 {
-        // Stop if we've reached maximum depth
-        if (current_depth >= max_depth) {
+        // Stop if we've reached maximum depth or power is too small
+        if (current_depth >= max_depth || current_power == 0) {
             return 0
         };
 
         // If this node is the target, we found a path
         if (current == target) {
-            // Weight the path by its inverse depth (shorter paths worth more)
-            return max_depth - current_depth + 1
+            // Return the current trust power
+            return current_power
         };
 
         // Get all neighbors this node vouches for
@@ -187,85 +191,74 @@ module ol_framework::page_rank_lazy {
         // Track the total score from all paths
         let total_score = 0;
 
-        if (is_exhaustive) {
-            // Full graph - Check ALL neighbors for paths to target
-            let i = 0;
-            while (i < neighbor_count) {
-                let neighbor = *vector::borrow(&neighbors, i);
+        // Calculate the power that will flow to each neighbor (50% decay)
+        let next_power = current_power / 2;
 
-                // Only visit neighbors we haven't seen yet (avoid cycles)
-                if (!vector::contains(visited, &neighbor)) {
-                    // Mark this neighbor as visited
-                    vector::push_back(visited, neighbor);
+        // Full graph - Check ALL neighbors for paths to target
+        let i = 0;
+        while (i < neighbor_count) {
+            let neighbor = *vector::borrow(&neighbors, i);
 
-                    // Recursive search from this neighbor
-                    let path_score = walk_from_node(
-                        neighbor,
-                        target,
-                        visited,
-                        current_depth + 1,
-                        max_depth,
-                        is_exhaustive
-                    );
-
-                    // Add to our total
-                    total_score = total_score + path_score;
-
-                    // Remove from visited since we're backtracking
-                    let last_idx = vector::length(visited) - 1;
-                    vector::remove(visited, last_idx);
-                };
-
-                i = i + 1;
-            };
-        } else {
-            // Monte Carlo - Pick ONE unvisited neighbor randomly
-            let (neighbor, has_neighbor) = get_random_unvisited_neighbor(current, visited);
-
-            if (has_neighbor) {
+            // Only visit neighbors we haven't seen yet (avoid cycles)
+            if (!vector::contains(visited, &neighbor)) {
+                // Mark this neighbor as visited
                 vector::push_back(visited, neighbor);
 
-                // Continue the random walk from this neighbor
-                if (neighbor == target || random_walk_from_node(
+                // Recursive search from this neighbor with reduced power
+                let path_score = walk_from_node_with_decay(
                     neighbor,
                     target,
                     visited,
-                    max_depth - current_depth
-                )) {
-                    total_score = 1;
-                };
+                    current_depth + 1,
+                    max_depth,
+                    next_power
+                );
+
+                // Add to our total
+                total_score = total_score + path_score;
+
+                // Remove from visited since we're backtracking
+                let last_idx = vector::length(visited) - 1;
+                vector::remove(visited, last_idx);
             };
+
+            i = i + 1;
         };
 
         total_score
     }
 
-    // Monte Carlo random walk from a node
-    fun random_walk_from_node(
+    // Monte Carlo random walk from a node with trust decay (50% per hop)
+    // Returns the score if target is found, otherwise 0
+    fun random_walk_from_node_with_decay(
         current: address,
         target: address,
         visited: &mut vector<address>,
-        steps_remaining: u64
-    ): bool {
-        // Base case - found target
+        steps_remaining: u64,
+        current_power: u64
+    ): u64 {
+        // Base case - found target, return current power
         if (current == target) {
-            return true
+            return current_power
         };
 
-        // Base case - no steps left
-        if (steps_remaining == 0) {
-            return false
+        // Base case - no steps left or power too small
+        if (steps_remaining == 0 || current_power == 0) {
+            return 0
         };
 
         // Get a random unvisited neighbor
         let (next_addr, has_neighbor) = get_random_unvisited_neighbor(current, visited);
         if (!has_neighbor) {
-            return false
+            return 0
         };
 
-        // Add to visited list and continue walk
+        // Calculate power passed to neighbor (50% decay)
+        let next_power = current_power / 2;
+
+        // Add to visited list and continue walk with reduced power
         vector::push_back(visited, next_addr);
-        random_walk_from_node(next_addr, target, visited, steps_remaining - 1)
+        random_walk_from_node_with_decay(next_addr, target, visited, steps_remaining - 1, next_power)
     }
 
     // Get a random unvisited neighbor that this user vouches for
