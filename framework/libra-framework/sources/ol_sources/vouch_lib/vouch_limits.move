@@ -70,8 +70,9 @@ module ol_framework::vouch_limits {
       assert_max_vouches_by_score(grantor_acc);
       assert_received_limit_vouches(grantor_acc);
       assert_epoch_vouches_limit(grantor_acc);
-      // Check if cooldown period has passed since last revocation
-      assert_cooldown_period(grantor_acc);
+      // prevents user from revoking many and subsequently adding
+      // to bypass the limits
+      assert_revoke_cooldown_period(grantor_acc);
     }
 
     fun assert_safety_ceiling_vouches(grantor_acc: address) {
@@ -160,7 +161,7 @@ module ol_framework::vouch_limits {
     }
 
     // Check if enough time has passed since last revocation before giving a new vouch
-    fun assert_cooldown_period(grantor_acc: address) {
+    fun assert_revoke_cooldown_period(grantor_acc: address) {
       assert!(
         cooldown_period_passed(grantor_acc),
         error::invalid_state(ECOOLDOWN_PERIOD_ACTIVE)
@@ -168,82 +169,78 @@ module ol_framework::vouch_limits {
     }
 
 
-        /// Helper function to check if the cooldown period has passed
+    /// Helper function to check if the cooldown period has passed
     fun cooldown_period_passed(grantor_acc: address): bool {
       let current_epoch = epoch_helper::get_current_epoch();
+      // FOR TESTNET:
+      if (current_epoch < REVOCATION_COOLDOWN_EPOCHS) {
+        return true
+      };
+
       let last_revocation_epoch = vouch::get_last_revocation_epoch(grantor_acc);
 
       // Check if enough epochs have passed since last revocation
       current_epoch >= last_revocation_epoch + REVOCATION_COOLDOWN_EPOCHS
     }
 
-    // /// Helper function to check how many vouches are left this epoch
-    // fun remaining_epoch_vouches(addr: address): u64 {
-    //   let current_epoch = epoch_helper::get_current_epoch();
-    //   let state = borrow_global<VouchesLifetime>(addr);
-
-    //   // Reset counter if we're in a new epoch
-    //   if (state.last_given_epoch != current_epoch) {
-    //     return MAX_VOUCHES_PER_EPOCH
-    //   };
-
-    //   // Calculate remaining vouches for this epoch
-    //   if (state.given_this_epoch >= MAX_VOUCHES_PER_EPOCH) {
-    //     0
-    //   } else {
-    //     MAX_VOUCHES_PER_EPOCH - state.given_this_epoch
-    //   }
-    // }
 
     #[view]
-    // /// Returns the number of vouches a user can still give based on system limits.
-    // /// This takes into account all constraints:
-    // /// 1. Base maximum limit (10 vouches)
-    // /// 2. Score-based limit
-    // /// 3. Received vouches + 1 limit
-    // /// 4. Per-epoch limit
-    // /// The returned value is the minimum of all these limits minus current given vouches.
-    public fun get_remaining_vouches(_addr: address): u64 {
+    /// Returns the number of vouches a user can still give based on system limits.
+    /// This takes into account all constraints:
+    /// 1. Base maximum limit (10 vouches)
+    /// 2. Score-based limit
+    /// 3. Received vouches + 1 limit
+    /// 4. Per-epoch limit
+    /// The returned value is the minimum of all these limits minus current given vouches.
+    public fun get_remaining_vouches(addr: address): u64 {
+
+      // Check if account is initialized
+      if (!vouch::is_init(addr)) {
+        return 0
+      };
+      // Check cooldown period
+      if (!cooldown_period_passed(addr)) {
+        return 0
+      };
+
+      let given_this_epoch = vouch::get_given_this_epoch(addr);
+      if (given_this_epoch >= MAX_VOUCHES_PER_EPOCH) {
+        return 0
+      };
+
+      // check what the core would allow.
+
+      let score_limit = calculate_score_limit(addr);
+
+      // check based on how many received
+      // Received limit: non-expired received vouches + 1
+      let received_vouches = vouch::true_friends(addr);
+      let received_limit = vector::length(&received_vouches) + 1;
+
+
+      // find the lowest number, most restrictive limit
+      let vouches_allowed = if (score_limit < received_limit) {
+        score_limit
+      } else {
+        received_limit
+      };
+
+      vouches_allowed = if (vouches_allowed < BASE_MAX_VOUCHES) {
+        vouches_allowed
+      } else {
+        BASE_MAX_VOUCHES
+      };
+
+
+      // Get current non-expired vouches
+      let given_count = vector::length(&vouch::get_given_vouches_not_expired(addr));
+
+      // Calculate remaining vouches
+      if (given_count >= vouches_allowed) {
         0
+      } else {
+        vouches_allowed - given_count
+      }
     }
-    //   // Check if account is initialized
-    //   if (!vouch::is_init(addr)) {
-    //     return 0
-    //   };
-    //   // Check cooldown period
-    //   if (!cooldown_period_passed(addr)) {
-    //     return 0
-    //   };
-
-    //   // Get current non-expired vouches
-    //   let given_count = vector::length(&vouch::get_given_vouches_not_expired(addr));
-
-    //   // Calculate all limits
-    //   let base_limit = BASE_MAX_VOUCHES;
-    //   let score_limit = calculate_score_limit(addr);
-    //   print(&3333);
-    //   print(&score_limit);
-
-    //   // Received limit: non-expired received vouches + 1
-    //   let received_vouches = vouch::true_friends(addr);
-    //   let received_limit = vector::length(&received_vouches) + 1;
-
-    //   // Check epoch limit
-    //   let epoch_limit = remaining_epoch_vouches(addr);
-
-    //   // Find the most restrictive limit
-    //   let min_limit = base_limit;
-    //   if (score_limit < min_limit) { min_limit = score_limit };
-    //   if (received_limit < min_limit) { min_limit = received_limit };
-    //   if (epoch_limit == 0) { return 0 }; // If no vouches left this epoch, return 0
-
-
-    //   // Calculate remaining vouches
-    //   if (given_count >= min_limit) {
-    //     0
-    //   } else {
-    //     min_limit - given_count
-    //   }
-    // }
 
 }
