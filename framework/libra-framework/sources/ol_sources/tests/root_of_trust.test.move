@@ -8,6 +8,7 @@ module ol_framework::root_of_trust_tests {
     use ol_framework::ol_account;
     use ol_framework::mock;
     use ol_framework::root_of_trust;
+    use ol_framework::vouch_metrics;
 
     // Test addresses with descriptive names showing relationships
     const ALICE_AT_GENESIS: address = @0x123;
@@ -178,7 +179,7 @@ module ol_framework::root_of_trust_tests {
         );
 
         // Test scoring for direct children of roots
-        let bob_score = root_of_trust::score_connection(@0x1, BOB_ALICES_CHILD);
+        let bob_score = vouch_metrics::calculate_total_vouch_quality(BOB_ALICES_CHILD);
 
         let maybe_degree = ancestry::get_degree(ALICE_AT_GENESIS, BOB_ALICES_CHILD);
         let bob_d = *option::borrow(&maybe_degree);
@@ -190,21 +191,21 @@ module ol_framework::root_of_trust_tests {
         let eve_d = *option::borrow(&maybe_degree);
         assert!(eve_d == 1, 7357001);
 
-        let eve_score = root_of_trust::score_connection(@0x1, EVE_DAVES_CHILD);
+        let eve_score = vouch_metrics::calculate_total_vouch_quality( EVE_DAVES_CHILD);
         assert!(eve_score == 100, 7357003);
 
         let maybe_degree = ancestry::get_degree(ALICE_AT_GENESIS, CAROL_BOBS_CHILD);
         let carol_d = *option::borrow(&maybe_degree);
         assert!(carol_d == 2, 3);
         // Test scoring for grandchild (two degrees of separation)
-        let carol_score = root_of_trust::score_connection(@0x1, CAROL_BOBS_CHILD);
+        let carol_score = vouch_metrics::calculate_total_vouch_quality( CAROL_BOBS_CHILD);
 
         diem_std::debug::print(&carol_score);
         // Grandchild gets 50 points (100/2, two degrees away)
         assert!(carol_score == 50, 3);
 
         // Test scoring for root members themselves
-        let alice_score = root_of_trust::score_connection(@0x1, ALICE_AT_GENESIS);
+        let alice_score = vouch_metrics::calculate_total_vouch_quality(ALICE_AT_GENESIS);
         // Root members get 100 points (direct connection)
         assert!(alice_score == 100, 4);
     }
