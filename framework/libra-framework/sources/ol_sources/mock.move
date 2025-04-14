@@ -29,6 +29,8 @@ module ol_framework::mock {
   use ol_framework::infra_escrow;
   use ol_framework::testnet;
   use ol_framework::vouch_limits;
+  use ol_framework::root_of_trust;
+  use ol_framework::page_rank_lazy;
 
   use diem_std::debug::print;
 
@@ -345,6 +347,9 @@ module ol_framework::mock {
     musical_chairs::initialize(root, musical_chairs_default_seats);
 
     let val_addr = personas();
+
+    root_of_trust::framework_migration(root, val_addr, vector::length(&val_addr), 10000);
+
     let i = 0;
     while (i < num) {
       let val = vector::borrow(&val_addr, i);
@@ -537,6 +542,12 @@ module ol_framework::mock {
   fun validator_vouches_mocked_correctly(root: &signer, alice: address) {
     // create vals without vouches
     let _vals = genesis_n_vals(root, 10);
+
+    let is_root = root_of_trust::is_root_at_registry(@ol_framework, alice);
+    print(&is_root);
+
+    let score = page_rank_lazy::get_trust_score(alice);
+    print(&score);
 
     let remaining = vouch_limits::get_remaining_vouches(alice);
     print(&remaining);

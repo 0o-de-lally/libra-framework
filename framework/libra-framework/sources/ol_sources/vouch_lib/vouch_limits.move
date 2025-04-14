@@ -123,6 +123,7 @@ module ol_framework::vouch_limits {
         // Calculate the quality using the social distance method
         // This avoids dependency on page_rank_lazy
         let total_quality = page_rank_lazy::get_trust_score(grantor_acc);
+        print(&4444);
         print(&total_quality);
 
         // For accounts with low quality vouchers,
@@ -211,6 +212,8 @@ module ol_framework::vouch_limits {
       // check what the core would allow.
 
       let score_limit = calculate_score_limit(addr);
+      print(&3333);
+      print(&score_limit);
 
       // check based on how many received
       // Received limit: non-expired received vouches + 1
