@@ -335,4 +335,85 @@ module ol_framework::page_rank_lazy {
     public fun vouches_for(voucher_addr: address, target_addr: address): bool {
         vouch::is_valid_voucher_for(voucher_addr, target_addr)
     }
+
+    // Testing helpers
+    #[test_only]
+    public fun setup_mock_trust_network(
+        admin: &signer,
+        root: &signer,
+        user1: &signer,
+        user2: &signer,
+        user3: &signer
+    ) {
+        // Initialize trust records for all accounts
+        initialize_user_trust_record(root);
+        initialize_user_trust_record(user1);
+        initialize_user_trust_record(user2);
+        initialize_user_trust_record(user3);
+
+        // Initialize vouch structures for all accounts
+        vouch::init(root);
+        vouch::init(user1);
+        vouch::init(user2);
+        vouch::init(user3);
+
+        // Initialize ancestry for test accounts to ensure they're unrelated
+        ol_framework::ancestry::test_fork_migrate(
+            admin,
+            root,
+            vector::empty<address>()
+        );
+
+        ol_framework::ancestry::test_fork_migrate(
+            admin,
+            user1,
+            vector::empty<address>()
+        );
+
+        ol_framework::ancestry::test_fork_migrate(
+            admin,
+            user2,
+            vector::empty<address>()
+        );
+
+        ol_framework::ancestry::test_fork_migrate(
+            admin,
+            user3,
+            vector::empty<address>()
+        );
+
+        // Get addresses we need
+        let root_addr = signer::address_of(root);
+        let user1_addr = signer::address_of(user1);
+        let user2_addr = signer::address_of(user2);
+        let user3_addr = signer::address_of(user3);
+
+        // Use direct setting of vouching relationships instead of vouch_txs
+        // This avoids dependencies on other modules for testing
+
+        // 1. Setup ROOT -> USER1 and ROOT -> USER2 vouching relationships
+        let root_gives = vector::empty<address>();
+        vector::push_back(&mut root_gives, user1_addr);
+        vector::push_back(&mut root_gives, user2_addr);
+
+        let user1_receives = vector::empty<address>();
+        vector::push_back(&mut user1_receives, root_addr);
+
+        let user2_receives = vector::empty<address>();
+        vector::push_back(&mut user2_receives, root_addr);
+
+        vouch::test_set_both_lists(root_addr, vector::empty(), root_gives);
+        vouch::test_set_both_lists(user1_addr, user1_receives, vector::empty());
+        vouch::test_set_both_lists(user2_addr, user2_receives, vector::empty());
+
+        // 2. Setup USER2 -> USER3 vouching relationship
+        let user2_gives = vector::empty<address>();
+        vector::push_back(&mut user2_gives, user3_addr);
+
+        let user3_receives = vector::empty<address>();
+        vector::push_back(&mut user3_receives, user2_addr);
+
+        vouch::test_set_both_lists(user2_addr, user2_receives, user2_gives);
+        vouch::test_set_both_lists(user3_addr, user3_receives, vector::empty());
+    }
 }
