@@ -6,20 +6,15 @@ module ol_framework::page_rank_lazy {
     use ol_framework::vouch;
     use ol_framework::root_of_trust;
 
-    use diem_std::debug::print;
-    use diem_std::debug::print_str;
+    friend ol_framework::vouch_txs;
 
     // Constants
     const DEFAULT_WALK_DEPTH: u64 = 4;
     const DEFAULT_NUM_WALKS: u64 = 10;
     const SCORE_TTL_SECONDS: u64 = 1000; // Score validity period in seconds
     const MAX_PROCESSED_ADDRESSES: u64 = 1000; // Circuit breaker to prevent stack overflow
-    const DEFAULT_ROOT_REGISTRY: address = @0x1; // Default registry address for root of trust
 
-    // Algorithm selection constants
-    const ALGORITHM_MONTE_CARLO: u8 = 0;
-    const ALGORITHM_FULL_GRAPH: u8 = 1;
-    const DEFAULT_ALGORITHM: u8 = 0;
+    const DEFAULT_ROOT_REGISTRY: address = @diem_framework; // Default registry address for root of trust
 
     // Full graph walk constants
     const FULL_WALK_MAX_DEPTH: u64 = 6; // Maximum path length for full graph traversal
@@ -56,44 +51,20 @@ module ol_framework::page_rank_lazy {
         };
     }
 
-    // Mark a user's trust record as stale when their vouching relationships change
-    public fun mark_record_stale(user: address) acquires UserTrustRecord {
-        if (exists<UserTrustRecord>(user)) {
-            let user_record = borrow_global_mut<UserTrustRecord>(user);
-            user_record.is_stale = true;
-        };
-    }
-
     // Calculate or retrieve cached trust score
     // TODO: remove this
     public fun get_trust_score(addr: address): u64 acquires UserTrustRecord {
-        get_trust_score_with_algorithm(addr)
-    }
-
-    // Calculate or retrieve cached trust score with specific algorithm
-    public fun get_trust_score_with_algorithm(addr: address): u64 acquires UserTrustRecord {
         let current_timestamp = timestamp::now_seconds();
 
         // If user has no trust record, they have no score
         assert!(exists<UserTrustRecord>(addr), error::invalid_state(ENOT_INITIALIZED));
-        let user_record = borrow_global<UserTrustRecord>(addr);
-
-
-        // Check if cached score is still valid and not stale
-        if (!user_record.is_stale
-            && current_timestamp < user_record.score_computed_at_timestamp + SCORE_TTL_SECONDS
-            && user_record.score_computed_at_timestamp > 0) {
-            print_str(&b"stale, getting cached score");
-            // Cache is fresh, return it
-            return user_record.cached_score
-        };
 
         // Cache is stale or expired - compute fresh score
         // Default roots to system account if no registry
         let roots = root_of_trust::get_current_roots_at_registry(@diem_framework);
 
         // Compute score using selected algorithm
-        let score = compute_trust_score(&roots, addr, 0);
+        let score = traverse_graph(&roots, addr, FULL_WALK_MAX_DEPTH);
 
         // Update the cache
         let user_record_mut = borrow_global_mut<UserTrustRecord>(addr);
@@ -102,12 +73,6 @@ module ol_framework::page_rank_lazy {
         user_record_mut.is_stale = false;
 
         score
-    }
-
-    // Unified function to compute trust score with selected algorithm
-    fun compute_trust_score(roots: &vector<address>, target: address, _algorithm: u8): u64 {
-        // Ignore algorithm type for now - always use exhaustive walk
-        traverse_graph(roots, target, FULL_WALK_MAX_DEPTH)
     }
 
     // Simplified graph traversal - only uses exhaustive walk
@@ -126,7 +91,6 @@ module ol_framework::page_rank_lazy {
 
             let visited = vector::empty<address>();
             vector::push_back(&mut visited, root);
-
 
             if (root != target) {
               // NOTE: you don't don't give yourself points in the walk
@@ -152,8 +116,10 @@ module ol_framework::page_rank_lazy {
         max_depth: u64,
         current_power: u64
     ): u64 {
+        assert!(vouch::is_init(current), error::invalid_state(ENOT_INITIALIZED));
+
         // Stop conditions
-        if (current_depth >= max_depth || current_power == 0) {
+        if (current_depth >= max_depth || current_power < 2) {
             return 0
         };
 
@@ -162,9 +128,6 @@ module ol_framework::page_rank_lazy {
             return current_power
         };
 
-        print(&current);
-
-        assert!(vouch::is_init(current), error::invalid_state(ENOT_INITIALIZED));
 
         let (neighbors, _) = vouch::get_given_vouches(current);
         let neighbor_count = vector::length(&neighbors);
@@ -214,91 +177,6 @@ module ol_framework::page_rank_lazy {
         total_score
     }
 
-    // Get a random unvisited neighbor that this user vouches for
-    // Now uses vouch module instead of local storage
-    fun get_random_unvisited_neighbor(user: address, visited: &vector<address>): (address, bool) {
-        // Get the active vouches from the vouch module
-        let (active_vouches, _) = vouch::get_given_vouches(user);
-
-        let vouches_len = vector::length(&active_vouches);
-
-        if (vouches_len == 0) {
-            return (@0x0, false) // Return dummy address with false flag
-        };
-
-        // Try to find an unvisited neighbor
-        let i = 0;
-        while (i < vouches_len) {
-            let neighbor = *vector::borrow(&active_vouches, i);
-
-            // If this neighbor hasn't been visited yet, return it
-            if (!vector::contains(visited, &neighbor)) {
-                return (neighbor, true)
-            };
-
-            i = i + 1;
-        };
-
-        // No unvisited neighbors found
-        (@0x0, false)
-    }
-
-    // Mark a user's trust score as stale
-    fun mark_as_stale(user: address) acquires UserTrustRecord {
-        // Use an internal helper with visited tracking to avoid cycles
-        // Initialize a counter to track processed addresses
-        let processed_count = 0;
-        mark_as_stale_with_visited(user, &vector::empty<address>(), &mut processed_count);
-    }
-
-    // Internal helper function with cycle detection for marking nodes as stale
-    // Uses vouch module to get outgoing vouches
-    fun mark_as_stale_with_visited(
-        user: address,
-        visited: &vector<address>,
-        processed_count: &mut u64
-    ) acquires UserTrustRecord {
-        // Circuit breaker: stop processing if we've hit our limit
-        if (*processed_count >= MAX_PROCESSED_ADDRESSES) {
-            return
-        };
-
-        // Skip if we've already visited this node (cycle detection)
-        if (vector::contains(visited, &user)) {
-            return
-        };
-
-        // Increment the number of addresses we've processed
-        *processed_count = *processed_count + 1;
-
-        // Mark this user's record as stale if it exists
-        if (exists<UserTrustRecord>(user)) {
-            let record = borrow_global_mut<UserTrustRecord>(user);
-            record.is_stale = true;
-        };
-
-        // Get outgoing vouches from vouch module
-        let (outgoing_vouches, _) = vouch::get_given_vouches(user);
-
-        // Create a new visited list that includes the current node
-        let new_visited = *visited; // Clone the visited list
-        vector::push_back(&mut new_visited, user);
-
-        // Recursively process downstream addresses
-        let i = 0;
-        let len = vector::length(&outgoing_vouches);
-        while (i < len) {
-            // Pass the updated visited list to avoid cycles
-            mark_as_stale_with_visited(*vector::borrow(&outgoing_vouches, i), &new_visited, processed_count);
-
-            // If we've hit the circuit breaker, stop processing
-            if (*processed_count >= MAX_PROCESSED_ADDRESSES) {
-                break
-            };
-
-            i = i + 1;
-        };
-    }
 
     // For testing only - initialize a user trust record for testing
     #[test_only]
@@ -331,6 +209,68 @@ module ol_framework::page_rank_lazy {
             && current_timestamp < user_record.score_computed_at_timestamp + SCORE_TTL_SECONDS
             && user_record.score_computed_at_timestamp > 0
     }
+
+    // Mark a user's trust score as stale
+    public(friend) fun mark_as_stale(user: address) acquires UserTrustRecord {
+        walk_stale(user, &vector::empty<address>(), &mut 0);
+    }
+    // Internal helper function with cycle detection for marking nodes as stale
+    // Uses vouch module to get outgoing vouches
+    fun walk_stale(
+        user: address,
+        visited: &vector<address>,
+        processed_count: &mut u64
+    ) acquires UserTrustRecord {
+
+        // Circuit breaker: stop processing if we've hit our limit
+        if (*processed_count >= MAX_PROCESSED_ADDRESSES) {
+            return
+        };
+
+        // Skip if we've already visited this node (cycle detection)
+        if (vector::contains(visited, &user)) {
+            return
+        };
+
+        // Increment the number of addresses we've processed
+        *processed_count = *processed_count + 1;
+
+        // Mark this user's record as stale if it exists
+        if (exists<UserTrustRecord>(user)) {
+            let record = borrow_global_mut<UserTrustRecord>(user);
+            record.is_stale = true;
+        };
+
+        // Get outgoing vouches from vouch module
+        let (outgoing_vouches, _) = vouch::get_given_vouches(user);
+
+        // Create a new visited list that includes the current node
+        let new_visited = *visited; // Clone the visited list
+        vector::push_back(&mut new_visited, user);
+
+        // Recursively process downstream addresses
+        let i = 0;
+        let len = vector::length(&outgoing_vouches);
+        while (i < len) {
+            let each_vouchee = vector::borrow(&outgoing_vouches, i);
+            // Mark this user's record as stale if it exists
+            if (exists<UserTrustRecord>(*each_vouchee)) {
+                let record = borrow_global_mut<UserTrustRecord>(user);
+                record.is_stale = true;
+            };
+
+            // Pass the updated visited list to avoid cycles
+            walk_stale(*each_vouchee, &new_visited, processed_count);
+
+            // If we've hit the circuit breaker, stop processing
+            if (*processed_count >= MAX_PROCESSED_ADDRESSES) {
+                break
+            };
+
+            i = i + 1;
+        };
+    }
+
 
     // Registry existence check helper for other modules
     public fun registry_exists(_registry_addr: address): bool {
@@ -439,55 +379,4 @@ module ol_framework::page_rank_lazy {
         vouch::test_set_both_lists(user3_addr, user3_receives, vector::empty());
     }
 
-    // #[test(framework = @0x1)]
-    // fun test_connection_scoring(framework: &signer) {
-    //     // Setup test environment and accounts with our family tree:
-    //     // ALICE_AT_GENESIS -> BOB_ALICES_CHILD -> CAROL_BOBS_CHILD
-    //     // DAVE_AT_GENESIS -> EVE_DAVES_CHILD
-    //     setup_test_ancestry(framework);
-
-    //     // Initialize framework root of trust with Alice and Dave as roots
-    //     let initial_roots = vector::empty();
-    //     vector::push_back(&mut initial_roots, ALICE_AT_GENESIS);
-    //     vector::push_back(&mut initial_roots, DAVE_AT_GENESIS);
-
-    //     root_of_trust::framework_migration(
-    //         framework,
-    //         initial_roots,
-    //         2,  // minimum_cohort size
-    //         5,  // days until next rotation
-    //     );
-
-    //     // Test scoring for direct children of roots
-    //     let bob_score = vouch_metrics::calculate_total_vouch_quality(BOB_ALICES_CHILD);
-
-    //     let maybe_degree = ancestry::get_degree(ALICE_AT_GENESIS, BOB_ALICES_CHILD);
-    //     let bob_d = *option::borrow(&maybe_degree);
-    //     assert!(bob_d == 1, 7357001);
-    //     // Direct descendants of roots get 50 points (100/2 - one hop away)
-    //     assert!(bob_score == 100, 7357002);
-
-    //     let maybe_degree = ancestry::get_degree(DAVE_AT_GENESIS, EVE_DAVES_CHILD);
-    //     let eve_d = *option::borrow(&maybe_degree);
-    //     assert!(eve_d == 1, 7357001);
-
-    //     let eve_score = vouch_metrics::calculate_total_vouch_quality( EVE_DAVES_CHILD);
-    //     assert!(eve_score == 100, 7357003);
-
-    //     let maybe_degree = ancestry::get_degree(ALICE_AT_GENESIS, CAROL_BOBS_CHILD);
-    //     let carol_d = *option::borrow(&maybe_degree);
-    //     assert!(carol_d == 2, 3);
-    //     // Test scoring for grandchild (two degrees of separation)
-    //     let carol_score = vouch_metrics::calculate_total_vouch_quality( CAROL_BOBS_CHILD);
-
-    //     diem_std::debug::print(&carol_score);
-    //     // Grandchild gets 50 points (100/2, two degrees away)
-    //     assert!(carol_score == 50, 3);
-
-    //     // Test scoring for root members themselves
-    //     let alice_score = vouch_metrics::calculate_total_vouch_quality(ALICE_AT_GENESIS);
-    //     // Root members get 100 points (direct connection)
-    //     print(&alice_score);
-    //     // assert!(alice_score == 100, 4);
-    // }
 }

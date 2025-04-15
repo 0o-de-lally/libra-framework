@@ -7,8 +7,6 @@ module ol_framework::vouch_limits {
     use ol_framework::epoch_helper;
     use ol_framework::vouch;
 
-    use diem_std::debug::{print, print_str};
-
     friend ol_framework::vouch_txs;
 
     /// Maximum number of vouches
@@ -136,8 +134,6 @@ module ol_framework::vouch_limits {
         // Calculate the quality using the social distance method
         // This avoids dependency on page_rank_lazy
         let trust_score = page_rank_lazy::get_trust_score(grantor_acc);
-        print_str(&b"trust_score");
-        print(&trust_score);
 
         // For accounts with low quality vouchers,
         // we restrict further how many they can vouch for
@@ -226,21 +222,12 @@ module ol_framework::vouch_limits {
       // check what the core would allow.
 
       let score_limit = calculate_score_limit(addr);
-      print_str(&b"score limit");
-      print(&score_limit);
 
-      let is_init = vouch::is_init(addr);
-      print_str(&b"is_init");
-      print(&is_init);
       // check based on how many received
       // Received limit: non-expired received vouches + 1
       let true_friends = vouch::true_friends(addr);
-      print_str(&b"true_friends");
-      print(&true_friends);
-      let received_limit = vector::length(&true_friends) + 1;
 
-      print_str(&b"received_limit");
-      print(&received_limit);
+      let received_limit = vector::length(&true_friends) + 1;
       // find the lowest number, most restrictive limit
       let vouches_allowed = if (score_limit < received_limit) {
         score_limit

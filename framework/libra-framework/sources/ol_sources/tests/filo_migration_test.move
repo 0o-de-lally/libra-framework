@@ -12,8 +12,6 @@ module ol_framework::test_filo_migration {
   use ol_framework::reauthorization;
   use ol_framework::vouch;
 
-  use diem_std::debug::print;
-
   /// two state initializations happen on first
   /// transaction
   fun simulate_transaction_validation(sender: &signer) {
@@ -233,7 +231,6 @@ module ol_framework::test_filo_migration {
     slow_wallet::test_epoch_drip(framework, 100);
 
     let (unlocked_post, _total_post) = ol_account::balance(b_addr);
-    print(&unlocked_post);
     assert!(unlocked_post == 0, 735706);
 
     // uses transfer entry function
