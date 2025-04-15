@@ -4,8 +4,7 @@
 // This simulates 100 accounts with various vouching relationships
 // and tests the page rank score calculation.
 module ol_framework::test_page_rank {
-  // use diem_framework::account;
-
+  use ol_framework::filo_migration;
   use ol_framework::root_of_trust;
   use ol_framework::mock;
   use ol_framework::vouch;
@@ -26,8 +25,13 @@ module ol_framework::test_page_rank {
 
     // create 10 root of trust accounts
     let roots_sig = mock::create_test_end_users(framework, 10, 0);
-    // get a vec of addresses from roots_sig
     let root_users = mock::collect_addresses(&roots_sig);
+
+    vector::for_each_ref(&roots_sig, |sig| {
+      // make each account a v8 address
+      filo_migration::maybe_migrate(sig);
+    });
+    // get a vec of addresses from roots_sig
 
     // make these accounts root of trust
     root_of_trust::framework_migration(framework, root_users, 1, 30);

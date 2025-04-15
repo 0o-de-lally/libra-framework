@@ -6,7 +6,7 @@ module ol_framework::page_rank_lazy {
     use ol_framework::vouch;
     use ol_framework::root_of_trust;
 
-    // use diem_std::debug::print;
+    use diem_std::debug::print;
     use diem_std::debug::print_str;
 
     // Constants
@@ -161,6 +161,8 @@ module ol_framework::page_rank_lazy {
         if (current == target) {
             return current_power
         };
+
+        print(&current);
 
         assert!(vouch::is_init(current), error::invalid_state(ENOT_INITIALIZED));
 

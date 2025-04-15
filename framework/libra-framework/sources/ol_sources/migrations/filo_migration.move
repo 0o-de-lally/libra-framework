@@ -9,6 +9,8 @@ module ol_framework::filo_migration {
   friend diem_framework::transaction_validation;
   #[test_only]
   friend ol_framework::test_filo_migration;
+  #[test_only]
+  friend ol_framework::test_page_rank;
 
   // Welcome to Level 8
 
