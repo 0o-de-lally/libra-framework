@@ -6,6 +6,9 @@ module ol_framework::page_rank_lazy {
     use ol_framework::vouch;
     use ol_framework::root_of_trust;
 
+    // use diem_std::debug::print;
+    use diem_std::debug::print_str;
+
     // Constants
     const DEFAULT_WALK_DEPTH: u64 = 4;
     const DEFAULT_NUM_WALKS: u64 = 10;
@@ -80,6 +83,7 @@ module ol_framework::page_rank_lazy {
         if (!user_record.is_stale
             && current_timestamp < user_record.score_computed_at_timestamp + SCORE_TTL_SECONDS
             && user_record.score_computed_at_timestamp > 0) {
+            print_str(&b"stale, getting cached score");
             // Cache is fresh, return it
             return user_record.cached_score
         };
@@ -120,13 +124,12 @@ module ol_framework::page_rank_lazy {
         while (root_idx < roots_len) {
             let root = *vector::borrow(roots, root_idx);
 
-            // Case 1: Direct match - target is a root
-            if (root == target) {
-                total_score = total_score + 100; // Full score for being a root
-            } else {
-                // Case 2: Not a direct match - start an exhaustive search from this root
-                let visited = vector::empty<address>();
-                vector::push_back(&mut visited, root);
+            let visited = vector::empty<address>();
+            vector::push_back(&mut visited, root);
+
+
+            if (root != target) {
+              // NOTE: you don't don't give yourself points in the walk
 
                 // Initial trust power is 100 (full trust from root)
                 total_score = total_score + walk_from_node(
@@ -159,10 +162,8 @@ module ol_framework::page_rank_lazy {
             return current_power
         };
 
-        // Get all neighbors this node vouches for
-        if (!vouch::is_init(current)) {
-            return 0
-        };
+        assert!(vouch::is_init(current), error::invalid_state(ENOT_INITIALIZED));
+
         let (neighbors, _) = vouch::get_given_vouches(current);
         let neighbor_count = vector::length(&neighbors);
 
@@ -200,9 +201,9 @@ module ol_framework::page_rank_lazy {
                 // Add to total score
                 total_score = total_score + path_score;
 
-                // Remove from visited for backtracking
-                let last_idx = vector::length(visited) - 1;
-                vector::remove(visited, last_idx);
+                // // Remove from visited for backtracking
+                // let last_idx = vector::length(visited) - 1;
+                // vector::remove(visited, last_idx);
             };
 
             i = i + 1;

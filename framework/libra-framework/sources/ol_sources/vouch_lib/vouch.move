@@ -6,6 +6,8 @@ module ol_framework::vouch {
     use ol_framework::epoch_helper;
     use diem_framework::system_addresses;
 
+    use diem_std::debug::{print, print_str};
+
 
     friend diem_framework::genesis;
     friend ol_framework::proof_of_fee;
@@ -479,8 +481,13 @@ module ol_framework::vouch {
     public fun true_friends(addr: address): vector<address> acquires ReceivedVouches {
         if (!exists<ReceivedVouches>(addr)) return vector::empty<address>();
 
+        let (all_received, _) = get_received_vouches(addr);
+        print_str(&b"all_received");
+        print(&all_received);
         // Get non-expired vouches
         let not_expired = all_not_expired(addr);
+        print_str(&b"not_expired");
+        print(&not_expired);
         // Filter for ancestry relationships
         ancestry::list_unrelated(not_expired)
     }

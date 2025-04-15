@@ -6,8 +6,9 @@ module ol_framework::test_validator_vouch {
   use ol_framework::vouch_txs;
   use ol_framework::mock;
   use ol_framework::proof_of_fee;
+  use ol_framework::vouch_limits;
 
-  // use diem_std::debug::print;
+  use diem_std::debug::{print, print_str};
 
   // Happy Day scenarios
   #[test(root = @ol_framework, alice = @0x1000a, bob = @0x1000b, carol = @0x1000c)]
@@ -195,19 +196,23 @@ module ol_framework::test_validator_vouch {
   #[expected_failure(abort_code = 196618, location = ol_framework::vouch)]
   fun vouch_over_max(root: &signer, alice: &signer) {
     // create vals without vouches
-    mock::create_validator_accounts(root, 2, false);
+    mock::create_validator_accounts(root, 2, true);
     vouch::set_vouch_price(root, 0);
 
-    let users = mock::create_test_end_users(root, 10, 0);
-    let i = 0;
-    while (i < 10) {
-      let sig = vector::borrow(&users, i);
-      // init vouch for 10 validators
-      vouch::init(sig);
-      // alice vouches for 10 validators
-      vouch::vouch_for(alice, signer::address_of(sig));
-      i = i + 1;
-    };
+    let _users = mock::create_test_end_users(root, 10, 0);
+
+    let remaining = vouch_limits::get_remaining_vouches(signer::address_of(alice));
+    print_str(&b"remaining");
+    print(&remaining);
+    // let i = 0;
+    // while (i < 10) {
+    //   let sig = vector::borrow(&users, i);
+    //   // init vouch for 10 validators
+    //   vouch::init(sig);
+    //   // alice vouches for 10 validators
+    //   vouch_txs::vouch_for(alice, signer::address_of(sig));
+    //   i = i + 1;
+    // };
 
     // should fail
   }
