@@ -31,7 +31,6 @@ module ol_framework::test_page_rank {
       // make each account a v8 address
       filo_migration::maybe_migrate(sig);
     });
-    // get a vec of addresses from roots_sig
 
     // make these accounts root of trust
     root_of_trust::framework_migration(framework, root_users, 1, 30);

@@ -3,6 +3,7 @@ module ol_framework::vouch_limits {
     use std::error;
     use std::vector;
     use ol_framework::page_rank_lazy;
+    use ol_framework::root_of_trust;
     use ol_framework::epoch_helper;
     use ol_framework::vouch;
 
@@ -11,7 +12,7 @@ module ol_framework::vouch_limits {
     friend ol_framework::vouch_txs;
 
     /// Maximum number of vouches
-    const BASE_MAX_VOUCHES: u64 = 10;
+    const BASE_MAX_VOUCHES: u64 = 20;
 
     /// Maximum number of vouches allowed to be given per epoch
     const MAX_VOUCHES_PER_EPOCH: u64 = 1;
@@ -58,14 +59,18 @@ module ol_framework::vouch_limits {
 
       let (found, _i) = vector::index_of(&given_vouches, &vouched_account);
 
+      let is_root = root_of_trust::is_root_at_registry(@diem_framework, grantor_acc);
       // don't check max vouches if we are just extending the expiration
-      if (!found) {
+      if (!found && !is_root) {
         // are we hitting the limit of max vouches
-        assert_max_vouches(grantor_acc);
+        assert_all_checks(grantor_acc);
+      } else if (is_root) {
+        assert_safety_ceiling_vouches(grantor_acc);
+        assert_received_limit_vouches(grantor_acc);
       }
     }
 
-    fun assert_max_vouches(grantor_acc: address) {
+    fun assert_all_checks(grantor_acc: address) {
       assert_safety_ceiling_vouches(grantor_acc);
       assert_max_vouches_by_score(grantor_acc);
       assert_received_limit_vouches(grantor_acc);
@@ -88,8 +93,16 @@ module ol_framework::vouch_limits {
         let received_count = vector::length(&received_vouches);
         let given_vouches = vouch::get_given_vouches_not_expired(account);
 
+        let is_root = root_of_trust::is_root_at_registry(@diem_framework, account);
+
         // Base case: Always allow at least vouches received + 1
-        let max_allowed = received_count + 1;
+        // Though root of trust accounts need to propagate trust faster
+        let max_allowed = if (is_root) {
+          received_count * 2
+        } else {
+          received_count + 1
+        };
+
         assert!(vector::length(&given_vouches) <= max_allowed, error::invalid_state(EMAX_LIMIT_GIVEN_BY_RECEIPT));
     }
 
@@ -131,14 +144,15 @@ module ol_framework::vouch_limits {
         let max_allowed = 1;
 
         // TODO: collect analytics data to review this
-        if (trust_score >= 2 && trust_score < 200) {
+        if (trust_score >= 2 && trust_score < 10) {
             max_allowed = 3;
-        } else if (trust_score >= 200 && trust_score < 400) {
+        } else if (trust_score >= 10 && trust_score < 100) {
             max_allowed = 5;
-        } else if (trust_score >= 400) {
+        } else if (trust_score >= 250) {
             max_allowed = 10;
+        } else if (trust_score >= 350 ) {
+            max_allowed = 15;
         };
-
         max_allowed
     }
 
