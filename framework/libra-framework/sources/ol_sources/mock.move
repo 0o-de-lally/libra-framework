@@ -359,6 +359,7 @@ module ol_framework::mock {
       validator_universe::test_register_validator(root, &pk, &pop, &sig, 100, true, should_end_epoch);
 
       vouch::init(&sig);
+      page_rank_lazy::maybe_initialize_trust_record(&sig);
       if (with_vouches) {
         vouch::test_set_received_list(*val, val_addr);
       };
@@ -426,6 +427,7 @@ module ol_framework::mock {
     ol_account::transfer(&parent_sig, target_account, 1000);
     // vouch will be missing unless the initialized it through filo_migration
     vouch::init(&target_signer);
+    page_rank_lazy::maybe_initialize_trust_record(&target_signer);
 
 
     // Each validator vouches

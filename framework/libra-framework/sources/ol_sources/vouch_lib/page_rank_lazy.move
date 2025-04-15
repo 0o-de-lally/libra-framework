@@ -1,4 +1,5 @@
 module ol_framework::page_rank_lazy {
+    use std::error;
     use std::signer;
     use std::timestamp;
     use std::vector;
@@ -20,10 +21,13 @@ module ol_framework::page_rank_lazy {
     // Full graph walk constants
     const FULL_WALK_MAX_DEPTH: u64 = 6; // Maximum path length for full graph traversal
 
-    // Error codes
-    const ENODE_NOT_FOUND: u64 = 2;
-    const ENOT_INITIALIZED: u64 = 4;
-    const EPROCESSING_LIMIT_REACHED: u64 = 6;
+    //////// Error codes ////////
+    /// node not found
+    const ENODE_NOT_FOUND: u64 = 1;
+    /// trust record not initialized
+    const ENOT_INITIALIZED: u64 = 2;
+    /// processing limit reached
+    const EPROCESSING_LIMIT_REACHED: u64 = 3;
 
     // Per-user trust record - each user stores their own trust data
     struct UserTrustRecord has key, drop {
@@ -68,11 +72,9 @@ module ol_framework::page_rank_lazy {
         let current_timestamp = timestamp::now_seconds();
 
         // If user has no trust record, they have no score
-        if (!exists<UserTrustRecord>(addr)) {
-            return 0
-        };
-
+        assert!(exists<UserTrustRecord>(addr), error::invalid_state(ENOT_INITIALIZED));
         let user_record = borrow_global<UserTrustRecord>(addr);
+
 
         // Check if cached score is still valid and not stale
         if (!user_record.is_stale

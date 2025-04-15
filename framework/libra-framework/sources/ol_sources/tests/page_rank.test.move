@@ -37,7 +37,7 @@ module ol_framework::test_page_rank {
 
   // create a test base and check we have 10 root of trust accounts.
   #[test(framework = @ol_framework)]
-  fun c(framework: &signer) {
+  fun meta_check_base_setup(framework: &signer) {
     // Set up the test base
     let roots_sig = test_base(framework);
 
