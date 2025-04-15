@@ -66,7 +66,7 @@ module ol_framework::test_page_rank {
     vouch::init(root_sig);
     vouch::init(&new_user_sig);
     // // Initialize page rank for the new user
-    page_rank_lazy::initialize_user_trust_record(&new_user_sig);
+    page_rank_lazy::maybe_initialize_trust_record(&new_user_sig);
 
     // // Setup one vouch from the first root
 
@@ -90,7 +90,7 @@ module ol_framework::test_page_rank {
     vouch::init(root_sig);
     vouch::init(&new_user_sig);
     // // Initialize page rank for the new user
-    page_rank_lazy::initialize_user_trust_record(&new_user_sig);
+    page_rank_lazy::maybe_initialize_trust_record(&new_user_sig);
 
     // // Setup one vouch from the first root
 

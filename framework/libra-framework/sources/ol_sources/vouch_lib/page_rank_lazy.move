@@ -177,39 +177,6 @@ module ol_framework::page_rank_lazy {
         total_score
     }
 
-
-    // For testing only - initialize a user trust record for testing
-    #[test_only]
-    public fun initialize_user_trust_record(account: &signer) {
-        let addr = signer::address_of(account);
-
-        if (!exists<UserTrustRecord>(addr)) {
-            move_to(account, UserTrustRecord {
-                cached_score: 0,
-                score_computed_at_timestamp: 0,
-                is_stale: true,
-            });
-        };
-    }
-
-    // Check if a trust record exists
-    public fun has_trust_record(addr: address): bool {
-        exists<UserTrustRecord>(addr)
-    }
-
-    // Check if a trust record is fresh (not stale and not expired)
-    public fun is_fresh_record(addr: address, current_timestamp: u64): bool acquires UserTrustRecord {
-        if (!exists<UserTrustRecord>(addr)) {
-            return false
-        };
-
-        let user_record = borrow_global<UserTrustRecord>(addr);
-
-        !user_record.is_stale
-            && current_timestamp < user_record.score_computed_at_timestamp + SCORE_TTL_SECONDS
-            && user_record.score_computed_at_timestamp > 0
-    }
-
     // Mark a user's trust score as stale
     public(friend) fun mark_as_stale(user: address) acquires UserTrustRecord {
         walk_stale(user, &vector::empty<address>(), &mut 0);
@@ -271,24 +238,6 @@ module ol_framework::page_rank_lazy {
         };
     }
 
-
-    // Registry existence check helper for other modules
-    public fun registry_exists(_registry_addr: address): bool {
-        // Simplified implementation
-        true
-    }
-
-    // Helper for other modules to check if an address is a root node
-    public fun is_root_node(addr: address): bool {
-        // Simplified implementation - only system account is root
-        addr == @0x1
-    }
-
-    // Accessor functions for use by other modules - now using vouch module
-    public fun vouches_for(voucher_addr: address, target_addr: address): bool {
-        vouch::is_valid_voucher_for(voucher_addr, target_addr)
-    }
-
     // Testing helpers
     #[test_only]
     public fun setup_mock_trust_network(
@@ -301,10 +250,10 @@ module ol_framework::page_rank_lazy {
 
         root_of_trust::framework_migration(admin, vector[signer::address_of(root)], 1, 1000);
         // Initialize trust records for all accounts
-        initialize_user_trust_record(root);
-        initialize_user_trust_record(user1);
-        initialize_user_trust_record(user2);
-        initialize_user_trust_record(user3);
+        maybe_initialize_trust_record(root);
+        maybe_initialize_trust_record(user1);
+        maybe_initialize_trust_record(user2);
+        maybe_initialize_trust_record(user3);
 
         // Ensure full initialization of vouch structures for all accounts
         // The init function should create both ReceivedVouches and GivenVouches structures
