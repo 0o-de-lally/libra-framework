@@ -6,9 +6,9 @@ module ol_framework::activity {
   #[test_only]
   use ol_framework::testnet;
 
-
+  friend ol_framework::filo_migration;
+  friend ol_framework::ol_account;
   friend diem_framework::transaction_validation;
-  friend diem_framework::ol_account;
 
   #[test_only]
   friend ol_framework::donor_voice_reauth;

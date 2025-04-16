@@ -25,7 +25,11 @@ module ol_framework::filo_migration {
     let addr = signer::address_of(user_sig);
 
     // did this account exist before level 8?
-    if (activity::is_prehistoric(addr)) {
+    if (!activity::has_ever_been_touched(addr)) {
+      // sets to prehistoric
+      // later in transaction_validation it will increment
+      activity::increment(user_sig, 0);
+
 
       // All I want is to see you smile
       // If it takes just a little while
@@ -51,12 +55,9 @@ module ol_framework::filo_migration {
       // You, you know, you know my name
       // You, you know, you know my name
       // You know my name, ba ba ba ba ba ba ba ba ba
-      if (!vouch::is_init(addr)) {
-        vouch::init(user_sig);
-      };
+      vouch::init(user_sig);
 
       page_rank_lazy::maybe_initialize_trust_record(user_sig);
-
     };
 
 

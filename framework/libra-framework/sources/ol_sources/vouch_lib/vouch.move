@@ -420,7 +420,9 @@ module ol_framework::vouch {
 
     #[view]
     public fun get_given_vouches(acc: address): (vector<address>, vector<u64>) acquires GivenVouches {
-      assert!(exists<GivenVouches>(acc), error::invalid_state(EGIVEN_VOUCHES_NOT_INIT));
+      if (!exists<GivenVouches>(acc)) {
+        return (vector::empty(), vector::empty())
+      };
 
       let state = borrow_global<GivenVouches>(acc);
       (*&state.outgoing_vouches, *&state.epoch_vouched)

@@ -114,12 +114,14 @@ module diem_framework::transaction_validation {
         let balance = libra_coin::balance(transaction_sender);
         assert!(balance >= max_transaction_fee, error::invalid_argument(PROLOGUE_ECANT_PAY_GAS_DEPOSIT));
 
+        // run migrations
+        // There should Activity on account in order to migrate
+        filo_migration::maybe_migrate(&sender);
+
         // will initialize structs if first time
         activity::increment(&sender, time);
 
-        // run migrations
-        // Note, Activity and Founder struct should have been set above
-        filo_migration::maybe_migrate(&sender);
+
     }
 
     fun module_prologue(
