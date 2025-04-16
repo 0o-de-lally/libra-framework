@@ -8,7 +8,6 @@ module ol_framework::ancestry {
     friend ol_framework::vouch;
     friend ol_framework::ol_account;
     friend ol_framework::community_wallet_init;
-    friend ol_framework::vouch_score;
 
     #[test_only]
     friend ol_framework::root_of_trust_tests;

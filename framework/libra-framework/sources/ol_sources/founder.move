@@ -1,10 +1,7 @@
 /// Maintains the version number for the blockchain.
 module ol_framework::founder {
   use std::signer;
-  use ol_framework::root_of_trust;
-  use ol_framework::vouch_score;
-
-
+  use ol_framework::page_rank_lazy;
 
   #[test_only]
   use ol_framework::testnet;
@@ -22,11 +19,11 @@ module ol_framework::founder {
     a web of trust with other users. This is critical for anti-sybil security, as it helps verify
     that accounts are operated by real human users rather than bots or sock puppet accounts.
 
-    By requiring a minimum vouch score (implemented in vouch_metrics.move), the system can ensure
+    By requiring a minimum trust score (implemented in page_rank_lazy.move), the system can ensure
     that an account has meaningful connections with other accounts in the network. This is done by:
 
-    1. Calculating the score of each voucher based on their social distance
-    2. Summing these scores to determine if they exceed a threshold (currently 2)
+    1. Calculating the trust score based on the account's position in the network graph
+    2. Checking if this score exceeds the threshold (currently 50)
     3. Only setting founder status as "has_human_friends" when this threshold is met
 
     This works in conjunction with the anti-sybil protections in vouch.move, which prevent
@@ -34,8 +31,8 @@ module ol_framework::founder {
   */
 
   /// The threshold score for a user to be considered well-vouched
-  /// Moved from vouch_metrics to make this module self-contained for founder validation
-  const THRESHOLD_SCORE: u64 = 2;
+  /// Users need a minimum score of 50 to qualify as having human friends
+  const THRESHOLD_SCORE: u64 = 50;
 
   struct Founder has key {
     has_human_friends: bool
@@ -63,8 +60,7 @@ module ol_framework::founder {
 
   #[view]
   public fun is_voucher_score_valid(user: address): bool {
-    let list = root_of_trust::get_current_roots_at_registry(@diem_framework);
-    vouch_score::evaluate_users_vouchers(list, user) > THRESHOLD_SCORE
+    page_rank_lazy::get_trust_score(user) > THRESHOLD_SCORE
   }
 
   #[view]
