@@ -27,6 +27,7 @@ pub async fn replace_validators_blob(
         db_path,
         creds,
         &upgrade_mrb_path,
+        None
     )?;
 
     let gen_tx = Transaction::GenesisTransaction(WriteSetPayload::Direct(cs));
