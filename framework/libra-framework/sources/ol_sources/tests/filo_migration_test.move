@@ -90,8 +90,8 @@ module ol_framework::test_filo_migration {
     // with 1000 coins total, which are all unlocked
     mock::ol_mint_to(framework, b_addr, 1000);
     let (unlocked, total) = ol_account::balance(b_addr);
-    assert!(unlocked == total, 735701);
-    assert!(unlocked == 1000, 735702);
+    assert!(unlocked == 0, 735701);
+    assert!(total == 1000, 735702);
 
     //////// user sends migration tx ////////
     // The first time the user touches the account with a transaction
@@ -113,8 +113,8 @@ module ol_framework::test_filo_migration {
 
     mock::ol_mint_to(framework, b_addr, 1000);
     let (unlocked, total) = ol_account::balance(b_addr);
-    assert!(unlocked == total, 735705);
-    assert!(unlocked == 1000, 735706);
+    assert!(unlocked == 0, 735705);
+    assert!(total == 1000, 735706);
 
     let mocked_unlock_amount = 50;
     // Emulate a V7 slow wallet
@@ -123,9 +123,14 @@ module ol_framework::test_filo_migration {
     // check setup is correct
     // now it should be a slow wallet
     assert!(slow_wallet::is_slow(b_addr), 735707);
-    let (unlocked, total) = ol_account::balance(b_addr);
-    assert!(unlocked != total, 735708);
-    assert!(unlocked == mocked_unlock_amount, 735709);
+    let (unlocked, _total) = ol_account::balance(b_addr);
+    assert!(unlocked == 0, 735708);
+
+    // CHECK THAT THE BALANCE DOES NOT SHOW PREVIOUS UNLOCK
+    let (unlocked, _total) = ol_account::balance(b_addr);
+    assert!(unlocked == 0, 735709);
+    assert!(unlocked != mocked_unlock_amount, 735709);
+
     let locked_supply_pre = slow_wallet::get_locked_supply();
 
     // the test:
@@ -133,7 +138,7 @@ module ol_framework::test_filo_migration {
     // there should be no drip
     slow_wallet::test_epoch_drip(framework, 10);
     let (unlocked_post_epoch, total_post_epoch) = ol_account::balance(b_addr);
-    assert!(unlocked_post_epoch == mocked_unlock_amount, 7357010);
+    assert!(unlocked_post_epoch == 0, 7357010);
     assert!(unlocked_post_epoch == unlocked, 7357011);
     assert!(total_post_epoch == total, 7357012);
 
@@ -156,8 +161,8 @@ module ol_framework::test_filo_migration {
     // give bob some coins, unlocked leftover from V7.
     mock::ol_mint_to(framework, b_addr, 1000);
     let (unlocked, total) = ol_account::balance(b_addr);
-    assert!(unlocked == total, 735705);
-    assert!(unlocked == 1000, 735706);
+    assert!(unlocked == 0, 735705);
+    assert!(total == 1000, 735706);
 
     assert!(!activity::has_ever_been_touched(b_addr), 735707);
     // uses transfer entry function
@@ -181,8 +186,8 @@ module ol_framework::test_filo_migration {
     // give bob some coins, unlocked leftover from V7.
     mock::ol_mint_to(framework, b_addr, 1000);
     let (unlocked, total) = ol_account::balance(b_addr);
-    assert!(unlocked == total, 735705);
-    assert!(unlocked == 1000, 735706);
+    assert!(unlocked == 0, 735705);
+    assert!(total == 1000, 735706);
 
     assert!(!activity::has_ever_been_touched(b_addr), 735707);
 
@@ -190,13 +195,12 @@ module ol_framework::test_filo_migration {
     // The first time the user touches the account with a transaction
     // the migration should happen
     simulate_transaction_validation(bob);
+    founder::test_mock_friendly(framework, bob);
     //////// end migration tx ////////
 
     // uses transfer entry function
     ol_account::transfer(bob, marlon, 33);
   }
-
-
 
   #[test(framework = @0x1, marlon = @0x1234, bob = @0x1000b)]
   #[expected_failure(abort_code = 196614, location = 0x1::ol_account)]
@@ -209,8 +213,8 @@ module ol_framework::test_filo_migration {
     // give bob some coins, unlocked leftover from V7.
     mock::ol_mint_to(framework, b_addr, 1000);
     let (unlocked, total) = ol_account::balance(b_addr);
-    assert!(unlocked == total, 735705);
-    assert!(unlocked == 1000, 735706);
+    assert!(unlocked == 0, 735705);
+    assert!(total == 1000, 735706);
 
     assert!(!activity::has_ever_been_touched(b_addr), 735707);
     assert!(!reauthorization::is_v8_authorized(b_addr), 735708);
@@ -230,6 +234,7 @@ module ol_framework::test_filo_migration {
 
     slow_wallet::test_epoch_drip(framework, 100);
 
+    founder::test_mock_friendly(framework, bob);
     let (unlocked_post, _total_post) = ol_account::balance(b_addr);
     assert!(unlocked_post == 0, 735706);
 
@@ -246,8 +251,8 @@ module ol_framework::test_filo_migration {
     // give bob some coins, unlocked leftover from V7.
     mock::ol_mint_to(framework, b_addr, 1000);
     let (unlocked, total) = ol_account::balance(b_addr);
-    assert!(unlocked == total, 735705);
-    assert!(unlocked == 1000, 735706);
+    assert!(unlocked == 0, 735705);
+    assert!(total == 1000, 735706);
 
     assert!(!activity::has_ever_been_touched(b_addr), 735707);
     assert!(!reauthorization::is_v8_authorized(b_addr), 735708);
@@ -273,8 +278,8 @@ module ol_framework::test_filo_migration {
     // give bob some coins, unlocked leftover from V7.
     mock::ol_mint_to(framework, b_addr, 1000);
     let (unlocked, total) = ol_account::balance(b_addr);
-    assert!(unlocked == total, 735705);
-    assert!(unlocked == 1000, 735706);
+    assert!(unlocked == 0, 735705);
+    assert!(total == 1000, 735706);
 
     assert!(!activity::has_ever_been_touched(b_addr), 735707);
     assert!(!reauthorization::is_v8_authorized(b_addr), 735708);
