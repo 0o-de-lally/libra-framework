@@ -30,11 +30,22 @@ Without this parameter in the correct position, your transactions will attempt t
 
 1. Configure your CLI to connect to the twin testnet:
 
-```bash
-libra config --chain-name TESTNET init
-# enter your mnemonic
-libra config fix --force-url https://twin-testnet-rpc.libra.org
-```
+  ```bash
+  # config for testnet and the mnemonic to set up addresses and authkeys
+
+  libra config --chain-name=testnet \
+  init \
+  --fullnode-url=https://twin-testnet-rpc.libra.org
+
+  # if you do not wish to enter a mnemonic on config you can enter the address and authkey directly.
+
+  libra config --chain-name=testnet \
+  init \
+  --fullnode-url https://twin-testnet-rpc.libra.org \
+  --force-address <ADDRESS> \
+  --force-authkey <AUTHKEY>
+
+  ```
 
 2. Verify your connection:
 
@@ -68,13 +79,18 @@ libra query balance <ACCOUNT>
 3. Try to make a transfer (this should fail):
 
   ```bash
-  libra txs --chain-id=2 transfer --to <RECIPIENT_ADDRESS> --amount 10
+  libra txs --chain-name=testnet \
+  transfer \
+  --to-account=<RECIPIENT_ADDRESS> \
+  --amount=10
   ```
 
 4. Complete reauthorization through vouching:
    - Ask other testnet participants to vouch for you using:
    ```bash
-   libra txs --chain-id=2 user vouch --vouch-for <YOUR_ADDRESS>
+   libra txs --chain-name=testnet \
+   user vouch \
+   --vouch-for=<SOME ADDRESS>
    ```
 
    - A user can check how many remaining vouches they have to give with:
