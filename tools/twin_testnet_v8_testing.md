@@ -2,24 +2,47 @@
 
 Thank you for participating in testing the new V8 features on our twin testnet. This document provides step-by-step instructions for using the Libra CLI to execute test transactions.
 
+## Important Note: Using The correct Network
+The instructions below will help configure a proper `~/.libra/libra-cli-config.yaml` to use for testing. It will setup to include the chain id 2 (in configs as `chain_name: TESTNET`).
+
+### Be extra safe
+If you are using a device that has had production keys and settings in the past, you should be explicit with the arguments in the CLI.
+
+For belt-and-suspenders testing, you should also explicitly include the chain ID in your CLI arguments for testing.
+
+**Always include `--chain-id=2` and `--url <TESTNET URL>` immediately after the `txs` command when using the twin testnet.**
+
+This parameter specifies that you're interacting with the twin testnet (Chain ID 2) rather than the mainnet (Chain ID 1). The correct format is:
+
+```bash
+libra txs --chain-id=2 --url https://twin-testnet-rpc.libra.org [subcommand] [options]
+```
+
+Without this parameter in the correct position, your transactions will attempt to target the mainnet and might succeed, or worse, could be used for replay attacks.
+
+
 ## Prerequisites
 
-- Libra CLI installed (version 7.0.5 or higher)
-- An account on the twin testnet with test tokens
-- Basic familiarity with blockchain transactions
+- Libra CLI installed (version 8.0.0-rc.4 or higher)
+- An account previously existing on mainnet
 
 ## Setup
 
 1. Configure your CLI to connect to the twin testnet:
 
 ```bash
-libra config set --url https://twin-testnet-rpc.libra.org
+libra config --chain-name TESTNET init
+# enter your mnemonic
+libra config fix --force-url https://twin-testnet-rpc.libra.org
 ```
 
 2. Verify your connection:
 
 ```bash
-libra info
+# check the epoch
+libra query epoch
+# check block height
+libra query block-height
 ```
 
 ## FILO Migration Features
@@ -27,14 +50,15 @@ libra info
 ### Feature 1: V7 Accounts as Slow Wallets
 
 ### Description
-In V8, all V7 accounts have been converted to slow wallets. This means previously unlocked balances are now considered locked until reauthorization with Vouch is completed.
+In V8, all V7 accounts have been converted to slow wallets. This means previously unlocked balances are now considered dormant until human reauthorization with Vouch is completed.
 
 ### Testing Steps
 
 1. Check your account balance:
 
 ```bash
-libra query balance
+libra query balance <ACCOUNT>
+# will display [<unlocked>, <total>]
 ```
 
 2. Verify that:
@@ -43,34 +67,51 @@ libra query balance
 
 3. Try to make a transfer (this should fail):
 
-```bash
-libra transfer --to <RECIPIENT_ADDRESS> --amount 10
-```
+  ```bash
+  libra txs --chain-id=2 transfer --to <RECIPIENT_ADDRESS> --amount 10
+  ```
 
 4. Complete reauthorization through vouching:
    - Ask other testnet participants to vouch for you using:
    ```bash
-   libra txs user vouch --vouch-for <YOUR_ADDRESS>
+   libra txs --chain-id=2 user vouch --vouch-for <YOUR_ADDRESS>
+   ```
+
+   - A user can check how many remaining vouches they have to give with:
+
+  ```bash
+   libra query view --function 0x1::vouch_limits::get_remaining_vouches --args <YOUR_ADDRESS>
    ```
 
    - After each vouch, check your vouch score increasing:
+
    ```bash
-   libra query view --function 0x1::vouch::get_vouch_score --args <YOUR_ADDRESS>
+   libra query view --function 0x1::page_rank_lazy::get_cached_score --args <YOUR_ADDRESS>
    ```
 
    - Continue until you have enough vouches to unlock your balance
 
-5. Verify unlocked balance after receiving sufficient vouches:
+5. After sufficient number of vouches you should see a the `Founder` status and that the account is reauthorized:
 
-```bash
-libra query balance
-```
+  ```bash
+  libra query view --function 0x1::founder::is_founder --args <YOUR_ADDRESS>
+  ```
 
-6. Try the transfer again (should succeed now):
+  ```bash
+    libra query view --function 0x1::reauthorization::is_v8_reauthorized --args <YOUR_ADDRESS>
+  ```
 
-```bash
-libra transfer --to <RECIPIENT_ADDRESS> --amount 10
-```
+6. After every epoch boundary (15 minutes in testnet), you should see the unlocked balance increase
+
+  ```bash
+  libra query balance <YOUR_ADDRESS>
+  ```
+
+6. Assuming you have some unlocked balance, try the transfer again (should succeed now):
+
+  ```bash
+  libra txs --chain-id=2 transfer --to <RECIPIENT_ADDRESS> --amount 10
+  ```
 
 ### Expected Outcome
 - Initial balance check shows 0 unlocked tokens with full total balance
@@ -79,59 +120,6 @@ libra transfer --to <RECIPIENT_ADDRESS> --amount 10
 - After receiving sufficient vouches, balance shows unlocked tokens
 - Second transfer attempt completes successfully
 
-### Feature 2: Verify Founder Status
-
-### Description
-The Founder status is granted to accounts that have received a sufficient number of vouches. This status is tracked in the founder module and provides special privileges within the network.
-
-### Testing Steps
-
-1. First, complete the vouching process as described in Feature 1
-
-2. Once you have received enough vouches, check your Founder status:
-
-```bash
-libra query view --function 0x1::founder::is_founder --args <YOUR_ADDRESS>
-```
-
-3. Verify additional Founder details:
-
-```bash
-libra query view --function 0x1::founder::get_founder_info --args <YOUR_ADDRESS>
-```
-
-### Expected Outcome
-- After receiving sufficient vouches, the `is_founder` function should return `true`
-- The `get_founder_info` function should return details about your Founder status, including when it was granted
-
-### Feature 3: Epoch-Based Token Unlocks
-
-### Description
-Users with Founder status receive gradual token unlocks with each new epoch. The twin testnet has accelerated epochs of approximately 15 minutes (compared to 24 hours on mainnet) to allow for quicker testing of this feature.
-
-### Testing Steps
-
-1. First, complete the vouching process and verify Founder status as described in Features 1 and 2
-
-2. Check your initial unlocked balance:
-
-```bash
-libra query balance
-```
-
-3. Wait for approximately 15 minutes (one epoch)
-
-4. Check your balance again to observe the increase in unlocked tokens:
-
-```bash
-libra query balance
-```
-
-5. Repeat steps 3-4 several times to confirm that unlocks occur consistently with each epoch
-
-### Expected Outcome
-- After each epoch (approximately 15 minutes), your unlocked balance should increase
-- The increase should follow a predictable pattern based on your total balance and Founder status
 
 ## Community Wallet Reauthorization Votes
 
@@ -151,7 +139,7 @@ libra query view --function 0x1::community_wallet::get_pending_proposals
 2. Submit your vote for a community wallet reauthorization:
 
 ```bash
-libra txs community reauthorize --community-wallet <COMMUNITY_WALLET_ADDRESS>
+libra txs --chain-id=2 community reauthorize --community-wallet <COMMUNITY_WALLET_ADDRESS>
 ```
 
 3. Verify your vote was recorded:
@@ -191,44 +179,3 @@ libra query view --function 0x1::root_of_trust::get_current_root
 ```bash
 libra query view --function 0x1::root_of_trust::get_rotation_status
 ```
-
-3. If a rotation is in progress, view the details:
-
-```bash
-libra query view --function 0x1::root_of_trust::get_rotation_info
-```
-
-4. After rotation completes, verify the new root of trust:
-
-```bash
-libra query view --function 0x1::root_of_trust::get_current_root
-```
-
-5. Verify the rotation history:
-
-```bash
-libra query view --function 0x1::root_of_trust::get_rotation_history
-```
-
-### Expected Outcome
-- You can successfully view the current root of trust
-- If a rotation is in progress, details are displayed correctly
-- After rotation, the new root is reflected in the system
-- The rotation history shows a record of all previous root changes
-
-## Reporting Issues
-
-If you encounter any issues during testing, please report them with the following information:
-
-1. Feature being tested
-2. Exact command that failed
-3. Error message or unexpected behavior
-4. Any additional context that might be helpful
-
-Please submit issues to our [GitHub repository](https://github.com/libra-framework/issues) or contact the development team at testnet-support@libra.org.
-
-## Feedback
-
-Your feedback is valuable! After completing the tests, please fill out our feedback form at [https://forms.libra.org/twin-testnet-feedback](https://forms.libra.org/twin-testnet-feedback).
-
-Thank you for helping improve Libra!
