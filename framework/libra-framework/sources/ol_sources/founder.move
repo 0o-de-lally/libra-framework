@@ -60,7 +60,7 @@ module ol_framework::founder {
 
   #[view]
   public fun is_voucher_score_valid(user: address): bool {
-    page_rank_lazy::get_trust_score(user) > THRESHOLD_SCORE
+    page_rank_lazy::get_trust_score(user) >= THRESHOLD_SCORE
   }
 
   #[view]
