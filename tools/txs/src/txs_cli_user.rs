@@ -25,7 +25,7 @@ pub enum UserTxs {
     RotationCapability(RotationCapabilityTx),
     RotateKey(RotateKeyTx),
     Vouch(VouchTx),
-    Touch,
+    HumanFounder,
 }
 
 impl UserTxs {
@@ -57,9 +57,9 @@ impl UserTxs {
             UserTxs::Vouch(vouch_tx) => {
                 vouch_tx.run(sender).await?;
             }
-            UserTxs::Touch => {
-                println!("Touching the account...");
-                let payload = libra_stdlib::activity_touch();
+            UserTxs::HumanFounder => {
+                println!("Migrating v7 account...");
+                let payload = libra_stdlib::filo_migration_maybe_migrate();
                 sender.sign_submit_wait(payload).await?;
             }
         }
