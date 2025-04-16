@@ -27,7 +27,7 @@ pub async fn replace_validators_blob(
         db_path,
         creds,
         &upgrade_mrb_path,
-        None
+        None, // intentionally forces chain_id=2 in simple swarm case
     )?;
 
     let gen_tx = Transaction::GenesisTransaction(WriteSetPayload::Direct(cs));
