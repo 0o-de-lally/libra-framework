@@ -360,7 +360,7 @@ module ol_framework::mock {
 
     let val_addr = personas(num);
 
-    root_of_trust::framework_migration(root, val_addr, vector::length(&val_addr), 10000);
+    root_of_trust::test_set_root_of_trust(root, val_addr, vector::length(&val_addr), 10000);
 
     let i = 0;
     while (i < num) {
@@ -375,6 +375,8 @@ module ol_framework::mock {
 
       i = i + 1;
     };
+
+    root_of_trust::genesis_initialize(root, stake::get_current_validators());
 
     if (with_vouches) {
       vouch::set_vouch_price(root, 0);

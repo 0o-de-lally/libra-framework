@@ -277,7 +277,7 @@ module ol_framework::page_rank_lazy {
         user3: &signer
     ) {
 
-        root_of_trust::framework_migration(admin, vector[signer::address_of(root)], 1, 1000);
+        root_of_trust::test_set_root_of_trust(admin, vector[signer::address_of(root)], 1, 1000);
         // Initialize trust records for all accounts
         maybe_initialize_trust_record(root);
         maybe_initialize_trust_record(user1);

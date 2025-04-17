@@ -34,7 +34,7 @@ module ol_framework::test_page_rank {
     });
 
     // make these accounts root of trust
-    root_of_trust::framework_migration(framework, root_users, 1, 30);
+    root_of_trust::test_set_root_of_trust(framework, root_users, 1, 30);
 
     return roots_sig
   }

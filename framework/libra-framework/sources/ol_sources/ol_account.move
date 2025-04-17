@@ -209,10 +209,10 @@ module ol_framework::ol_account {
     let auth_key_as_address = from_bcs::to_address(auth_key);
     let lookup_addr = account::get_originating_address(auth_key_as_address);
 
-        let sig_addr = signer::address_of(&new_signer);
-        if (lookup_addr != sig_addr) {
-          print(&sig_addr);
-        };
+    let sig_addr = signer::address_of(&new_signer);
+    if (lookup_addr != sig_addr) {
+      print(&sig_addr);
+    };
 
     // TODO: create migration path for duplicates
     // assert!(
