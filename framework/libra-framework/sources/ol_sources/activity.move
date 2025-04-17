@@ -1,6 +1,7 @@
 
 /// Maintains the version number for the blockchain.
 module ol_framework::activity {
+  // use std::error;
   use std::signer;
   use diem_std::timestamp;
   #[test_only]
@@ -17,13 +18,17 @@ module ol_framework::activity {
   #[test_only]
   friend ol_framework::test_filo_migration;
 
+  //////// ERROR CODES ///////
+  /// account not initialized on v8 chain
+  const EACCOUNT_MALFORMED: u64 = 1;
+
   struct Activity has key {
     last_touch_usecs: u64,
     onboarding_usecs: u64,
   }
 
   /// Initialize the activity timestamp of a user
-  fun lazy_initialize(user: &signer, timestamp: u64) {
+  public(friend) fun lazy_initialize(user: &signer, timestamp: u64) {
     if (!exists<Activity>(signer::address_of(user))) {
       move_to<Activity>(user, Activity {
         last_touch_usecs: timestamp,
@@ -35,6 +40,8 @@ module ol_framework::activity {
   /// Increment the activity timestamp of a user
   public(friend) fun increment(user: &signer, timestamp: u64) acquires Activity {
     lazy_initialize(user, timestamp);
+    // assert!(exists<Activity>(signer::address_of(user)),
+      // error::invalid_state(EACCOUNT_MALFORMED));
 
     let state = borrow_global_mut<Activity>(signer::address_of(user));
     state.last_touch_usecs = timestamp;
@@ -76,19 +83,21 @@ module ol_framework::activity {
 
   #[view]
   // check if this is an account that has activity
-  public fun has_ever_been_touched(user: address): bool{
+  public fun has_ever_been_touched(user: address): bool acquires Activity {
     // I was beat, incomplete
     // I've been had, I was sad and blue
     // But you made me feel
     // Yeah, you made me feel
     // Shiny and new
-    is_initialized(user)
+    // is_initialized(user);
 
     // TODO: possibly check if the last touch is greater than 0
-    // if (exists<Activity>(user)){
-    //   let state = borrow_global<Activity>(user);
-    //   return state.last_touch_usecs > 0
-    // };
+    if (exists<Activity>(user)){
+      let state = borrow_global<Activity>(user);
+      return state.last_touch_usecs > 0
+    };
+
+    false
   }
 
 

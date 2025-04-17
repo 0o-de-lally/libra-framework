@@ -11,7 +11,6 @@ module diem_framework::transaction_validation {
     use diem_framework::transaction_fee;
 
     use ol_framework::activity;
-    use ol_framework::filo_migration;
     use ol_framework::libra_coin::{Self, LibraCoin};
 
     friend diem_framework::genesis;
@@ -114,14 +113,6 @@ module diem_framework::transaction_validation {
         let balance = libra_coin::balance(transaction_sender);
         assert!(balance >= max_transaction_fee, error::invalid_argument(PROLOGUE_ECANT_PAY_GAS_DEPOSIT));
 
-        // run migrations
-        // There should Activity on account in order to migrate
-        filo_migration::maybe_migrate(&sender);
-
-        // will initialize structs if first time
-        activity::increment(&sender, time);
-
-
     }
 
     fun module_prologue(
@@ -213,6 +204,10 @@ module diem_framework::transaction_validation {
             // later redistribution.
             transaction_fee::collect_fee(addr, transaction_fee_amount);
         };
+
+        //////// OL ////////
+        // increments the activity tracker
+        activity::increment(&account, timestamp::now_microseconds());
 
         // Increment sequence number
         account::increment_sequence_number(addr);
