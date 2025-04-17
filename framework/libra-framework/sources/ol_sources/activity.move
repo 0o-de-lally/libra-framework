@@ -83,21 +83,21 @@ module ol_framework::activity {
 
   #[view]
   // check if this is an account that has activity
-  public fun has_ever_been_touched(user: address): bool acquires Activity {
+  public fun has_ever_been_touched(user: address): bool {
     // I was beat, incomplete
     // I've been had, I was sad and blue
     // But you made me feel
     // Yeah, you made me feel
     // Shiny and new
-    // is_initialized(user);
+    is_initialized(user)
 
     // TODO: possibly check if the last touch is greater than 0
-    if (exists<Activity>(user)){
-      let state = borrow_global<Activity>(user);
-      return state.last_touch_usecs > 0
-    };
+    // if (exists<Activity>(user)){
+    //   let state = borrow_global<Activity>(user);
+    //   return state.last_touch_usecs > 0
+    // };
 
-    false
+    // false
   }
 
 
