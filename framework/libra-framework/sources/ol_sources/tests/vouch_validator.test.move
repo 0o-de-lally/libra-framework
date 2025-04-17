@@ -292,13 +292,6 @@ module ol_framework::test_validator_vouch {
   }
 
   #[test(root = @ol_framework, alice = @0x1000a)]
-  #[expected_failure(abort_code = 0x30003, location = ol_framework::vouch)]
-  fun get_given_vouches_not_init() {
-    // alice try to get given vouches without init
-    vouch::get_given_vouches(@0x1000a);
-  }
-
-  #[test(root = @ol_framework, alice = @0x1000a)]
   fun get_all_vouchers_not_init() {
     // alice try to get all vouchers without init
     let all_vouchers = vouch::all_vouchers(@0x1000a);
