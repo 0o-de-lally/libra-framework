@@ -1,3 +1,5 @@
+// TODO: Move this and other generally useful
+// test fixtures to its own module.
 #![allow(dead_code)]
 use anyhow::Context;
 use diem_config::config::NodeConfig;
@@ -35,7 +37,7 @@ use tar::Archive;
 /// is dropped (unless persist() is called).
 ///
 /// Returns the PathBuf containing the extracted database.
-pub fn setup_test_db() -> anyhow::Result<PathBuf> {
+pub fn setup_v7_reference_twin_db() -> anyhow::Result<PathBuf> {
     let mut temp_dir = TempPath::new();
     temp_dir.create_as_dir()?;
     temp_dir.persist();
@@ -192,7 +194,7 @@ pub async fn upgrade_multiple_impl(
         })),
         mnemonic: None,
         test_private_key: Some(smoke.encoded_pri_key.clone()),
-        chain_id: Some(NamedChain::TESTING),
+        chain_name: Some(NamedChain::TESTING),
         config_path: Some(d.path().to_owned().join("libra-cli-config.yaml")),
         url: Some(smoke.api_endpoint.clone()),
         tx_profile: None,

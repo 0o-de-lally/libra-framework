@@ -2,10 +2,12 @@
 //! database bootstrapping, and debugging twin states.
 use crate::{
     cli_bootstrapper::{check_rescue_bootstraps, BootstrapOpts},
+    node_config::post_rescue_node_file_updates,
     transaction_factory::{register_vals, run_script_tx, save_rescue_blob, upgrade_tx},
 };
 
 use clap::{Parser, Subcommand};
+use diem_types::waypoint::Waypoint;
 use libra_types::exports::AccountAddress;
 use std::{path::PathBuf, time::Duration};
 
@@ -35,6 +37,18 @@ pub struct RescueCli {
 #[derive(Subcommand)]
 pub enum Sub {
     Bootstrap(BootstrapOpts),
+    /// once the node is started run this command to update safety rules
+    PatchSafetyRules {
+        #[clap(short, long)]
+        /// path to validator.yaml
+        config_path: PathBuf,
+        /// rescue blob path
+        #[clap(short, long)]
+        blob_path: PathBuf,
+        /// expected waypoint
+        #[clap(short, long)]
+        waypoint: Waypoint,
+    },
     /// Registers new validators, and replaces the validator set.
     RegisterVals {
         #[clap(long)]
@@ -43,6 +57,9 @@ pub enum Sub {
         #[clap(short, long)]
         /// optional, provide a path to .mrb release, if this write should publish new framework
         upgrade_mrb: Option<PathBuf>,
+        #[clap(short, long)]
+        /// optional, chain_id to use, default is 2 (staging)
+        chain_id: Option<u8>,
     },
     /// Upgrades the framework in the reference DB
     UpgradeFramework {
@@ -71,8 +88,9 @@ impl RescueCli {
             Sub::RegisterVals {
                 operator_yaml,
                 upgrade_mrb,
+                chain_id,
             } => {
-                let tx = register_vals(&self.db_path, operator_yaml, upgrade_mrb)?;
+                let tx = register_vals(&self.db_path, operator_yaml, upgrade_mrb, *chain_id)?;
 
                 let out_file = self
                     .blob_path
@@ -105,6 +123,13 @@ impl RescueCli {
                     .join(RUN_SCRIPT_BLOB);
                 let p = save_rescue_blob(tx, &out_dir)?;
                 check_rescue_bootstraps(&self.db_path, &p)?;
+            }
+            Sub::PatchSafetyRules {
+                config_path,
+                blob_path,
+                waypoint,
+            } => {
+                post_rescue_node_file_updates(config_path, *waypoint, blob_path)?;
             }
         }
         // hack. let the DB close before exiting

@@ -117,11 +117,7 @@ module ol_framework::ol_account {
   /// A wrapper to create a NEW account and register it to receive GAS.
   public fun test_ol_create_resource_account(user: &signer, seed: vector<u8>): (signer, account::SignerCapability) {
     let (resource_account_sig, cap) = account::create_resource_account(user, seed);
-    coin::register<LibraCoin>(&resource_account_sig);
-
-    receipts::user_init(&resource_account_sig);
-    maybe_init_burn_tracker(&resource_account_sig);
-    ancestry::adopt_this_child(user, &resource_account_sig);
+    init_from_sig_impl(user, &resource_account_sig);
 
     (resource_account_sig, cap)
   }
@@ -346,10 +342,6 @@ module ol_framework::ol_account {
     fun transfer_checks(payer: address, recipient: address, amount: u64) {
         assert!(!ol_features_constants::is_governance_mode_enabled(), error::invalid_state(EGOVERNANCE_MODE));
 
-        let limit = slow_wallet::unlocked_amount(payer);
-
-        assert!(amount < limit, error::invalid_state(EINSUFFICIENT_BALANCE));
-
         // community wallets cannot use ol_transfer, they have a dedicated workflow
         assert!(!community_wallet::is_init(payer),
         error::invalid_state(ENOT_FOR_CW));
@@ -372,8 +364,8 @@ module ol_framework::ol_account {
         // zero despite the state (which is stale, until there is a migration).
         reauthorization::assert_v8_reauthorized(payer);
 
-        // TODO: Should transactions fail if a recipient is not migrated?
-        // assert!(activity::has_ever_been_touched(recipient), error::invalid_state(ENOT_MIGRATED));
+        let limit = slow_wallet::unlocked_amount(payer);
+        assert!(amount < limit, error::invalid_state(EINSUFFICIENT_BALANCE));
 
     }
 

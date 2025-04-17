@@ -5746,7 +5746,7 @@ checksum = "8355be11b20d696c8f18f6cc018c4e372165b1fa8126cef092399c9951984ffa"
 
 [[package]]
 name = "libra"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "clap 4.5.20",
@@ -5759,6 +5759,7 @@ dependencies = [
  "libra-query",
  "libra-rescue",
  "libra-storage",
+ "libra-testnet",
  "libra-txs",
  "libra-types",
  "libra-wallet",
@@ -5768,7 +5769,7 @@ dependencies = [
 
 [[package]]
 name = "libra-backwards-compatibility"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "bcs 0.1.4",
@@ -5794,7 +5795,7 @@ dependencies = [
 
 [[package]]
 name = "libra-cached-packages"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "bcs 0.1.4",
  "diem-types",
@@ -5805,7 +5806,7 @@ dependencies = [
 
 [[package]]
 name = "libra-config"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "bcs 0.1.4",
@@ -5815,6 +5816,7 @@ dependencies = [
  "diem-config",
  "diem-crypto",
  "diem-genesis",
+ "diem-logger",
  "diem-rest-client",
  "diem-temppath",
  "diem-types",
@@ -5830,7 +5832,7 @@ dependencies = [
 
 [[package]]
 name = "libra-framework"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "bcs 0.1.4",
@@ -5850,7 +5852,7 @@ dependencies = [
 
 [[package]]
 name = "libra-genesis-tools"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "base64 0.13.1",
@@ -5882,14 +5884,13 @@ dependencies = [
  "move-core-types",
  "serde 1.0.214",
  "serde_json",
- "serde_yaml 0.8.26",
  "tokio",
  "ureq",
 ]
 
 [[package]]
 name = "libra-query"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "clap 4.5.20",
@@ -5907,7 +5908,7 @@ dependencies = [
 
 [[package]]
 name = "libra-rescue"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "bcs 0.1.4",
@@ -5919,6 +5920,7 @@ dependencies = [
  "diem-executor",
  "diem-forge",
  "diem-gas",
+ "diem-genesis",
  "diem-logger",
  "diem-storage-interface",
  "diem-temppath",
@@ -5926,12 +5928,15 @@ dependencies = [
  "diem-vm",
  "diem-vm-types",
  "flate2",
+ "fs_extra",
+ "glob",
  "libra-config",
  "libra-framework",
  "libra-query",
  "libra-smoke-tests",
  "libra-txs",
  "libra-types",
+ "libra-wallet",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",
@@ -5944,7 +5949,7 @@ dependencies = [
 
 [[package]]
 name = "libra-smoke-tests"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "diem-config",
@@ -5956,12 +5961,14 @@ dependencies = [
  "diem-sdk",
  "diem-temppath",
  "diem-types",
+ "fs_extra",
  "hex",
  "libra-cached-packages",
  "libra-config",
  "libra-framework",
  "libra-query",
  "libra-types",
+ "libra-wallet",
  "serde_json",
  "serde_yaml 0.8.26",
  "smoke-test",
@@ -5971,7 +5978,7 @@ dependencies = [
 
 [[package]]
 name = "libra-storage"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "bcs 0.1.4",
@@ -6003,11 +6010,14 @@ dependencies = [
 
 [[package]]
 name = "libra-testnet"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
+ "async-trait",
+ "bcs 0.1.4",
  "clap 4.5.20",
  "dialoguer",
+ "diem",
  "diem-api-types",
  "diem-config",
  "diem-forge",
@@ -6024,17 +6034,21 @@ dependencies = [
  "libra-genesis-tools",
  "libra-rescue",
  "libra-smoke-tests",
+ "libra-storage",
  "libra-types",
+ "libra-wallet",
  "regex",
+ "serde 1.0.214",
  "serde_json",
  "serde_yaml 0.8.26",
  "smoke-test",
  "tokio",
+ "url",
 ]
 
 [[package]]
 name = "libra-txs"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "bcs 0.1.4",
@@ -6067,7 +6081,7 @@ dependencies = [
 
 [[package]]
 name = "libra-types"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6102,7 +6116,7 @@ dependencies = [
 
 [[package]]
 name = "libra-upgrade-tests"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "bcs 0.1.4",
@@ -6111,6 +6125,7 @@ dependencies = [
  "diem-types",
  "libra-framework",
  "libra-query",
+ "libra-rescue",
  "libra-smoke-tests",
  "libra-testnet",
  "libra-txs",
@@ -6121,7 +6136,7 @@ dependencies = [
 
 [[package]]
 name = "libra-wallet"
-version = "7.0.4"
+version = "8.0.0-rc.4"
 dependencies = [
  "anyhow",
  "blst",

@@ -50,7 +50,6 @@ module ol_framework::reauthorization {
         founder::is_founder(account) &&
         !community_wallet::is_init(account)
       ) {
-
         return founder::has_friends(account)
       };
       // case 3: a community wallet which was reauthorized

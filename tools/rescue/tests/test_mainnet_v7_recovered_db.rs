@@ -8,11 +8,9 @@
 // which is not working. There is some voodoo which is not
 // being invoked, the epoch event is not being emitted.
 
-mod support;
 use std::env;
 use std::path::PathBuf;
 
-use crate::support::setup_test_db;
 use anyhow::Context;
 use diem_storage_interface::state_view::DbStateViewAtVersion;
 use diem_storage_interface::DbReaderWriter;
@@ -21,6 +19,7 @@ use libra_framework::release::ReleaseTarget;
 use libra_rescue::cli_bootstrapper::BootstrapOpts;
 use libra_rescue::cli_main::RescueCli;
 use libra_rescue::cli_main::Sub;
+use libra_rescue::test_support::setup_v7_reference_twin_db;
 
 // Database related imports
 use diem_config::config::{
@@ -44,7 +43,7 @@ use libra_rescue::session_tools::{
 ///
 /// Uses a database fixture extracted from `./rescue/fixtures/db_339.tar.gz`
 fn test_voodoo_on_v7() -> anyhow::Result<()> {
-    let dir = setup_test_db()?;
+    let dir = setup_v7_reference_twin_db()?;
     libra_run_session(dir, writeset_voodoo_events, None, None)?;
     Ok(())
 }
@@ -54,7 +53,7 @@ fn test_voodoo_on_v7() -> anyhow::Result<()> {
 ///
 /// Uses a database fixture extracted from `./rescue/fixtures/db_339.tar.gz`
 fn meta_test_open_db_on_restored_v7() -> anyhow::Result<()> {
-    let dir = setup_test_db()?;
+    let dir = setup_v7_reference_twin_db()?;
 
     let db = DiemDB::open(
         dir,
@@ -93,7 +92,7 @@ fn meta_test_open_db_on_restored_v7() -> anyhow::Result<()> {
 ///
 /// Uses a database fixture extracted from `./rescue/fixtures/db_339.tar.gz`
 fn publish_on_restored_v7_changeset_success() -> anyhow::Result<()> {
-    let dir = setup_test_db()?;
+    let dir = setup_v7_reference_twin_db()?;
     let upgrade_mrb = ReleaseTarget::Head
         .find_bundle_path()
         .expect("cannot find head.mrb");
@@ -108,7 +107,7 @@ fn publish_on_restored_v7_changeset_success() -> anyhow::Result<()> {
 /// using the command-line entry point
 #[test]
 fn e2e_publish_on_restored_v7() -> anyhow::Result<()> {
-    let dir = setup_test_db()?;
+    let dir = setup_v7_reference_twin_db()?;
     let blob_path = dir.clone();
     let bundle = ReleaseTarget::Head
         .find_bundle_path()
@@ -137,6 +136,7 @@ fn e2e_publish_on_restored_v7() -> anyhow::Result<()> {
         genesis_txn_file: file,
         waypoint_to_verify: None,
         commit: false,
+        update_node_config: None,
         info: false,
     };
 
@@ -155,7 +155,7 @@ fn e2e_publish_on_restored_v7() -> anyhow::Result<()> {
 /// and upgrade the framework
 #[test]
 fn e2e_twin_register_vals_plus_upgrade_on_v7() -> anyhow::Result<()> {
-    let dir = setup_test_db()?;
+    let dir = setup_v7_reference_twin_db()?;
     let blob_path = dir.clone();
     // get the Alice operator.yaml from fixtures
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
@@ -171,6 +171,7 @@ fn e2e_twin_register_vals_plus_upgrade_on_v7() -> anyhow::Result<()> {
         command: Sub::RegisterVals {
             operator_yaml: vec![oper_file],
             upgrade_mrb: Some(upgrade_mrb),
+            chain_id: None,
         },
     };
 
@@ -188,6 +189,7 @@ fn e2e_twin_register_vals_plus_upgrade_on_v7() -> anyhow::Result<()> {
         genesis_txn_file: file,
         waypoint_to_verify: None,
         commit: false,
+        update_node_config: None,
         info: false,
     };
 
