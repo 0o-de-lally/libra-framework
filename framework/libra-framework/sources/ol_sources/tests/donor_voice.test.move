@@ -621,7 +621,6 @@ module ol_framework::test_donor_voice {
       // the default timed payment is 3 epochs, we are in epoch 1
       let list = donor_voice_txs::find_by_deadline(donor_voice_address, 3);
       assert!(vector::contains(&list, &uid), 73570014);
-
       // one epoch goes by and then new payment to marlon
       mock::trigger_epoch(root); // into epoch 1
 
@@ -654,11 +653,11 @@ module ol_framework::test_donor_voice {
       let list = donor_voice_txs::find_by_deadline(donor_voice_address, 3);
       assert!(vector::contains(&list, &uid), 73570026);
 
+
       // process epoch 3 accounts
       mock::trigger_epoch(root); // into epoch 2
       mock::trigger_epoch(root); // into epoch 3, processes at the end of this epoch.
       mock::trigger_epoch(root); // epoch 4 should include the payment
-
       // MARLON'S FIRST PAYMENT GOES THROUGH
       let (_, marlon_rando_balance_post) = ol_account::balance(signer::address_of(marlon_rando));
 

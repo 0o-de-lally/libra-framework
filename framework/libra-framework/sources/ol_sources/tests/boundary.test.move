@@ -149,7 +149,6 @@ module ol_framework::test_boundary {
   //   // NOTE: now MARLON is INCLUDED in this, and we filled all the seats on offer.
   //   // all vals had winning bids, but it was less than the seats on offer
   //   let win = epoch_boundary::get_auction_winners();
-  //   // print(&vector::length(&win));
 
 
   //   assert!(vector::length(&win) == 10, 7357005);
