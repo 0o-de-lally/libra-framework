@@ -2,6 +2,9 @@ TWIN_JSON = ./twin.json
 FRAMEWORK = ../../framework
 DB_PATH = ~/.libra/db_365
 
+### common addresses
+TIP_JAR=0x2B0E8325DEA5BE93D856CFDE2D0CBA12
+
 framework:
 	cd ${FRAMEWORK} && libra move framework release
 
@@ -27,4 +30,17 @@ send-epoch: parse-jq
 
 #### QUERIES
 query-roots:  parse-jq
-	libra query -c ${APP_CFG} view -f 0x1::root_of_trust::get_current_roots_at_registry -a 0x1
+	libra8 query -c ${APP_CFG} view -f 0x1::root_of_trust::get_current_roots_at_registry -a 0x1
+
+balance: parse-jq
+	libra8 query -c ${APP_CFG} balance ${ADDR}
+
+vouch-score: parse-jq
+	libra8 query -c ${APP_CFG} view -f 0x1::page_rank_lazy::get_cached_score -a ${ADDR}
+
+cw-status: parse-jq
+	libra8 query -c ${APP_CFG} view -f 0x1::donor_voice_reauth::is_authorized -a ${ADDR}
+	libra8 query -c ${APP_CFG} resource -r 0x1::donor_voice_reauth::DonorAuthorized ${ADDR}
+
+cw-auth-vote: parse-jq
+	libra8 txs generate-transaction -f 0x1::donor_voice_txs::vote_reauth_tx -a ${TIP_JAR}
