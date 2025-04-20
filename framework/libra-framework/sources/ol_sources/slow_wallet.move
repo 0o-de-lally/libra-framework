@@ -413,6 +413,13 @@ module ol_framework::slow_wallet {
       (unlocked, total, transferred)
     }
 
+    #[view]
+    /// Get the current daily unlocking rate
+    public fun get_daily_unlocking_rate(): u64 acquires SlowSupply {
+        let supply = borrow_global<SlowSupply>(@ol_framework);
+        supply.daily_unlocked
+    }
+
     //////// MIGRATIONS ////////
 
     /// private function which can only be called at genesis
