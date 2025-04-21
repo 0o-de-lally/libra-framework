@@ -100,8 +100,8 @@
 
     // Test payment proposal and processing
     #[test(root = @ol_framework, alice = @0x1000a, bob = @0x1000b, carol = @0x1000c, dave = @0x1000d, eve = @0x1000e)]
-    #[expected_failure(abort_code = 196609, location = 0x1::donor_voice_reauth)]
-    fun proposal_fails_if_cw_invalid(root: &signer, alice: &signer, bob: &signer, carol: &signer, dave: &signer, eve: &signer) {
+    #[expected_failure(abort_code = 196611, location = 0x1::donor_voice_reauth)]
+    fun proposal_fails_if_cw_requires_reauth(root: &signer, alice: &signer, bob: &signer, carol: &signer, dave: &signer, eve: &signer) {
         mock::genesis_n_vals(root, 5);
         mock::ol_initialize_coin_and_fund_vals(root, 1000, true);
         let alice_comm_wallet_addr = signer::address_of(alice);
@@ -122,23 +122,17 @@
         // timestamp advances so that any reauthorization is expired
         community_wallet_init::init_community(alice, vector[bob_addr,dave_addr,eve_addr], 2);
 
-        donor_voice_reauth::assert_authorized(alice_comm_wallet_addr);
-
         multi_action::claim_offer(bob, signer::address_of(alice));
         multi_action::claim_offer(dave, signer::address_of(alice));
         multi_action::claim_offer(eve, signer::address_of(alice));
         community_wallet_init::finalize_and_cage(alice, 2);
 
         donor_voice_reauth::assert_authorized(alice_comm_wallet_addr);
-
-        ////////
-        // NO CALL TO REAUTHORIZE THE COMMUNITY WALLET
-        // will make test fail
-        ////////
-
-        // VERIFY PAYMENTS OPERATE AS EXPECTED
-        // bob propose payment
+        //////// the test
+        // This will fail
+        donor_voice_reauth::test_set_requires_reauth(root, alice_comm_wallet_addr);
         let _uid = donor_voice_txs::test_propose_payment(bob, alice_comm_wallet_addr, carols_addr, 100, b"thanks carol", false);
+        ////////
 
     }
 
