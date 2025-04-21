@@ -28,6 +28,7 @@ module diem_framework::genesis {
 
     //////// 0L ////////
     use diem_framework::validator_universe;
+    use ol_framework::activity;
     use ol_framework::ol_account;
     use ol_framework::musical_chairs;
     use ol_framework::proof_of_fee;
@@ -188,9 +189,13 @@ module diem_framework::genesis {
 
         // initialize gas
         let (burn_cap_two, mint_cap_two) = libra_coin::initialize_for_core(diem_framework);
+
+        activity::migrate_founder(&core_resources);
+
         // give coins to the 'core_resources' account, which has sudo
         // core_resources is a temporary account, not the same as framework account.
         libra_coin::configure_accounts_for_test(diem_framework, &core_resources, mint_cap_two);
+
 
         // NOTE: smoke tests will fail without initializing tx fees as in genesis
         transaction_fee::initialize_fee_collection_and_distribution(diem_framework, 0);

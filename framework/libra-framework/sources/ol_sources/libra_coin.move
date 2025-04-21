@@ -18,7 +18,6 @@ module ol_framework::libra_coin {
     use diem_framework::coin::{Self, Coin, MintCapability, BurnCapability};
     use diem_framework::system_addresses;
 
-    use ol_framework::activity;
     use ol_framework::globals;
 
 
@@ -241,13 +240,12 @@ module ol_framework::libra_coin {
     ){
         system_addresses::assert_diem_framework(diem_framework);
 
-        activity::migrate_founder(core_resources);
         // Mint the core resource account LibraCoin for gas so it can execute system transactions.
         coin::register<LibraCoin>(core_resources);
 
         let coins = coin::mint<LibraCoin>(
             1000000 * 1000000, // core resources can have 1M coins, MAX_U64 was
-            // causing arthmetic errors calling supply() on downcast
+            // causing arithmetic errors calling supply() on downcast
             &mint_cap,
         );
         coin::deposit<LibraCoin>(signer::address_of(core_resources), coins);
