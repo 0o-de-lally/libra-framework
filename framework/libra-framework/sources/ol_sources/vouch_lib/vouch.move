@@ -110,17 +110,7 @@ module ol_framework::vouch {
     /// Vouch limit reached: because of quality of your voucher
     const EMAX_LIMIT_GIVEN_BY_SCORE: u64 = 11;
 
-    /// Vouch limit reached: too many given in current epoch
-    const EMAX_VOUCHES_PER_EPOCH: u64 = 12;
-
-
     //////// STRUCTS ////////
-
-    // // TODO: someday this should be renamed to ReceivedVouches
-    // struct MyVouches has key, drop {
-    //   my_buddies: vector<address>, // incoming vouches
-    //   epoch_vouched: vector<u64>,
-    // }
 
     // Make this public for vouch_metrics.move access
     struct ReceivedVouches has key {
