@@ -21,7 +21,6 @@ module ol_framework::vouch_txs {
     page_rank_lazy::mark_as_stale(friend_account);
     maybe_debit_validator_cost(grantor, friend_account);
     founder::maybe_set_friendly_founder(friend_account);
-
     // if both are candidates for root of trust, update it
     if (
         root_of_trust::is_candidate_human(grantor_addr) &&

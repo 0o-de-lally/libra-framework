@@ -85,7 +85,7 @@ module ol_framework::root_of_trust {
     /// At the time of V8 upgrade, the framework
     /// will migrate the prior root of trust implementation
     /// to the new explicit one.
-    public(friend) fun framework_migration(framework: &signer, roots: vector<address>, minimum_cohort: u64, rotation_days: u64) acquires RootOfTrust {
+    public(friend) fun depr_framework_migration(framework: &signer, roots: vector<address>, minimum_cohort: u64, rotation_days: u64) acquires RootOfTrust {
         // Verify this is called by the framework account
         system_addresses::assert_diem_framework(framework);
 
@@ -187,12 +187,8 @@ module ol_framework::root_of_trust {
     #[view]
     /// check if the user is in the universe of plausible humans
     public fun is_candidate_human(account: address): bool acquires RootOfTrust {
-        if (exists<RootOfTrust>(@diem_framework)) {
-            let root_of_trust = borrow_global<RootOfTrust>(@diem_framework);
-            vector::contains(&root_of_trust.roots, &account)
-        } else {
-            false
-        }
+        let root_of_trust = borrow_global<RootOfTrust>(@diem_framework);
+        vector::contains(&root_of_trust.roots, &account)
     }
 
     #[view]

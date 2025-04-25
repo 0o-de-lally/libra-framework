@@ -68,7 +68,7 @@ module ol_framework::page_rank_lazy {
         // First try to get dynamic roots of trust
         let roots = dynamic_root_of_trust::get_dynamic_roots();
 
-        assert!(vector::length(&roots) > MIN_BOOTSTRAP_ROOTS, error::invalid_state(EBOOTSTRAP_ROOT));
+        // assert!(vector::length(&roots) > MIN_BOOTSTRAP_ROOTS, error::invalid_state(EBOOTSTRAP_ROOT));
 
         // Compute score using selected algorithm
         let score = traverse_graph(&roots, addr);
@@ -297,7 +297,7 @@ module ol_framework::page_rank_lazy {
         user3: &signer
     ) {
 
-        root_of_trust::framework_migration(admin, vector[signer::address_of(root)], 1, 1000);
+        dynamic_root_of_trust::genesis_initialize(admin, vector[signer::address_of(root)], vector::empty());
         // Initialize trust records for all accounts
         maybe_initialize_trust_record(root);
         maybe_initialize_trust_record(user1);

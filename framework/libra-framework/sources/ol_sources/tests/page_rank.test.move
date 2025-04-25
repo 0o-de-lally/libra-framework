@@ -30,15 +30,17 @@ module ol_framework::test_page_rank {
     });
 
     // Make these accounts root of trust candidates
-    root_of_trust::framework_migration(framework, root_users, 1, 30);
+    dynamic_root_of_trust::genesis_initialize(framework, root_users, vector::empty());
 
     if (mutual) {
+      diem_std::debug::print(&1111111);
       mock::setup_mutual_vouch(&roots_sig);
       // Now dynamic_root_addr should be a dynamic root of trust since all candidates vouch for it
       let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots();
-
+      diem_std::debug::print(&dynamic_roots);
       // assert that all the roots are the same as roots_sig
       let count_roots = vector::length(&dynamic_roots);
+      diem_std::debug::print(&count_roots);
       assert!(vector::length(&roots_sig) == count_roots, 7357000);
       let i = 0;
       while (i < count_roots) {

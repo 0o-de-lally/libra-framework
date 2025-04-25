@@ -16,8 +16,13 @@ module ol_framework::dynamic_root_of_trust {
     friend ol_framework::migrations;
     friend ol_framework::vouch_txs;
 
+
     #[test_only]
     friend ol_framework::mock;
+    #[test_only]
+    friend ol_framework::test_page_rank;
+    #[test_only]
+    friend ol_framework::page_rank_lazy;
 
     //////// ERROR CODES //////////
     const ENOT_INITIALIZED: u64 = 0;
@@ -44,10 +49,11 @@ module ol_framework::dynamic_root_of_trust {
       borrow_global_mut<LikelyHuman>(@diem_framework).list = list;
     }
 
-    /// epoch boundary set
+    /// calculates then sets the likely humans
+    /// this is called whenever there is a vouch between two human candidates
     /// Requires a signature, even though we wont check it.
     public(friend) fun maybe_update_humans(_sig: &signer) acquires LikelyHuman {
-      let list = get_dynamic_roots();
+      let list = calculate_dynamic_roots();
       set_likely_humans(list);
     }
 

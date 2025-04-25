@@ -35,6 +35,7 @@ use ol_framework::dynamic_root_of_trust;
 use ol_framework::slow_wallet;
 use ol_framework::validator_universe;
 use ol_framework::vouch;
+use ol_framework::vouch_txs;
 use ol_framework::vouch_limits;
 use std::bcs;
 use std::signer;
@@ -543,7 +544,7 @@ public fun setup_mutual_vouch(roots_sig: &vector<signer>) {
         if (i != j) { // Don't vouch for yourself
           let beneficiary = vector::borrow(roots_sig, j);
           let beneficiary_addr = signer::address_of(beneficiary);
-          vouch::vouch_for(grantor, beneficiary_addr);
+          vouch_txs::vouch_for(grantor, beneficiary_addr);
         };
         j = j + 1;
       };
