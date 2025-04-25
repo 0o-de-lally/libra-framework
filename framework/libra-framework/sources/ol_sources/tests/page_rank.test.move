@@ -3,6 +3,7 @@ module ol_framework::test_page_rank {
   use ol_framework::activity;
   use ol_framework::founder;
   use ol_framework::root_of_trust;
+  use ol_framework::dynamic_root_of_trust;
   use ol_framework::mock;
   use ol_framework::ol_account;
   use ol_framework::vouch;
@@ -12,24 +13,48 @@ module ol_framework::test_page_rank {
   use std::signer;
   use std::vector;
 
-  // sets up a network with 10 root of trust accounts (which are
+  // Sets up a network with 10 root of trust accounts (which are
   // not the validators). Returns a list of signers from the 10 roots.
   fun test_base(framework: &signer): vector<signer> {
     // do a test genesis with 3 validators
     mock::genesis_n_vals(framework, 3);
     mock::ol_initialize_coin_and_fund_vals(framework, 100, false);
 
-    // create 10 root of trust accounts
+    // Create 10 root of trust accounts (candidates)
     let roots_sig = mock::create_test_end_users(framework, 10, 0);
     let root_users = mock::collect_addresses(&roots_sig);
 
+    // Initialize accounts - mock::simulate_transaction_validation already initializes vouch
     vector::for_each_ref(&roots_sig, |sig| {
-      // make each account a v8 address
       mock::simulate_transaction_validation(sig);
     });
 
-    // make these accounts root of trust
+    // Make these accounts root of trust candidates
     root_of_trust::framework_migration(framework, root_users, 1, 30);
+
+    // For dynamic root to work, we need at least 1 common address that ALL candidates vouch for
+    // Create a common address all roots will vouch for (this will be the dynamic root)
+    let dynamic_root_sig = mock::create_user_from_u64(framework, 20);
+    let dynamic_root_addr = signer::address_of(&dynamic_root_sig);
+    mock::simulate_transaction_validation(&dynamic_root_sig);
+
+    // Have all root candidates vouch for this common address
+    let count_roots = vector::length(&roots_sig);
+    let i = 0;
+    while (i < count_roots) {
+      let grantor = vector::borrow(&roots_sig, i);
+      vouch::vouch_for(grantor, dynamic_root_addr);
+      i = i + 1;
+    };
+
+    // Now dynamic_root_addr should be a dynamic root of trust since all candidates vouch for it
+    let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots(@diem_framework);
+
+    diem_std::debug::print(&dynamic_roots);
+
+    // // Verify the dynamic root is set up properly
+    // assert!(vector::length(&dynamic_roots) > 0, 7001); // Ensure there are dynamic roots
+    // assert!(vector::contains(&dynamic_roots, &dynamic_root_addr), 7002); // Our address should be a dynamic root
 
     return roots_sig
   }

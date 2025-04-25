@@ -54,6 +54,15 @@ module ol_framework::dynamic_root_of_trust {
             i = i + 1;
         };
 
+        // Let the sunshine (and let the sun shine on in), let the sun shine in
+        // (Open up your heart) the sun shine in (and let it shine on you)
+        // (And when you lonely) let the sunshine (hey, let it shine), let the sun shine in
+        // (You gotta open up your heart) the sun shine in (and let it shine on in)
+        // (And when you feel like you been mistreated)
+        // Let the sunshine, let the sun shine in (and your friends turn their backs upon ya)
+        // (Just open up your heart) the sun shine in (let it shine on in)
+        // (You got to feel it) let the sunshine (you got to feel it), let the sun shine in
+        // (Oh, open up your heart) the sun shine in (and let it shine on in)
         common_vouches
     }
 
