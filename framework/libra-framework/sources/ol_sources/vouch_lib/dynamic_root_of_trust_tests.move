@@ -3,7 +3,6 @@ module ol_framework::dynamic_root_of_trust_tests {
     use std::vector;
     use diem_framework::account;
     use ol_framework::dynamic_root_of_trust;
-    use ol_framework::root_of_trust;
     use ol_framework::vouch;
 
     // Test account addresses
@@ -48,7 +47,7 @@ module ol_framework::dynamic_root_of_trust_tests {
         vector::push_back(&mut roots, ROOT2_ADDR);
         vector::push_back(&mut roots, ROOT3_ADDR);
 
-        root_of_trust::test_set_root_of_trust(&admin, roots, 3, 1);
+        dynamic_root_of_trust::genesis_initialize(&admin, roots, vector::empty<address>());
 
         // Setup vouching relationships:
         // ROOT1 vouches for USER1, USER2
@@ -60,7 +59,7 @@ module ol_framework::dynamic_root_of_trust_tests {
         vouch::test_set_given_list(ROOT3_ADDR, vector[USER1_ADDR, USER2_ADDR, USER3_ADDR]);
 
         // Calculate dynamic root of trust
-        let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots();
+        let dynamic_roots = dynamic_root_of_trust::calculate_dynamic_roots();
 
         // Verify USER1 is the only common vouch (intersection of all roots' vouches)
         assert!(vector::length(&dynamic_roots) == 1, 0);
@@ -70,7 +69,7 @@ module ol_framework::dynamic_root_of_trust_tests {
         vouch::test_set_given_list(ROOT1_ADDR, vector[USER1_ADDR, USER2_ADDR, USER3_ADDR]);
 
         // Recalculate dynamic root of trust
-        dynamic_roots = dynamic_root_of_trust::get_dynamic_roots();
+        dynamic_roots = dynamic_root_of_trust::calculate_dynamic_roots();
 
         // Now both USER1 and USER3 should be in the dynamic roots (common vouches)
         assert!(vector::length(&dynamic_roots) == 2, 2);
@@ -81,7 +80,7 @@ module ol_framework::dynamic_root_of_trust_tests {
         vouch::test_set_given_list(ROOT3_ADDR, vector::empty<address>());
 
         // When any candidate has no vouches, there should be no common vouches
-        dynamic_roots = dynamic_root_of_trust::get_dynamic_roots();
+        dynamic_roots = dynamic_root_of_trust::calculate_dynamic_roots();
         assert!(vector::length(&dynamic_roots) == 0, 5);
         assert!(!dynamic_root_of_trust::has_common_vouches(), 6);
     }

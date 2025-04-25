@@ -18,6 +18,8 @@ module ol_framework::dynamic_root_of_trust {
 
 
     #[test_only]
+    friend ol_framework::dynamic_root_of_trust_tests;
+    #[test_only]
     friend ol_framework::mock;
     #[test_only]
     friend ol_framework::test_page_rank;
