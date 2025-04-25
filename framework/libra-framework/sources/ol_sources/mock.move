@@ -530,6 +530,29 @@ public fun mock_dv(
 }
 
 #[test_only]
+/// for a list of signers make them all vouch for each other
+/// useful in setting up a the dynamic root of trust
+public fun setup_mutual_vouch(roots_sig: &vector<signer>) {
+    // Have all root candidates vouch for this common address
+    let count_roots = vector::length(roots_sig);
+    let i = 0;
+    while (i < count_roots) {
+      let j = 0;
+      let grantor = vector::borrow(roots_sig, i);
+      while (j < count_roots) {
+        if (i != j) { // Don't vouch for yourself
+          let beneficiary = vector::borrow(roots_sig, j);
+          let beneficiary_addr = signer::address_of(beneficiary);
+          vouch::vouch_for(grantor, beneficiary_addr);
+        };
+        j = j + 1;
+      };
+      i = i + 1;
+    };
+  }
+
+
+#[test_only]
 /// Creates a vouching network where target_account has a vouch score of 100
 /// This will create validators if they don't exist, and set up vouches
 /// @param framework - framework signer

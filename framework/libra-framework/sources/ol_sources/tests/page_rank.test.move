@@ -15,7 +15,7 @@ module ol_framework::test_page_rank {
 
   // Sets up a network with 10 root of trust accounts (which are
   // not the validators). Returns a list of signers from the 10 roots.
-  fun test_base(framework: &signer): vector<signer> {
+  fun test_base(framework: &signer, mutual: bool): vector<signer> {
     // do a test genesis with 3 validators
     mock::genesis_n_vals(framework, 3);
     mock::ol_initialize_coin_and_fund_vals(framework, 100, false);
@@ -32,39 +32,23 @@ module ol_framework::test_page_rank {
     // Make these accounts root of trust candidates
     root_of_trust::framework_migration(framework, root_users, 1, 30);
 
-    return roots_sig
-  }
+    if (mutual) {
+      mock::setup_mutual_vouch(&roots_sig);
+      // Now dynamic_root_addr should be a dynamic root of trust since all candidates vouch for it
+      let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots();
 
-  fun setup_mutual_vouch(roots_sig: &vector<signer>) {
-    // Have all root candidates vouch for this common address
-    let count_roots = vector::length(roots_sig);
-    let i = 0;
-    while (i < count_roots) {
-      let j = 0;
-      let grantor = vector::borrow(roots_sig, i);
-      while (j < count_roots) {
-        if (i != j) { // Don't vouch for yourself
-          let beneficiary = vector::borrow(roots_sig, j);
-          let beneficiary_addr = signer::address_of(beneficiary);
-          vouch::vouch_for(grantor, beneficiary_addr);
-        };
-        j = j + 1;
+      // assert that all the roots are the same as roots_sig
+      let count_roots = vector::length(&dynamic_roots);
+      assert!(vector::length(&roots_sig) == count_roots, 7357000);
+      let i = 0;
+      while (i < count_roots) {
+        let root_addr = signer::address_of(vector::borrow(&roots_sig, i));
+        assert!(vector::contains(&dynamic_roots, &root_addr), 7357000);
+        i = i + 1;
       };
-      i = i + 1;
     };
 
-    // Now dynamic_root_addr should be a dynamic root of trust since all candidates vouch for it
-    let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots();
-
-    // assert that all the roots are the same as roots_sig
-    let count_roots = vector::length(&dynamic_roots);
-    assert!(vector::length(roots_sig) == count_roots, 7357000);
-    let i = 0;
-    while (i < count_roots) {
-      let root_addr = signer::address_of(vector::borrow(roots_sig, i));
-      assert!(vector::contains(&dynamic_roots, &root_addr), 7357000);
-      i = i + 1;
-    };
+    return roots_sig
   }
 
   #[test(framework = @ol_framework)]
@@ -73,7 +57,7 @@ module ol_framework::test_page_rank {
   /// vouches, and has a zero page rank score initially.
   fun meta_check_base_setup(framework: &signer) {
     // Set up the test base
-    let roots_sig = test_base(framework);
+    let roots_sig = test_base(framework, false);
 
     // Check that we have exactly 10 root accounts
     assert!(vector::length(&roots_sig) == 10, 1000);
@@ -99,11 +83,7 @@ module ol_framework::test_page_rank {
   /// tests that mutual vouching between root accounts works correctly.
   fun meta_test_mutual_vouch(framework: &signer) {
     // Set up the test base
-    let roots_sig = test_base(framework);
-
-    // Setup mutual vouching between root accounts
-    setup_mutual_vouch(&roots_sig);
-
+    let _roots_sig = test_base(framework, true);
   }
 
   #[test(framework = @ol_framework)]
@@ -113,7 +93,7 @@ module ol_framework::test_page_rank {
   fun test_one_user_one_root(framework: &signer) {
     let max_single_score = page_rank_lazy::get_max_single_score();
     // Set up the test base
-    let roots_sig = test_base(framework);
+    let roots_sig = test_base(framework, false);
     let new_user_sig = mock::create_user_from_u64(framework, 11);
     let new_user_addr = signer::address_of(&new_user_sig);
 
@@ -138,8 +118,7 @@ module ol_framework::test_page_rank {
   /// multiple root vouches.
   fun test_one_user_ten_root(framework: &signer) {
     // Set up the test base
-    let roots_sig = test_base(framework);
-    setup_mutual_vouch(&roots_sig);
+    let roots_sig = test_base(framework, true);
 
     let count_roots = vector::length(&roots_sig);
     let new_user_sig = mock::create_user_from_u64(framework, 11);
@@ -181,8 +160,7 @@ module ol_framework::test_page_rank {
     let max_single_score = page_rank_lazy::get_max_single_score();
 
     // Set up the test base
-    let roots_sig = test_base(framework);
-    setup_mutual_vouch(&roots_sig);
+    let roots_sig = test_base(framework, true);
 
     let count_roots = vector::length(&roots_sig);
 
@@ -249,7 +227,7 @@ module ol_framework::test_page_rank {
   /// and that each root achieves a high page rank score (9 * max_single_score) from these vouches.
   fun test_root_reciprocal_vouch(framework: &signer) {
     // Set up the test base
-    let roots_sig = test_base(framework);
+    let roots_sig = test_base(framework, false);
     let count_roots = vector::length(&roots_sig);
 
     // First, have all root accounts initialize page rank
@@ -311,7 +289,7 @@ module ol_framework::test_page_rank {
   fun test_stale_trust(framework: &signer) {
     let max_single_score = page_rank_lazy::get_max_single_score();
     // Set up the test base
-    let roots_sig = test_base(framework);
+    let roots_sig = test_base(framework, false);
     let new_user_sig = mock::create_user_from_u64(framework, 11);
     let new_user_addr = signer::address_of(&new_user_sig);
     let root_sig = vector::borrow(&roots_sig, 0);
@@ -366,7 +344,7 @@ module ol_framework::test_page_rank {
   fun test_founder_reauth(framework: &signer) {
     let max_single_score = page_rank_lazy::get_max_single_score();
     // Set up the test base
-    let roots_sig = test_base(framework);
+    let roots_sig = test_base(framework, false);
     let one_root_sig = vector::borrow(&roots_sig, 0);
 
     let seven_user_sig = ol_account::test_emulate_v7_account(framework, @0xabcd1234);
@@ -407,7 +385,7 @@ module ol_framework::test_page_rank {
     let max_single_score = page_rank_lazy::get_max_single_score();
 
     // Set up the test base with 10 root accounts
-    let roots_sig = test_base(framework);
+    let roots_sig = test_base(framework, false);
     let count_roots = vector::length(&roots_sig);
 
     // Create two users - one will be directly vouched by a root,
@@ -462,7 +440,7 @@ module ol_framework::test_page_rank {
   /// This ensures that trust doesn't propagate indefinitely through the network.
   fun test_diminishing_power(framework: &signer) {
     // Set up the test base with 10 root accounts
-    let roots_sig = test_base(framework);
+    let roots_sig = test_base(framework, false);
 
     // create 10 root of trust accounts
     let users_sig = mock::create_test_end_users(framework, 10, 11);
