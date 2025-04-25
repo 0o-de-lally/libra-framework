@@ -60,7 +60,7 @@ module ol_framework::dynamic_root_of_trust_tests {
         vouch::test_set_given_list(ROOT3_ADDR, vector[USER1_ADDR, USER2_ADDR, USER3_ADDR]);
 
         // Calculate dynamic root of trust
-        let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots(@diem_framework);
+        let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots();
 
         // Verify USER1 is the only common vouch (intersection of all roots' vouches)
         assert!(vector::length(&dynamic_roots) == 1, 0);
@@ -70,7 +70,7 @@ module ol_framework::dynamic_root_of_trust_tests {
         vouch::test_set_given_list(ROOT1_ADDR, vector[USER1_ADDR, USER2_ADDR, USER3_ADDR]);
 
         // Recalculate dynamic root of trust
-        dynamic_roots = dynamic_root_of_trust::get_dynamic_roots(@diem_framework);
+        dynamic_roots = dynamic_root_of_trust::get_dynamic_roots();
 
         // Now both USER1 and USER3 should be in the dynamic roots (common vouches)
         assert!(vector::length(&dynamic_roots) == 2, 2);
@@ -81,9 +81,9 @@ module ol_framework::dynamic_root_of_trust_tests {
         vouch::test_set_given_list(ROOT3_ADDR, vector::empty<address>());
 
         // When any candidate has no vouches, there should be no common vouches
-        dynamic_roots = dynamic_root_of_trust::get_dynamic_roots(@diem_framework);
+        dynamic_roots = dynamic_root_of_trust::get_dynamic_roots();
         assert!(vector::length(&dynamic_roots) == 0, 5);
-        assert!(!dynamic_root_of_trust::has_common_vouches(@diem_framework), 6);
+        assert!(!dynamic_root_of_trust::has_common_vouches(), 6);
     }
 
     #[test]
@@ -91,14 +91,14 @@ module ol_framework::dynamic_root_of_trust_tests {
         let list1 = vector[@0x1, @0x2, @0x3, @0x4];
         let list2 = vector[@0x2, @0x4, @0x6];
 
-        let intersection = dynamic_root_of_trust::test_find_intersection(list1, list2);
+        let intersection = dynamic_root_of_trust::find_intersection(&list1, &list2);
         assert!(vector::length(&intersection) == 2, 0);
         assert!(vector::contains(&intersection, &@0x2), 1);
         assert!(vector::contains(&intersection, &@0x4), 2);
 
         // Test empty intersection
         let list3 = vector[@0x5, @0x7, @0x9];
-        let empty_intersection = dynamic_root_of_trust::test_find_intersection(list1, list3);
+        let empty_intersection = dynamic_root_of_trust::find_intersection(&list1, &list3);
         assert!(vector::length(&empty_intersection) == 0, 3);
     }
 }

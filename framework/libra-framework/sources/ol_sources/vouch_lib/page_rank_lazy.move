@@ -13,12 +13,18 @@ module ol_framework::page_rank_lazy {
     /// trust record not initialized
     const ENOT_INITIALIZED: u64 = 2;
 
+    /// Root of trust not boostrapped
+    const EBOOTSTRAP_ROOT: u64 = 3;
+
     //////// CONSTANTS ////////
     // Max score on a single vouch
     const MAX_VOUCH_SCORE: u64 = 100_000;
 
     // Circuit breaker to prevent stack overflow
     const MAX_PROCESSED_ADDRESSES: u64 = 1_000;
+
+    // Minimum number of roots to consider bootsrapped
+    const MIN_BOOTSTRAP_ROOTS: u64 = 3;
 
     // Per-user trust record - each user stores their own trust data
     struct UserTrustRecord has key, drop {
@@ -60,15 +66,9 @@ module ol_framework::page_rank_lazy {
 
         // Cache is stale or expired - compute fresh score
         // First try to get dynamic roots of trust
-        let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots(@diem_framework);
+        let roots = dynamic_root_of_trust::get_dynamic_roots();
 
-        // If we have dynamic roots, use them for calculation
-        let roots = if (vector::length(&dynamic_roots) > 0) {
-            dynamic_roots
-        } else {
-            // If no dynamic roots, use candidate roots from registry
-            root_of_trust::get_current_roots_at_registry(@diem_framework)
-        };
+        assert!(vector::length(&roots) > MIN_BOOTSTRAP_ROOTS, error::invalid_state(EBOOTSTRAP_ROOT));
 
         // Compute score using selected algorithm
         let score = traverse_graph(&roots, addr);
@@ -176,7 +176,7 @@ module ol_framework::page_rank_lazy {
                 // trust list, because we don't
                 // want to accumulate points from
                 // roots vouching for each other.
-                if(
+                if (
                   root_of_trust::is_root_at_registry(@diem_framework, neighbor)
                   ) {
                     continue

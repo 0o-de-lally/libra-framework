@@ -185,6 +185,17 @@ module ol_framework::root_of_trust {
     }
 
     #[view]
+    /// check if the user is in the universe of plausible humans
+    public fun is_candidate_human(account: address): bool acquires RootOfTrust {
+        if (exists<RootOfTrust>(@diem_framework)) {
+            let root_of_trust = borrow_global<RootOfTrust>(@diem_framework);
+            vector::contains(&root_of_trust.roots, &account)
+        } else {
+            false
+        }
+    }
+
+    #[view]
     /// Get the current set of root addresses
     public fun get_current_roots_at_registry(registry: address): vector<address> acquires RootOfTrust {
        // return empty vector if the root of trust is not initialized

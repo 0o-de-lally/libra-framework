@@ -54,7 +54,7 @@ module ol_framework::test_page_rank {
     };
 
     // Now dynamic_root_addr should be a dynamic root of trust since all candidates vouch for it
-    let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots(@ol_framework);
+    let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots();
 
     // assert that all the roots are the same as roots_sig
     let count_roots = vector::length(&dynamic_roots);
@@ -139,6 +139,8 @@ module ol_framework::test_page_rank {
   fun test_one_user_ten_root(framework: &signer) {
     // Set up the test base
     let roots_sig = test_base(framework);
+    setup_mutual_vouch(&roots_sig);
+
     let count_roots = vector::length(&roots_sig);
     let new_user_sig = mock::create_user_from_u64(framework, 11);
     let new_user_addr = signer::address_of(&new_user_sig);
@@ -163,6 +165,7 @@ module ol_framework::test_page_rank {
 
     let max_single_score = page_rank_lazy::get_max_single_score();
     let page_rank_score_later = page_rank_lazy::get_trust_score(new_user_addr);
+
     // NOTE: this should be 10X the previous test
     assert!(page_rank_score_later == max_single_score * 10, 7357003);
   }
@@ -179,6 +182,8 @@ module ol_framework::test_page_rank {
 
     // Set up the test base
     let roots_sig = test_base(framework);
+    setup_mutual_vouch(&roots_sig);
+
     let count_roots = vector::length(&roots_sig);
 
     // First user who receives direct vouches from all roots
@@ -206,6 +211,8 @@ module ol_framework::test_page_rank {
 
     let direct_vouched_score = page_rank_lazy::get_trust_score(direct_vouched_addr);
 
+    diem_std::debug::print(&direct_vouched_score);
+
     // NOTE: this should be 10X the previous test
     assert!(direct_vouched_score == max_single_score * 10, 7357003);
 
@@ -225,6 +232,7 @@ module ol_framework::test_page_rank {
     // Direct vouched user vouches for the indirect vouched user
     vouch_txs::vouch_for(&direct_vouched_sig, indirect_vouched_addr);
     let indirect_score_after = page_rank_lazy::get_trust_score(indirect_vouched_addr);
+    diem_std::debug::print(&indirect_score_after);
 
     assert!(indirect_score_after == direct_vouched_score/2, 7357006);
 

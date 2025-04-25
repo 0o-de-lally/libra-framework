@@ -7,6 +7,8 @@ module ol_framework::vouch_txs {
   use diem_framework::transaction_fee;
   use ol_framework::founder;
   use ol_framework::ol_account;
+  use ol_framework::root_of_trust;
+  use ol_framework::dynamic_root_of_trust;
   use ol_framework::page_rank_lazy;
   use ol_framework::vouch;
   use ol_framework::vouch_limits;
@@ -19,6 +21,14 @@ module ol_framework::vouch_txs {
     page_rank_lazy::mark_as_stale(friend_account);
     maybe_debit_validator_cost(grantor, friend_account);
     founder::maybe_set_friendly_founder(friend_account);
+
+    // if both are candidates for root of trust, update it
+    if (
+        root_of_trust::is_candidate_human(grantor_addr) &&
+        root_of_trust::is_candidate_human(friend_account)
+      ) {
+        dynamic_root_of_trust::maybe_update_humans(grantor);
+    }
   }
 
   public entry fun revoke(grantor: &signer, friend_account: address) {
@@ -31,9 +41,19 @@ module ol_framework::vouch_txs {
     // If you're so hurt, why then don't you show it?
     // You say you've lost your faith, but that's not where its at
     // You have no faith to lose, and ya know it
-    vouch_limits::assert_revoke_limit(signer::address_of(grantor));
+
+    let grantor_addr = signer::address_of(grantor);
+    vouch_limits::assert_revoke_limit(grantor_addr);
     vouch::revoke(grantor, friend_account);
     page_rank_lazy::mark_as_stale(friend_account);
+
+        // if both are candidates for root of trust, update it
+    if (
+        root_of_trust::is_candidate_human(grantor_addr) &&
+        root_of_trust::is_candidate_human(friend_account)
+      ) {
+        dynamic_root_of_trust::maybe_update_humans(grantor);
+    }
   }
 
   public entry fun clean_expired(user_sig: &signer) {

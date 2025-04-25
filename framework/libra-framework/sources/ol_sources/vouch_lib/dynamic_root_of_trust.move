@@ -7,18 +7,59 @@
 /// This creates a more decentralized and consensus-based trust system.
 module ol_framework::dynamic_root_of_trust {
     use std::vector;
+    use std::error;
+    use diem_framework::system_addresses;
     use ol_framework::root_of_trust;
     use ol_framework::vouch;
 
+    friend ol_framework::vouch_txs;
+
+    //////// ERROR CODES //////////
+    const ENOT_INITIALIZED: u64 = 0;
+
+    struct LikelyHuman has key {
+       list: vector<address>,
+    }
+
+
+    /// Initializes a new instance of LikelyHuman with an empty list of addresses.
+    public fun initialize(framework: &signer, list: vector<address>) acquires LikelyHuman {
+      system_addresses::assert_diem_framework(framework);
+      if (!exists<LikelyHuman>(@diem_framework)) {
+        move_to(framework, LikelyHuman { list });
+      } else {
+        borrow_global_mut<LikelyHuman>(@diem_framework).list = list;
+      }
+    }
+    /// Initializes a new instance of LikelyHuman with an empty list of addresses.
+    fun set_likely_humans( list: vector<address>) acquires LikelyHuman {
+      borrow_global_mut<LikelyHuman>(@diem_framework).list = list;
+    }
+
+    /// epoch boundary set
+    /// Requires a signature, even though we wont check it.
+    public(friend) fun maybe_update_humans(_sig: &signer) acquires LikelyHuman {
+      let list = get_dynamic_roots();
+      set_likely_humans(list);
+    }
+
     #[view]
+    public fun get_dynamic_roots(): vector<address> acquires LikelyHuman {
+        assert!(exists<LikelyHuman>(@diem_framework), error::invalid_state(ENOT_INITIALIZED));
+        let likely_humans = borrow_global<LikelyHuman>(@diem_framework);
+
+        likely_humans.list
+
+    }
+
     /// Calculates the dynamic root of trust by finding addresses that all candidate
     /// roots vouch for (common vouches).
     ///
     /// @param registry - The address where the root of trust registry is stored
     /// @return Vector of addresses that are vouched for by all candidates
-    public fun get_dynamic_roots(registry: address): vector<address> {
+    public fun calculate_dynamic_roots(): vector<address> {
         // Get candidate roots from the registry
-        let candidates = root_of_trust::get_current_roots_at_registry(registry);
+        let candidates = root_of_trust::get_current_roots_at_registry(@diem_framework);
 
         // If there are no candidates, return empty vector
         if (vector::length(&candidates) == 0) {
@@ -79,8 +120,8 @@ module ol_framework::dynamic_root_of_trust {
     ///
     /// @param registry - The address where the root of trust registry is stored
     /// @return true if common vouches exist, false otherwise
-    public fun has_common_vouches(registry: address): bool {
-        let common_roots = get_dynamic_roots(registry);
+    public fun has_common_vouches(): bool acquires LikelyHuman {
+        let common_roots = get_dynamic_roots();
         vector::length(&common_roots) > 0
     }
 
@@ -89,7 +130,7 @@ module ol_framework::dynamic_root_of_trust {
     /// @param list1 - First list of addresses
     /// @param list2 - Second list of addresses
     /// @return Vector containing only addresses that appear in both input lists
-    fun find_intersection(list1: &vector<address>, list2: &vector<address>): vector<address> {
+    public fun find_intersection(list1: &vector<address>, list2: &vector<address>): vector<address> {
         let result = vector::empty<address>();
 
         let i = 0;
@@ -102,11 +143,5 @@ module ol_framework::dynamic_root_of_trust {
         };
 
         result
-    }
-
-    #[test_only]
-    /// Test helper to verify intersection calculation
-    public fun test_find_intersection(list1: vector<address>, list2: vector<address>): vector<address> {
-        find_intersection(&list1, &list2)
     }
 }
