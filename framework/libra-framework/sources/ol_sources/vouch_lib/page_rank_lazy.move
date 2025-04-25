@@ -103,7 +103,7 @@ module ol_framework::page_rank_lazy {
 
                 // Initial trust power is 100 (full trust from root)
                 total_score = total_score + walk_from_node(
-                    root, target, &mut visited, 2 * MAX_VOUCH_SCORE
+                    roots, root, target, &mut visited, 2 * MAX_VOUCH_SCORE
                 );
             };
 
@@ -115,6 +115,7 @@ module ol_framework::page_rank_lazy {
 
     // Simplified full graph traversal from a single node - returns weighted score
     fun walk_from_node(
+        roots: &vector<address>,
         current: address,
         target: address,
         visited: &mut vector<address>,
@@ -155,8 +156,8 @@ module ol_framework::page_rank_lazy {
         // catch the case
         // and exit early
         if(
-          root_of_trust::is_root_at_registry(@diem_framework, current) &&
-          root_of_trust::is_root_at_registry(@diem_framework, target)
+          vector::contains(roots, &current) &&
+          vector::contains(roots, &target)
           ) {
             return next_power
         };
@@ -184,6 +185,7 @@ module ol_framework::page_rank_lazy {
 
                 // Continue search from this neighbor with reduced power
                 let path_score = walk_from_node(
+                    roots,
                     neighbor,
                     target,
                     visited,
