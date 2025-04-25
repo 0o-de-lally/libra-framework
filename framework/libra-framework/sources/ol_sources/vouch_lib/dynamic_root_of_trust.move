@@ -10,7 +10,7 @@ module ol_framework::dynamic_root_of_trust {
     use ol_framework::root_of_trust;
     use ol_framework::vouch;
 
-    /// Calculates the dynamic root of trust by finding addresses that all candidate
+    /// Calculates the dynamic roo t of trust by finding addresses that all candidate
     /// roots vouch for (common vouches).
     ///
     /// @param registry - The address where the root of trust registry is stored

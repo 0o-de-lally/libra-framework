@@ -5,6 +5,7 @@ module ol_framework::page_rank_lazy {
     use std::vector;
     use ol_framework::vouch;
     use ol_framework::root_of_trust;
+    use ol_framework::dynamic_root_of_trust;
 
     friend ol_framework::vouch_txs;
 
@@ -58,8 +59,16 @@ module ol_framework::page_rank_lazy {
         };
 
         // Cache is stale or expired - compute fresh score
-        // Default roots to system account if no registry
-        let roots = root_of_trust::get_current_roots_at_registry(@diem_framework);
+        // First try to get dynamic roots of trust
+        let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots(@diem_framework);
+
+        // If we have dynamic roots, use them for calculation
+        let roots = if (vector::length(&dynamic_roots) > 0) {
+            dynamic_roots
+        } else {
+            // If no dynamic roots, use candidate roots from registry
+            root_of_trust::get_current_roots_at_registry(@diem_framework)
+        };
 
         // Compute score using selected algorithm
         let score = traverse_graph(&roots, addr);

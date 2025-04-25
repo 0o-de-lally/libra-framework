@@ -22,9 +22,9 @@ A static list of root addresses can lead to centralization and single points of 
 
 1. **Avoid Circular Dependencies**: The new module will import the `root_of_trust` and `vouch` modules but will not be imported by them, preventing circular dependencies.
 
-2. **Use Modern API**: The implementation will use current view functions from the `vouch` module instead of deprecated structures.
+2. **Use only public view functions in dependencies**: The implementation will use current view functions from the `vouch` module instead of deprecated structures.
 
-3. **Fallback Mechanism**: If no common vouches are found among candidates, the system will fall back to using the original candidate list.
+3. **Minimum quorum**: There is no fallback. The vouch system does not move forward until there are 5 dynamically constructed root of trust.
 
 ## Implementation Strategy
 
