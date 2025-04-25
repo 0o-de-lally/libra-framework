@@ -548,6 +548,7 @@ public fun setup_mutual_vouch(roots_sig: &vector<signer>) {
         };
         j = j + 1;
       };
+      assert!(page_rank_lazy::is_stale(signer::address_of(grantor)), 735701);
       i = i + 1;
     };
   }

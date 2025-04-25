@@ -23,9 +23,6 @@ module ol_framework::page_rank_lazy {
     // Circuit breaker to prevent stack overflow
     const MAX_PROCESSED_ADDRESSES: u64 = 1_000;
 
-    // Minimum number of roots to consider bootsrapped
-    const MIN_BOOTSTRAP_ROOTS: u64 = 3;
-
     // Per-user trust record - each user stores their own trust data
     struct UserTrustRecord has key, drop {
         // No need to store active_vouches - we'll get this from vouch module
@@ -50,9 +47,9 @@ module ol_framework::page_rank_lazy {
         };
     }
 
-    // Calculate or retrieve cached trust score
+    /// Calculate or retrieve cached trust score
+    /// will try to get a not stale score first
     public fun get_trust_score(addr: address): u64 acquires UserTrustRecord {
-        let current_timestamp = timestamp::now_seconds();
 
         // If user has no trust record, they have no score
         assert!(exists<UserTrustRecord>(addr), error::invalid_state(ENOT_INITIALIZED));
@@ -61,14 +58,19 @@ module ol_framework::page_rank_lazy {
         // and it's not stale, return the cached score
         let user_record = borrow_global<UserTrustRecord>(addr);
         if (!user_record.is_stale) {
+            diem_std::debug::print(&2222);
             return user_record.cached_score
         };
+
+        calc_trust_score(addr)
+    }
+
+    public fun calc_trust_score(addr: address): u64 acquires UserTrustRecord {
+        let current_timestamp = timestamp::now_seconds();
 
         // Cache is stale or expired - compute fresh score
         // First try to get dynamic roots of trust
         let roots = dynamic_root_of_trust::get_dynamic_roots();
-
-        // assert!(vector::length(&roots) > MIN_BOOTSTRAP_ROOTS, error::invalid_state(EBOOTSTRAP_ROOT));
 
         // Compute score using selected algorithm
         let score = traverse_graph(&roots, addr);
@@ -204,13 +206,13 @@ module ol_framework::page_rank_lazy {
 
     // Mark a user's trust score as stale
     public(friend) fun mark_as_stale(user: address) acquires UserTrustRecord {
-        walk_stale(user, &vector::empty<address>(), &mut 0);
+        walk_stale(user, &mut vector[], &mut 0);
     }
     // Internal helper function with cycle detection for marking nodes as stale
     // Uses vouch module to get outgoing vouches
     fun walk_stale(
         user: address,
-        visited: &vector<address>,
+        visited: &mut vector<address>,
         processed_count: &mut u64
     ) acquires UserTrustRecord {
 
@@ -237,8 +239,8 @@ module ol_framework::page_rank_lazy {
         let (outgoing_vouches, _) = vouch::get_given_vouches(user);
 
         // Create a new visited list that includes the current node
-        let new_visited = *visited; // Clone the visited list
-        vector::push_back(&mut new_visited, user);
+        // let new_visited = *visited; // Clone the visited list
+        vector::push_back(visited, user);
 
         // Recursively process downstream addresses
         let i = 0;
@@ -252,7 +254,7 @@ module ol_framework::page_rank_lazy {
             };
 
             // Pass the updated visited list to avoid cycles
-            walk_stale(*each_vouchee, &new_visited, processed_count);
+            walk_stale(*each_vouchee, visited, processed_count);
 
             // If we've hit the circuit breaker, stop processing
             if (*processed_count >= MAX_PROCESSED_ADDRESSES) {
