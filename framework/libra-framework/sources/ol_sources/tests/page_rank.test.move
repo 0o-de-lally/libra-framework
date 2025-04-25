@@ -24,39 +24,47 @@ module ol_framework::test_page_rank {
     let roots_sig = mock::create_test_end_users(framework, 10, 0);
     let root_users = mock::collect_addresses(&roots_sig);
 
-    // Initialize accounts - mock::simulate_transaction_validation already initializes vouch
+    // Initialize accounts - mock::mock_v8_migration already initializes vouch
     vector::for_each_ref(&roots_sig, |sig| {
-      mock::simulate_transaction_validation(sig);
+      mock::mock_v8_migration(sig);
     });
 
     // Make these accounts root of trust candidates
     root_of_trust::framework_migration(framework, root_users, 1, 30);
 
-    // For dynamic root to work, we need at least 1 common address that ALL candidates vouch for
-    // Create a common address all roots will vouch for (this will be the dynamic root)
-    let dynamic_root_sig = mock::create_user_from_u64(framework, 20);
-    let dynamic_root_addr = signer::address_of(&dynamic_root_sig);
-    mock::simulate_transaction_validation(&dynamic_root_sig);
+    return roots_sig
+  }
 
+  fun setup_mutual_vouch(roots_sig: &vector<signer>) {
     // Have all root candidates vouch for this common address
-    let count_roots = vector::length(&roots_sig);
+    let count_roots = vector::length(roots_sig);
     let i = 0;
     while (i < count_roots) {
-      let grantor = vector::borrow(&roots_sig, i);
-      vouch::vouch_for(grantor, dynamic_root_addr);
+      let j = 0;
+      let grantor = vector::borrow(roots_sig, i);
+      while (j < count_roots) {
+        if (i != j) { // Don't vouch for yourself
+          let beneficiary = vector::borrow(roots_sig, j);
+          let beneficiary_addr = signer::address_of(beneficiary);
+          vouch::vouch_for(grantor, beneficiary_addr);
+        };
+        j = j + 1;
+      };
       i = i + 1;
     };
 
     // Now dynamic_root_addr should be a dynamic root of trust since all candidates vouch for it
-    let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots(@diem_framework);
+    let dynamic_roots = dynamic_root_of_trust::get_dynamic_roots(@ol_framework);
 
-    diem_std::debug::print(&dynamic_roots);
-
-    // // Verify the dynamic root is set up properly
-    // assert!(vector::length(&dynamic_roots) > 0, 7001); // Ensure there are dynamic roots
-    // assert!(vector::contains(&dynamic_roots, &dynamic_root_addr), 7002); // Our address should be a dynamic root
-
-    return roots_sig
+    // assert that all the roots are the same as roots_sig
+    let count_roots = vector::length(&dynamic_roots);
+    assert!(vector::length(roots_sig) == count_roots, 7357000);
+    let i = 0;
+    while (i < count_roots) {
+      let root_addr = signer::address_of(vector::borrow(roots_sig, i));
+      assert!(vector::contains(&dynamic_roots, &root_addr), 7357000);
+      i = i + 1;
+    };
   }
 
   #[test(framework = @ol_framework)]
@@ -85,6 +93,17 @@ module ol_framework::test_page_rank {
 
       i = i + 1;
     }
+  }
+
+  #[test(framework = @ol_framework)]
+  /// tests that mutual vouching between root accounts works correctly.
+  fun meta_test_mutual_vouch(framework: &signer) {
+    // Set up the test base
+    let roots_sig = test_base(framework);
+
+    // Setup mutual vouching between root accounts
+    setup_mutual_vouch(&roots_sig);
+
   }
 
   #[test(framework = @ol_framework)]
@@ -346,7 +365,7 @@ module ol_framework::test_page_rank {
     let user_addr = signer::address_of(&seven_user_sig);
 
     // a v7 user touches the account to get structs created
-    mock::simulate_transaction_validation(&seven_user_sig);
+    mock::mock_v8_migration(&seven_user_sig);
     // check lazy migration worked
     let is_init = activity::is_initialized(user_addr);
     let pre = activity::is_prehistoric(user_addr);

@@ -11,7 +11,7 @@ module ol_framework::dynamic_root_of_trust {
     use ol_framework::vouch;
 
     #[view]
-    /// Calculates the dynamic roo t of trust by finding addresses that all candidate
+    /// Calculates the dynamic root of trust by finding addresses that all candidate
     /// roots vouch for (common vouches).
     ///
     /// @param registry - The address where the root of trust registry is stored
@@ -36,12 +36,19 @@ module ol_framework::dynamic_root_of_trust {
 
         // Initialize common vouches with the first candidate's vouches
         let common_vouches = first_vouches;
+        // Add the first candidate's own address to their vouches
+        // otherwise through iteration we end up with an empty vector
+        // also doing the same within the loop.
+        vector::push_back(&mut common_vouches, first_candidate);
 
         // For each additional candidate, find the intersection of vouches
         let i = 1;
         while (i < vector::length(&candidates)) {
             let candidate = *vector::borrow(&candidates, i);
             let candidate_vouches = vouch::get_given_vouches_not_expired(candidate);
+
+            // Add the candidate's own address to their vouches
+            vector::push_back(&mut candidate_vouches, candidate);
 
             // Update common_vouches to only include addresses that appear in both lists
             common_vouches = find_intersection(&common_vouches, &candidate_vouches);

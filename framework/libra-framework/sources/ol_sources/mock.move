@@ -575,7 +575,7 @@ public fun mock_vouch_score_50(framework: &signer, target_account: address): vec
 #[test_only]
 /// two state initializations happen on first
 /// transaction
-public fun simulate_transaction_validation(sender: &signer) {
+public fun mock_v8_migration(sender: &signer) {
     let time = timestamp::now_seconds();
     // will initialize structs if first time
     activity::increment(sender, time);
