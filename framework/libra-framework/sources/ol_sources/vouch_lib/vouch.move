@@ -150,13 +150,11 @@ module ol_framework::vouch {
     Mm, gonna try with a little help from my friends.
     */
 
-    // init the struct on a validators account.
-    public(friend) fun init(new_account_sig: &signer) {
+    /// init the vouch state on an account.
+    /// commit note: changed to public entry
+    /// in case an account needs to be healed.
+    public entry fun init(new_account_sig: &signer) {
       let acc = signer::address_of(new_account_sig);
-      // if (exists<MyVouches>(acc)) {
-      //   // let migration handle the initialization of new structs
-      //   return
-      // };
 
       if (!exists<ReceivedVouches>(acc)) {
         move_to<ReceivedVouches>(new_account_sig, ReceivedVouches {

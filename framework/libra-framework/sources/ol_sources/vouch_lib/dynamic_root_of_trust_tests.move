@@ -1,7 +1,6 @@
 #[test_only]
 module ol_framework::dynamic_root_of_trust_tests {
     use std::vector;
-    use std::signer;
     use diem_framework::account;
     use ol_framework::dynamic_root_of_trust;
     use ol_framework::root_of_trust;

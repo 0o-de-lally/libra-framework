@@ -10,12 +10,12 @@ module ol_framework::dynamic_root_of_trust {
     use ol_framework::root_of_trust;
     use ol_framework::vouch;
 
+    #[view]
     /// Calculates the dynamic roo t of trust by finding addresses that all candidate
     /// roots vouch for (common vouches).
     ///
     /// @param registry - The address where the root of trust registry is stored
     /// @return Vector of addresses that are vouched for by all candidates
-    #[view]
     public fun get_dynamic_roots(registry: address): vector<address> {
         // Get candidate roots from the registry
         let candidates = root_of_trust::get_current_roots_at_registry(registry);
@@ -57,12 +57,12 @@ module ol_framework::dynamic_root_of_trust {
         common_vouches
     }
 
+    #[view]
     /// Checks if the candidate roots have any common vouches.
     /// Useful for determining if we need to fall back to using candidates directly.
     ///
     /// @param registry - The address where the root of trust registry is stored
     /// @return true if common vouches exist, false otherwise
-    #[view]
     public fun has_common_vouches(registry: address): bool {
         let common_roots = get_dynamic_roots(registry);
         vector::length(&common_roots) > 0

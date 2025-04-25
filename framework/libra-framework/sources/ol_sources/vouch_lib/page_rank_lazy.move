@@ -271,7 +271,7 @@ module ol_framework::page_rank_lazy {
     }
 
     #[view]
-    // check if it's stale
+    /// Check if it's stale
     public fun is_stale(addr: address): bool acquires UserTrustRecord {
         assert!(exists<UserTrustRecord>(addr), error::invalid_state(ENOT_INITIALIZED));
         let record = borrow_global<UserTrustRecord>(addr);
@@ -279,7 +279,7 @@ module ol_framework::page_rank_lazy {
     }
 
     #[view]
-    // get the const for highest vouch score
+    /// Get the const for highest vouch score
     public fun get_max_single_score(): u64 {
         MAX_VOUCH_SCORE
     }
