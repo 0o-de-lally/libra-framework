@@ -37,9 +37,7 @@ module ol_framework::root_of_trust {
     use diem_framework::system_addresses;
     use diem_framework::timestamp;
 
-    friend ol_framework::page_rank_lazy;
-    friend ol_framework::migrations;
-    friend diem_framework::genesis;
+    friend ol_framework::dynamic_root_of_trust;
 
 
     #[test_only]
@@ -48,6 +46,8 @@ module ol_framework::root_of_trust {
     friend ol_framework::test_page_rank;
     #[test_only]
     friend ol_framework::mock;
+    #[test_only]
+    friend ol_framework::page_rank_lazy;
 
     /// Struct to store the root of trust configuration
     struct RootOfTrust has key {

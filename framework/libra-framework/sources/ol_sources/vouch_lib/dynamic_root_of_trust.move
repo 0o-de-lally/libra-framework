@@ -12,7 +12,12 @@ module ol_framework::dynamic_root_of_trust {
     use ol_framework::root_of_trust;
     use ol_framework::vouch;
 
+    friend ol_framework::genesis;
+    friend ol_framework::migrations;
     friend ol_framework::vouch_txs;
+
+    #[test_only]
+    friend ol_framework::mock;
 
     //////// ERROR CODES //////////
     const ENOT_INITIALIZED: u64 = 0;
@@ -23,8 +28,11 @@ module ol_framework::dynamic_root_of_trust {
 
 
     /// Initializes a new instance of LikelyHuman with an empty list of addresses.
-    public fun initialize(framework: &signer, list: vector<address>) acquires LikelyHuman {
+    public(friend) fun genesis_initialize(framework: &signer, universe: vector<address>, list: vector<address>) acquires LikelyHuman {
       system_addresses::assert_diem_framework(framework);
+
+      root_of_trust::genesis_initialize(framework, universe);
+
       if (!exists<LikelyHuman>(@diem_framework)) {
         move_to(framework, LikelyHuman { list });
       } else {

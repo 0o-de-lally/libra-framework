@@ -44,7 +44,7 @@ module diem_framework::genesis {
     use ol_framework::testnet;
     use ol_framework::epoch_boundary;
     use ol_framework::sacred_cows;
-    use ol_framework::root_of_trust;
+    use ol_framework::dynamic_root_of_trust;
 
     //////// end 0L ////////
 
@@ -275,7 +275,7 @@ module diem_framework::genesis {
           vouch::vm_migrate(diem_framework, one_val, val_addr_list);
         });
 
-        root_of_trust::genesis_initialize(diem_framework, val_addr_list);
+        dynamic_root_of_trust::genesis_initialize(diem_framework, val_addr_list, vector::empty());
 
         musical_chairs::initialize(diem_framework, num_validators);
         ////////

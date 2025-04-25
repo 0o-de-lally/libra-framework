@@ -31,6 +31,7 @@ use ol_framework::page_rank_lazy;
 use ol_framework::proof_of_fee;
 use ol_framework::receipts;
 use ol_framework::root_of_trust;
+use ol_framework::dynamic_root_of_trust;
 use ol_framework::slow_wallet;
 use ol_framework::validator_universe;
 use ol_framework::vouch;
@@ -355,7 +356,7 @@ public fun create_validator_accounts(root: &signer, num: u64, with_vouches: bool
 
     let val_addr = personas(num);
 
-    root_of_trust::framework_migration(root, val_addr, vector::length(&val_addr), 10000);
+    dynamic_root_of_trust::genesis_initialize(root, val_addr, vector::empty<address>());
 
     let i = 0;
     while (i < num) {
@@ -379,7 +380,7 @@ public fun create_validator_accounts(root: &signer, num: u64, with_vouches: bool
         i = i + 1;
     };
 
-    root_of_trust::genesis_initialize(root, stake::get_current_validators());
+    dynamic_root_of_trust::genesis_initialize(root, stake::get_current_validators(), vector::empty<address>());
 
     if (with_vouches) {
         vouch::set_vouch_price(root, 0);
