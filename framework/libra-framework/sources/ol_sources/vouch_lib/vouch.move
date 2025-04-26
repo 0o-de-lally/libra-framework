@@ -335,11 +335,11 @@ module ol_framework::vouch {
     /// will only successfully vouch if the two are not related by ancestry
     /// prevents spending a vouch that would not be counted.
     /// to add a vouch and ignore this check use insist_vouch
-    public(friend) fun vouch_for(grantor: &signer, friend_account: address) acquires ReceivedVouches, GivenVouches, VouchesLifetime {
+    public(friend) fun vouch_for_internal(grantor: &signer, friend_account: address) acquires ReceivedVouches, GivenVouches, VouchesLifetime {
       vouch_impl(grantor, friend_account, true);
     }
 
-    public(friend) fun revoke(grantor: &signer, friend_account: address) acquires ReceivedVouches, GivenVouches, VouchesLifetime {
+    public(friend) fun revoke_internal(grantor: &signer, friend_account: address) acquires ReceivedVouches, GivenVouches, VouchesLifetime {
       let grantor_acc = signer::address_of(grantor);
       assert!(grantor_acc != friend_account, error::invalid_argument(ETRY_SELF_VOUCH_REALLY));
 

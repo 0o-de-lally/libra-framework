@@ -26,7 +26,7 @@ module ol_framework::test_validator_vouch {
     });
 
     // alice vouches for bob
-    vouch::vouch_for(alice, @0x1000b);
+    vouch::vouch_for_internal(alice, @0x1000b);
 
     // check alice
     let (given_vouches, given_epochs) = vouch::get_given_vouches(@0x1000a);
@@ -42,7 +42,7 @@ module ol_framework::test_validator_vouch {
     mock::trigger_epoch(root);
 
     // carol vouches for bob
-    vouch::vouch_for(carol, @0x1000b);
+    vouch::vouch_for_internal(carol, @0x1000b);
 
     // check alice
     let (given_vouches, given_epochs) = vouch::get_given_vouches(@0x1000a);
@@ -68,11 +68,11 @@ module ol_framework::test_validator_vouch {
     vouch::set_vouch_price(root, 0);
 
     // alice and carol vouches for bob
-    vouch::vouch_for(alice, @0x1000b);
-    vouch::vouch_for(carol, @0x1000b);
+    vouch::vouch_for_internal(alice, @0x1000b);
+    vouch::vouch_for_internal(carol, @0x1000b);
 
     // alice revokes vouch for bob
-    vouch::revoke(alice, @0x1000b);
+    vouch::revoke_internal(alice, @0x1000b);
 
     // check alice
     let (given_vouches, given_epochs) = vouch::get_given_vouches(@0x1000a);
@@ -133,7 +133,7 @@ module ol_framework::test_validator_vouch {
     vouch::set_vouch_price(root, 0);
 
     // alice vouches for bob
-    vouch::vouch_for(alice, @0x1000b);
+    vouch::vouch_for_internal(alice, @0x1000b);
 
     let (given_vouches, given_epochs) = vouch::get_given_vouches(@0x1000a);
     assert!(given_vouches == vector[@0x1000b], 73570005);
@@ -147,7 +147,7 @@ module ol_framework::test_validator_vouch {
     mock::trigger_epoch(root);
 
     // alice vouches for bob again
-    vouch::vouch_for(alice, @0x1000b);
+    vouch::vouch_for_internal(alice, @0x1000b);
     // check alice
     let (given_vouches, given_epochs) = vouch::get_given_vouches(@0x1000a);
     assert!(given_vouches == vector[@0x1000b], 73570005);
@@ -170,7 +170,7 @@ module ol_framework::test_validator_vouch {
     vouch::set_vouch_price(root, 0);
 
     // alice vouches for herself
-    vouch::vouch_for(alice, @0x1000a);
+    vouch::vouch_for_internal(alice, @0x1000a);
   }
 
   #[test(root = @ol_framework, alice = @0x1000a)]
@@ -181,7 +181,7 @@ module ol_framework::test_validator_vouch {
     mock::create_validator_accounts(root, 1, false);
 
     // alice try to revoke herself
-    vouch::revoke(alice, @0x1000a);
+    vouch::revoke_internal(alice, @0x1000a);
   }
 
   #[test(root = @ol_framework, alice = @0x1000a, bob = @0x1000b)]
@@ -192,7 +192,7 @@ module ol_framework::test_validator_vouch {
     mock::create_validator_accounts(root, 2, false);
 
     // alice vouches for bob
-    vouch::revoke(alice, @0x1000b);
+    vouch::revoke_internal(alice, @0x1000b);
   }
 
   #[test(root = @ol_framework, alice = @0x1000a)]
@@ -234,7 +234,7 @@ module ol_framework::test_validator_vouch {
   #[expected_failure(abort_code = 0x30006, location = ol_framework::vouch)]
   fun vouch_without_init(alice: &signer) {
     // alice vouches for bob without init
-    vouch::vouch_for(alice, @0x1000b);
+    vouch::vouch_for_internal(alice, @0x1000b);
   }
 
   #[test(root = @ol_framework, alice = @0x1000a)]
@@ -244,14 +244,14 @@ module ol_framework::test_validator_vouch {
     mock::create_validator_accounts(root, 1, false);
 
     // alice vouches for bob without init
-    vouch::vouch_for(alice, @0x1000b);
+    vouch::vouch_for_internal(alice, @0x1000b);
   }
 
   #[test(root = @ol_framework, alice = @0x1000a, bob = @0x1000b)]
   #[expected_failure(abort_code = 0x30006, location = ol_framework::vouch)]
   fun revoke_without_init(alice: &signer) {
     // alice try to revoke bob without vouch
-    vouch::revoke(alice, @0x1000b);
+    vouch::revoke_internal(alice, @0x1000b);
   }
 
   #[test(root = @ol_framework, alice = @0x1000a)]
@@ -261,7 +261,7 @@ module ol_framework::test_validator_vouch {
     mock::create_validator_accounts(root, 2, false);
 
     // alice try to revoke bob without vouch
-    vouch::revoke(alice, @0x1000b);
+    vouch::revoke_internal(alice, @0x1000b);
   }
 
 

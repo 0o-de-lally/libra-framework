@@ -16,7 +16,7 @@ module ol_framework::vouch_txs {
   public entry fun vouch_for(grantor: &signer, friend_account: address) {
     let grantor_addr = signer::address_of(grantor);
     vouch_limits::assert_under_limit(grantor_addr, friend_account);
-    vouch::vouch_for(grantor, friend_account);
+    vouch::vouch_for_internal(grantor, friend_account);
     page_rank_lazy::mark_as_stale(grantor_addr);
     page_rank_lazy::mark_as_stale(friend_account);
     maybe_debit_validator_cost(grantor, friend_account);
@@ -43,7 +43,7 @@ module ol_framework::vouch_txs {
 
     let grantor_addr = signer::address_of(grantor);
     vouch_limits::assert_revoke_limit(grantor_addr);
-    vouch::revoke(grantor, friend_account);
+    vouch::revoke_internal(grantor, friend_account);
     page_rank_lazy::mark_as_stale(friend_account);
 
         // if both are candidates for root of trust, update it

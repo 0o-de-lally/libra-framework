@@ -24,7 +24,7 @@ spec ol_framework::vouch {
     }
 
     // Specification for revoking a vouch
-    spec revoke {
+    spec revoke_internal {
         pragma aborts_if_is_partial = true; // Allows partial aborts
 
         // Basic property - function should not abort

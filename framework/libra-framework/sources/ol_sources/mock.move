@@ -394,7 +394,7 @@ public fun create_validator_accounts(root: &signer, num: u64, with_vouches: bool
                 let recipient = vector::borrow(&val_addr, f);
 
                 if (grantor != recipient) {
-                    vouch::vouch_for(&grantor_sig, *recipient);
+                    vouch_txs::vouch_for(&grantor_sig, *recipient);
                 };
                 f = f + 1;
             };
@@ -586,7 +586,7 @@ public fun mock_vouch_score_50(framework: &signer, target_account: address): vec
         let val_signer = account::create_signer_for_test(val_addr);
 
         // Initialize vouch module for validator if not already done
-        vouch::vouch_for(&val_signer, target_account);
+        vouch_txs::vouch_for(&val_signer, target_account);
 
         i = i + 1;
     };
@@ -729,9 +729,9 @@ fun validator_vouches_mocked_correctly(root: &signer, alice: address) {
     let (received_vouches, _) = vouch::get_received_vouches(alice);
     assert!(vector::length(&received_vouches) == 9, 7357002);
 
-    // no likely humans have bee set yet, so we would expect the score to be 0
     let score = page_rank_lazy::get_trust_score(alice);
-    assert!(score == 0, 7357002);
+    let max_single = page_rank_lazy::get_max_single_score();
+    assert!(score == max_single * vector::length(&received_vouches), 7357002);
 
     let remaining = vouch_limits::get_vouch_limit(alice);
     // received 9 vouches, and has given 9, and since is root

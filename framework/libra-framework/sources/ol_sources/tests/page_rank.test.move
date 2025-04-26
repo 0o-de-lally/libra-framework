@@ -177,7 +177,7 @@ module ol_framework::test_page_rank {
     while (i < vector::length(&roots_sig)) {
       let grantor = vector::borrow(&roots_sig, i);
       vouch::init(grantor);
-      vouch::vouch_for(grantor, new_user_addr);
+      vouch_txs::vouch_for(grantor, new_user_addr);
       i = i + 1;
     };
 
@@ -222,7 +222,7 @@ module ol_framework::test_page_rank {
     while (i < vector::length(&roots_sig)) {
       let root_grantor = vector::borrow(&roots_sig, i);
       vouch::init(root_grantor);
-      vouch::vouch_for(root_grantor, direct_vouched_addr);
+      vouch_txs::vouch_for(root_grantor, direct_vouched_addr);
       i = i + 1;
     };
 
@@ -283,7 +283,7 @@ module ol_framework::test_page_rank {
     page_rank_lazy::maybe_initialize_trust_record(&new_user_sig);
 
     // Setup one vouch from the first root
-    vouch::vouch_for(root_sig, new_user_addr);
+    vouch_txs::vouch_for(root_sig, new_user_addr);
 
     // Now check the page rank score (should be 100)
     let page_rank_score = page_rank_lazy::get_trust_score(new_user_addr);
@@ -393,7 +393,7 @@ module ol_framework::test_page_rank {
         if (i != j) { // Don't vouch for yourself
           let beneficiary = vector::borrow(&roots_sig, j);
           let beneficiary_addr = signer::address_of(beneficiary);
-          vouch::vouch_for(grantor, beneficiary_addr);
+          vouch_txs::vouch_for(grantor, beneficiary_addr);
         };
         j = j + 1;
       };
@@ -402,7 +402,7 @@ module ol_framework::test_page_rank {
 
     // First hop: the root vouches for user1 (at first hop)
     let root0 = vector::borrow(&roots_sig, 0);
-    vouch::vouch_for(root0, user1_addr);
+    vouch_txs::vouch_for(root0, user1_addr);
 
     let root0_score = page_rank_lazy::get_trust_score(signer::address_of(root0));
     assert!(root0_score == 9 * max_single_score, 7357100);
@@ -451,7 +451,7 @@ module ol_framework::test_page_rank {
 
       vouch::init(beneficiary_sig);
       page_rank_lazy::maybe_initialize_trust_record(beneficiary_sig);
-      vouch::vouch_for(grantor_sig, *beneficiary_addr);
+      vouch_txs::vouch_for(grantor_sig, *beneficiary_addr);
 
       let user1_score = page_rank_lazy::get_trust_score(*beneficiary_addr);
 
