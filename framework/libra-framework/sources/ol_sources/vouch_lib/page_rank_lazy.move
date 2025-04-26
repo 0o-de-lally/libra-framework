@@ -4,7 +4,7 @@ module ol_framework::page_rank_lazy {
     use std::timestamp;
     use std::vector;
     use ol_framework::vouch;
-    use ol_framework::root_of_trust;
+    use ol_framework::human_candidates;
     use ol_framework::dynamic_root_of_trust;
 
     friend ol_framework::vouch_txs;
@@ -179,7 +179,7 @@ module ol_framework::page_rank_lazy {
                 // want to accumulate points from
                 // roots vouching for each other.
                 if (
-                  root_of_trust::is_root_at_registry(@diem_framework, neighbor)
+                  human_candidates::found_in_registry(@diem_framework, neighbor)
                   ) {
                     continue
                 };

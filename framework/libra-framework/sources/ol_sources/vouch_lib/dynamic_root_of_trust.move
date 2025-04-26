@@ -9,7 +9,7 @@ module ol_framework::dynamic_root_of_trust {
     use std::vector;
     use std::error;
     use diem_framework::system_addresses;
-    use ol_framework::root_of_trust;
+    use ol_framework::human_candidates;
     use ol_framework::vouch;
 
     friend ol_framework::genesis;
@@ -38,7 +38,7 @@ module ol_framework::dynamic_root_of_trust {
     public(friend) fun genesis_initialize(framework: &signer, universe: vector<address>, list: vector<address>) acquires LikelyHuman {
       system_addresses::assert_diem_framework(framework);
 
-      root_of_trust::genesis_initialize(framework, universe);
+      human_candidates::genesis_initialize(framework, universe);
 
       if (!exists<LikelyHuman>(@diem_framework)) {
         move_to(framework, LikelyHuman { list });
@@ -75,7 +75,7 @@ module ol_framework::dynamic_root_of_trust {
     /// @return Vector of addresses that are vouched for by all candidates
     public fun calculate_dynamic_roots(): vector<address> {
         // Get candidate roots from the registry
-        let candidates = root_of_trust::get_current_roots_at_registry(@diem_framework);
+        let candidates = human_candidates::get_current_candidates_at_registry(@diem_framework);
 
         // If there are no candidates, return empty vector
         if (vector::length(&candidates) == 0) {

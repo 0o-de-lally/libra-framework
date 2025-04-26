@@ -2,7 +2,7 @@
 module ol_framework::test_page_rank {
   use ol_framework::activity;
   use ol_framework::founder;
-  use ol_framework::root_of_trust;
+  use ol_framework::human_candidates;
   use ol_framework::dynamic_root_of_trust;
   use ol_framework::mock;
   use ol_framework::ol_account;
@@ -67,7 +67,7 @@ module ol_framework::test_page_rank {
     while (i < 10) {
       let addr = signer::address_of(vector::borrow(&roots_sig, i));
       // Pass both the registry address (@ol_framework) and the account being checked
-      assert!(root_of_trust::is_root_at_registry(@ol_framework, addr), 1001);
+      assert!(human_candidates::found_in_registry(@ol_framework, addr), 1001);
 
       let (received, _) = vouch::get_received_vouches(addr);
       assert!(vector::length(&received) == 0, 1002);

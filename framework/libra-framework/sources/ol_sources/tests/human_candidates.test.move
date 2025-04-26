@@ -1,5 +1,5 @@
 #[test_only]
-module ol_framework::root_of_trust_tests {
+module ol_framework::human_candidates_tests {
     use std::vector;
     use diem_framework::account;
     use diem_framework::timestamp;
@@ -7,7 +7,7 @@ module ol_framework::root_of_trust_tests {
     use ol_framework::ol_account;
     use ol_framework::migrations;
     use ol_framework::mock;
-    use ol_framework::root_of_trust;
+    use ol_framework::human_candidates;
 
     // Test addresses with descriptive names showing relationships
     const ALICE_AT_GENESIS: address = @0x123;
@@ -61,7 +61,7 @@ module ol_framework::root_of_trust_tests {
     fun test_genesis_roots(framework: &signer) {
         mock::genesis_n_vals(framework, 5);
 
-        let roots = root_of_trust::get_current_roots_at_registry(@0x1);
+        let roots = human_candidates::get_current_candidates_at_registry(@0x1);
         assert!(vector::length(&roots) == 5, 1);
     }
 
@@ -73,12 +73,12 @@ module ol_framework::root_of_trust_tests {
         // Setup test environment
         mock::genesis_n_vals(framework, 4);
 
-        let roots = root_of_trust::get_current_roots_at_registry(@0x1);
+        let roots = human_candidates::get_current_candidates_at_registry(@0x1);
         assert!(vector::length(&roots) == 4, 1);
 
         // now lets empty it to test epoch boundary self-healing
-        root_of_trust::test_set_root_of_trust(framework, vector::empty(), 0, 0);
-        let roots = root_of_trust::get_current_roots_at_registry(@0x1);
+        human_candidates::test_set_root_of_trust(framework, vector::empty(), 0, 0);
+        let roots = human_candidates::get_current_candidates_at_registry(@0x1);
         assert!(vector::length(&roots) == 0, 1);
 
         // It is show time!!! RUN MIGRATION
@@ -86,7 +86,7 @@ module ol_framework::root_of_trust_tests {
 
         // check last migration number
         assert!(migrations::has_migration_executed(2), 73570011);
-        let roots = root_of_trust::get_current_roots_at_registry(@0x1);
+        let roots = human_candidates::get_current_candidates_at_registry(@0x1);
         assert!(vector::length(&roots) == 19, 1);
     }
 
@@ -101,7 +101,7 @@ module ol_framework::root_of_trust_tests {
         vector::push_back(&mut roots, DAVE_AT_GENESIS);
 
         // Initialize root of trust on framework account
-        root_of_trust::test_set_root_of_trust(
+        human_candidates::test_set_root_of_trust(
             framework,
             roots,
             2,  // minimum_cohort size
@@ -109,12 +109,12 @@ module ol_framework::root_of_trust_tests {
         );
 
         // Assert root of trust was initialized correctly
-        assert!(root_of_trust::is_root_at_registry(@0x1, ALICE_AT_GENESIS), 1);
-        assert!(root_of_trust::is_root_at_registry(@0x1, DAVE_AT_GENESIS), 2);
+        assert!(human_candidates::found_in_registry(@0x1, ALICE_AT_GENESIS), 1);
+        assert!(human_candidates::found_in_registry(@0x1, DAVE_AT_GENESIS), 2);
 
         // Verify non-root addresses are not recognized
-        assert!(!root_of_trust::is_root_at_registry(@0x1, BOB_ALICES_CHILD), 3);
-        assert!(!root_of_trust::is_root_at_registry(@0x1, EVE_DAVES_CHILD), 4);
+        assert!(!human_candidates::found_in_registry(@0x1, BOB_ALICES_CHILD), 3);
+        assert!(!human_candidates::found_in_registry(@0x1, EVE_DAVES_CHILD), 4);
     }
 
     #[test(framework = @0x1)]
@@ -127,7 +127,7 @@ module ol_framework::root_of_trust_tests {
         vector::push_back(&mut initial_roots, ALICE_AT_GENESIS);
         vector::push_back(&mut initial_roots, DAVE_AT_GENESIS);
 
-        root_of_trust::test_set_root_of_trust(
+        human_candidates::test_set_root_of_trust(
             framework,
             initial_roots,
             2,  // minimum_cohort size
@@ -135,32 +135,32 @@ module ol_framework::root_of_trust_tests {
         );
 
         // Verify initial setup
-        assert!(root_of_trust::is_root_at_registry(@0x1, ALICE_AT_GENESIS), 1);
-        assert!(root_of_trust::is_root_at_registry(@0x1, DAVE_AT_GENESIS), 2);
+        assert!(human_candidates::found_in_registry(@0x1, ALICE_AT_GENESIS), 1);
+        assert!(human_candidates::found_in_registry(@0x1, DAVE_AT_GENESIS), 2);
 
         // Try to rotate before window - should fail
         let adds = vector::singleton(BOB_ALICES_CHILD);
         let removes = vector::singleton(ALICE_AT_GENESIS);
-        assert!(!root_of_trust::can_rotate(@0x1), 3);
+        assert!(!human_candidates::can_rotate(@0x1), 3);
 
         // Advance time past rotation window (7 days)
         timestamp::fast_forward_seconds(7 * 24 * 60 * 60);
 
         // Verify rotation is now possible
-        assert!(root_of_trust::can_rotate(@0x1), 4);
+        assert!(human_candidates::can_rotate(@0x1), 4);
 
         // Perform rotation
-        root_of_trust::rotate_roots(framework, adds, removes);
+        human_candidates::rotate_candidates(framework, adds, removes);
 
         // Verify new root set
-        assert!(!root_of_trust::is_root_at_registry(@0x1, ALICE_AT_GENESIS), 5);
-        assert!(root_of_trust::is_root_at_registry(@0x1, BOB_ALICES_CHILD), 6);
-        assert!(root_of_trust::is_root_at_registry(@0x1, DAVE_AT_GENESIS), 7);
+        assert!(!human_candidates::found_in_registry(@0x1, ALICE_AT_GENESIS), 5);
+        assert!(human_candidates::found_in_registry(@0x1, BOB_ALICES_CHILD), 6);
+        assert!(human_candidates::found_in_registry(@0x1, DAVE_AT_GENESIS), 7);
     }
 
 
     #[test(framework = @0x1)]
-    #[expected_failure(abort_code = 196613, location = root_of_trust )]
+    #[expected_failure(abort_code = 196613, location = human_candidates )]
     fun test_framework_root_rotation_fails_early(framework: &signer) {
         // Setup test environment and accounts
         setup_test_ancestry(framework);
@@ -170,7 +170,7 @@ module ol_framework::root_of_trust_tests {
         vector::push_back(&mut initial_roots, ALICE_AT_GENESIS);
         vector::push_back(&mut initial_roots, DAVE_AT_GENESIS);
 
-        root_of_trust::test_set_root_of_trust(
+        human_candidates::test_set_root_of_trust(
             framework,
             initial_roots,
             2,  // minimum_cohort size
@@ -178,7 +178,7 @@ module ol_framework::root_of_trust_tests {
         );
 
         // Verify initial setup
-        assert!(root_of_trust::is_root_at_registry(@0x1, ALICE_AT_GENESIS), 1);
+        assert!(human_candidates::found_in_registry(@0x1, ALICE_AT_GENESIS), 1);
 
         // Only advance 2 days (less than required 5 days)
         timestamp::fast_forward_seconds(2 * 24 * 60 * 60);
@@ -188,6 +188,6 @@ module ol_framework::root_of_trust_tests {
         let removes = vector::singleton(ALICE_AT_GENESIS);
 
         // This call should abort with EROTATION_WINDOW_NOT_ELAPSED
-        root_of_trust::rotate_roots(framework, adds, removes);
+        human_candidates::rotate_candidates(framework, adds, removes);
     }
 }

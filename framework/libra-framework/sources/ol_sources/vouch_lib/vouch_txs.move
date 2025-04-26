@@ -7,7 +7,7 @@ module ol_framework::vouch_txs {
   use diem_framework::transaction_fee;
   use ol_framework::founder;
   use ol_framework::ol_account;
-  use ol_framework::root_of_trust;
+  use ol_framework::human_candidates;
   use ol_framework::dynamic_root_of_trust;
   use ol_framework::page_rank_lazy;
   use ol_framework::vouch;
@@ -23,8 +23,8 @@ module ol_framework::vouch_txs {
     founder::maybe_set_friendly_founder(friend_account);
     // if both are candidates for root of trust, update it
     if (
-        root_of_trust::is_candidate_human(grantor_addr) &&
-        root_of_trust::is_candidate_human(friend_account)
+        human_candidates::is_candidate_human(grantor_addr) &&
+        human_candidates::is_candidate_human(friend_account)
       ) {
         dynamic_root_of_trust::maybe_update_humans(grantor);
     }
@@ -48,8 +48,8 @@ module ol_framework::vouch_txs {
 
         // if both are candidates for root of trust, update it
     if (
-        root_of_trust::is_candidate_human(grantor_addr) &&
-        root_of_trust::is_candidate_human(friend_account)
+        human_candidates::is_candidate_human(grantor_addr) &&
+        human_candidates::is_candidate_human(friend_account)
       ) {
         dynamic_root_of_trust::maybe_update_humans(grantor);
     }

@@ -5,7 +5,7 @@ module ol_framework::migrations {
   use diem_framework::system_addresses;
   use ol_framework::donor_voice_migration;
   use ol_framework::epoch_helper;
-  use ol_framework::root_of_trust;
+  use ol_framework::human_candidates;
   use ol_framework::dynamic_root_of_trust;
   use ol_framework::migration_capability::MigrationCapability;
 
@@ -37,7 +37,7 @@ module ol_framework::migrations {
     };
 
     if (apply_migration(root, 2, b"If root of trust is not initialize use 2021 genesis set")) {
-      dynamic_root_of_trust::genesis_initialize(root, root_of_trust::genesis_root(), vector::empty());
+      dynamic_root_of_trust::genesis_initialize(root, human_candidates::genesis_root(), vector::empty());
     };
 
     if (apply_migration(root, 3, b"All community endowments need new data structures")) {

@@ -30,7 +30,7 @@ use ol_framework::ol_account;
 use ol_framework::page_rank_lazy;
 use ol_framework::proof_of_fee;
 use ol_framework::receipts;
-use ol_framework::root_of_trust;
+use ol_framework::human_candidates;
 use ol_framework::dynamic_root_of_trust;
 use ol_framework::slow_wallet;
 use ol_framework::validator_universe;
@@ -721,7 +721,7 @@ fun validator_vouches_mocked_correctly(root: &signer, alice: address) {
     };
 
     // in testnet the genesis validators are the seed root of trust for human verification
-    let is_root = root_of_trust::is_root_at_registry(@ol_framework, alice);
+    let is_root = human_candidates::found_in_registry(@ol_framework, alice);
     assert!(is_root, 7357001);
 
     let (given_vouches, _) = vouch::get_given_vouches(alice);

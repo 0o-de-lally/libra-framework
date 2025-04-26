@@ -3,7 +3,7 @@ module ol_framework::vouch_limits {
     use std::error;
     use std::vector;
     use ol_framework::page_rank_lazy;
-    use ol_framework::root_of_trust;
+    use ol_framework::human_candidates;
     use ol_framework::epoch_helper;
     use ol_framework::vouch;
 
@@ -57,7 +57,7 @@ module ol_framework::vouch_limits {
 
       let (found, _i) = vector::index_of(&given_vouches, &vouched_account);
 
-      let is_root = root_of_trust::is_root_at_registry(@diem_framework, grantor_acc);
+      let is_root = human_candidates::found_in_registry(@diem_framework, grantor_acc);
       // don't check max vouches if we are just extending the expiration
       if (!found && !is_root) {
         // are we hitting the limit of max vouches
@@ -96,7 +96,7 @@ module ol_framework::vouch_limits {
         let received_count = vector::length(&received_vouches);
         let given_vouches = vouch::get_given_vouches_not_expired(account);
 
-        let is_root = root_of_trust::is_root_at_registry(@diem_framework, account);
+        let is_root = human_candidates::found_in_registry(@diem_framework, account);
 
         // Base case: Always allow at least vouches received + 1
         // Though root of trust accounts need to propagate trust faster
@@ -230,7 +230,7 @@ module ol_framework::vouch_limits {
 
       // root users exempt from the score limit
       // they need to propagate trust faster
-      if (root_of_trust::is_root_at_registry(@diem_framework, addr)) {
+      if (human_candidates::found_in_registry(@diem_framework, addr)) {
         vouches_allowed = BASE_MAX_VOUCHES;
       };
 

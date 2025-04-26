@@ -22,15 +22,15 @@
 /// played in OL. It is not the only root of trust, and neither is it static.
 /// Previously the Validator qualification game, had these functions built in using the (vouch.move).
 /// For validators the root of trust was presumed to be the Genesis validator set. This source does not change that policy: it commences a default root of trust based on that genesis validator set, and with #2 above allows for the rotation of that root of trust.
-/// There are a number of ways of instantiating and updating roots of trust,
+/// There are a number of ways of instantiating and updating candidates for trust,
 /// this module is agnostic to the method of instantiation, besides providing
 /// a transition from how it was implemented prior to V8.
 /// It's expected that there will be experimentation in the rotating and
-/// and selecting of roots of trust. For now this module is agnostic,
+/// and selecting of candidates for the root of trust. For now this module is agnostic,
 /// understanding the relationship building happens off-chain.
 
 
-module ol_framework::root_of_trust {
+module ol_framework::human_candidates {
     use std::vector;
     use std::signer;
     use std::error;  // Add error module
@@ -41,7 +41,7 @@ module ol_framework::root_of_trust {
 
 
     #[test_only]
-    friend ol_framework::root_of_trust_tests;
+    friend ol_framework::human_candidates_tests;
     #[test_only]
     friend ol_framework::test_page_rank;
     #[test_only]
@@ -50,8 +50,8 @@ module ol_framework::root_of_trust {
     friend ol_framework::page_rank_lazy;
 
     /// Struct to store the root of trust configuration
-    struct RootOfTrust has key {
-        roots: vector<address>,
+    struct HumanRegistry has key {
+        candidates: vector<address>,
         last_updated_secs: u64,
         minimum_cohort: u64,
         rotate_window_days: u64,
@@ -70,11 +70,11 @@ module ol_framework::root_of_trust {
     /// Anyone can initialize a root of trust on their account.
     /// as an initial implementation 0x1 framework address will also
     /// keep a default root of trust.
-    fun maybe_initialize(user_sig: &signer, roots: vector<address>, minimum_cohort: u64, rotate_window_days: u64) {
+    fun maybe_initialize(user_sig: &signer, candidates: vector<address>, minimum_cohort: u64, rotate_window_days: u64) {
         let user_addr = signer::address_of(user_sig);
-        if (!exists<RootOfTrust>(user_addr)) {
-            move_to(user_sig, RootOfTrust {
-                roots,
+        if (!exists<HumanRegistry>(user_addr)) {
+            move_to(user_sig, HumanRegistry {
+                candidates,
                 last_updated_secs: 0, // Initialize at 0
                 minimum_cohort,
                 rotate_window_days,
@@ -82,56 +82,56 @@ module ol_framework::root_of_trust {
         };
     }
 
-    /// At the time of V8 upgrade, the framework
-    /// will migrate the prior root of trust implementation
-    /// to the new explicit one.
-    public(friend) fun depr_framework_migration(framework: &signer, roots: vector<address>, minimum_cohort: u64, rotation_days: u64) acquires RootOfTrust {
-        // Verify this is called by the framework account
-        system_addresses::assert_diem_framework(framework);
+    // /// At the time of V8 upgrade, the framework
+    // /// will migrate the prior root of trust implementation
+    // /// to the new explicit one.
+    // public(friend) fun depr_framework_migration(framework: &signer, candidates: vector<address>, minimum_cohort: u64, rotation_days: u64) acquires HumanRegistry {
+    //     // Verify this is called by the framework account
+    //     system_addresses::assert_diem_framework(framework);
 
-        // Initialize the root of trust at the framework address
-        if (is_initialized(@ol_framework)) {
-            let root_of_trust = borrow_global_mut<RootOfTrust>(@ol_framework);
-            root_of_trust.roots = roots;
+    //     // Initialize the root of trust at the framework address
+    //     if (is_initialized(@ol_framework)) {
+    //         let root_of_trust = borrow_global_mut<HumanRegistry>(@ol_framework);
+    //         root_of_trust.candidates = candidates;
 
-        } else {
-          maybe_initialize(framework, roots, minimum_cohort, rotation_days);
-        }
-    }
+    //     } else {
+    //       maybe_initialize(framework, candidates, minimum_cohort, rotation_days);
+    //     }
+    // }
 
     /// for testnet genesis initialize with the validator set
-    public(friend) fun genesis_initialize(framework: &signer, roots: vector<address>) acquires RootOfTrust {
+    public(friend) fun genesis_initialize(framework: &signer, candidates: vector<address>) acquires HumanRegistry {
         // Verify this is called by the framework account
         system_addresses::assert_diem_framework(framework);
 
         let days = 365;
-        let len = vector::length(&roots);
+        let len = vector::length(&candidates);
 
         // Initialize the root of trust at the framework address
-        maybe_initialize(framework, roots, len, days);
+        maybe_initialize(framework, candidates, len, days);
         // belt and suspenders, override if it is already initialized
-        set_framework_root(framework, roots, len, days);
+        set_framework_maybe_human(framework, candidates, len, days);
     }
 
     /// At the time of V8 upgrade, the framework
     /// will migrate the prior root of trust implementation
     /// to the new explicit one.
-    fun set_framework_root(framework: &signer, roots: vector<address>, minimum_cohort: u64, rotation_days: u64) acquires RootOfTrust {
+    fun set_framework_maybe_human(framework: &signer, candidates: vector<address>, minimum_cohort: u64, rotation_days: u64) acquires HumanRegistry {
         // Verify this is called by the framework account
         system_addresses::assert_diem_framework(framework);
 
-        if (exists<RootOfTrust>(@diem_framework)) {
-            let root_of_trust = borrow_global_mut<RootOfTrust>(@diem_framework);
-            root_of_trust.roots = roots;
+        if (exists<HumanRegistry>(@diem_framework)) {
+            let root_of_trust = borrow_global_mut<HumanRegistry>(@diem_framework);
+            root_of_trust.candidates = candidates;
             root_of_trust.minimum_cohort = minimum_cohort;
             root_of_trust.rotate_window_days = rotation_days;
         };
     }
 
     /// Rotate the root of trust set by adding and removing addresses
-    public(friend) fun rotate_roots(user_sig: &signer, adds: vector<address>, removes: vector<address>) acquires RootOfTrust {
+    public(friend) fun rotate_candidates(user_sig: &signer, adds: vector<address>, removes: vector<address>) acquires HumanRegistry {
         let user_addr = signer::address_of(user_sig);
-        assert!(exists<RootOfTrust>(user_addr), error::not_found(ENOT_INITIALIZED));
+        assert!(exists<HumanRegistry>(user_addr), error::not_found(ENOT_INITIALIZED));
         assert!(can_rotate(user_addr), error::invalid_state(EROTATION_WINDOW_NOT_ELAPSED));
 
         // Check for conflicting addresses in adds and removes
@@ -142,15 +142,15 @@ module ol_framework::root_of_trust {
             i = i + 1;
         };
 
-        let root_of_trust = borrow_global_mut<RootOfTrust>(user_addr);
+        let root_of_trust = borrow_global_mut<HumanRegistry>(user_addr);
 
         // Process removals first
         i = 0;
         while (i < vector::length(&removes)) {
             let addr = *vector::borrow(&removes, i);
-            let (found, index) = vector::index_of(&root_of_trust.roots, &addr);
+            let (found, index) = vector::index_of(&root_of_trust.candidates, &addr);
             if (found) {
-                vector::remove(&mut root_of_trust.roots, index);
+                vector::remove(&mut root_of_trust.candidates, index);
             };
             i = i + 1;
         };
@@ -159,8 +159,8 @@ module ol_framework::root_of_trust {
         i = 0;
         while (i < vector::length(&adds)) {
             let addr = *vector::borrow(&adds, i);
-            if (!vector::contains(&root_of_trust.roots, &addr)) {
-                vector::push_back(&mut root_of_trust.roots, addr);
+            if (!vector::contains(&root_of_trust.candidates, &addr)) {
+                vector::push_back(&mut root_of_trust.candidates, addr);
             };
             i = i + 1;
         };
@@ -169,11 +169,11 @@ module ol_framework::root_of_trust {
     }
 
     /// Update the minimum cohort size required
-    fun update_minimum_cohort(user_sig: &signer, new_minimum: u64) acquires RootOfTrust {
+    fun update_minimum_cohort(user_sig: &signer, new_minimum: u64) acquires HumanRegistry {
         let user_addr = signer::address_of(user_sig);
-        assert!(exists<RootOfTrust>(user_addr), ENOT_INITIALIZED);
+        assert!(exists<HumanRegistry>(user_addr), ENOT_INITIALIZED);
 
-        let root_of_trust = borrow_global_mut<RootOfTrust>(user_addr);
+        let root_of_trust = borrow_global_mut<HumanRegistry>(user_addr);
         root_of_trust.minimum_cohort = new_minimum;
         root_of_trust.last_updated_secs = timestamp::now_seconds();
     }
@@ -181,34 +181,34 @@ module ol_framework::root_of_trust {
     #[view]
     /// checks if registry is initialized
     public fun is_initialized(registry: address): bool {
-        exists<RootOfTrust>(registry)
+        exists<HumanRegistry>(registry)
     }
 
     #[view]
     /// check if the user is in the universe of plausible humans
-    public fun is_candidate_human(account: address): bool acquires RootOfTrust {
-        let root_of_trust = borrow_global<RootOfTrust>(@diem_framework);
-        vector::contains(&root_of_trust.roots, &account)
+    public fun is_candidate_human(account: address): bool acquires HumanRegistry {
+        let root_of_trust = borrow_global<HumanRegistry>(@diem_framework);
+        vector::contains(&root_of_trust.candidates, &account)
     }
 
     #[view]
     /// Get the current set of root addresses
-    public fun get_current_roots_at_registry(registry: address): vector<address> acquires RootOfTrust {
+    public fun get_current_candidates_at_registry(registry: address): vector<address> acquires HumanRegistry {
        // return empty vector if the root of trust is not initialized
-        if (!exists<RootOfTrust>(registry)) {
+        if (!exists<HumanRegistry>(registry)) {
             vector::empty<address>()
         } else {
-            let root_of_trust = borrow_global<RootOfTrust>(registry);
-            root_of_trust.roots
+            let root_of_trust = borrow_global<HumanRegistry>(registry);
+            root_of_trust.candidates
         }
     }
 
     #[view]
-    /// For a RootOfTrust published on `registry`
+    /// For a HumanRegistry published on `registry`
     /// check if a user is a member of the root of trust.
-    public fun is_root_at_registry(registry: address, account: address): bool acquires RootOfTrust {
-        if (exists<RootOfTrust>(registry)) {
-            let list = get_current_roots_at_registry(registry);
+    public fun found_in_registry(registry: address, account: address): bool acquires HumanRegistry {
+        if (exists<HumanRegistry>(registry)) {
+            let list = get_current_candidates_at_registry(registry);
             vector::contains(&list, &account)
         } else {
             false
@@ -217,11 +217,11 @@ module ol_framework::root_of_trust {
 
     #[view]
     /// Check if rotation is possible for a given registry
-    public fun can_rotate(registry: address): bool acquires RootOfTrust {
-        if (!exists<RootOfTrust>(registry)) {
+    public fun can_rotate(registry: address): bool acquires HumanRegistry {
+        if (!exists<HumanRegistry>(registry)) {
             false
         } else {
-            let root_of_trust = borrow_global<RootOfTrust>(registry);
+            let root_of_trust = borrow_global<HumanRegistry>(registry);
             let elapsed_secs = timestamp::now_seconds() - root_of_trust.last_updated_secs;
             let required_secs = root_of_trust.rotate_window_days * SECONDS_IN_DAY;
             elapsed_secs >= required_secs
@@ -259,9 +259,9 @@ module ol_framework::root_of_trust {
 
     #[test_only]
     /// override the root of trust for testing
-    public fun test_set_root_of_trust(framework: &signer, roots: vector<address>, cohort: u64, days: u64) acquires RootOfTrust {
+    public fun test_set_root_of_trust(framework: &signer, candidates: vector<address>, cohort: u64, days: u64) acquires HumanRegistry {
         system_addresses::assert_diem_framework(framework);
-        maybe_initialize(framework, roots, cohort, days);
-        set_framework_root(framework, roots, cohort, days);
+        maybe_initialize(framework, candidates, cohort, days);
+        set_framework_maybe_human(framework, candidates, cohort, days);
     }
 }

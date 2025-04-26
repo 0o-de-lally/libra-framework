@@ -3,7 +3,7 @@ module ol_framework::distance_to_root {
     use std::signer;
     use std::vector;
     use ol_framework::vouch;
-    use ol_framework::root_of_trust;
+    use ol_framework::human_candidates;
 
     // Constants
     const DEFAULT_INWARD_MAX_DEPTH: u64 = 10; // Maximum depth for inward path search
@@ -47,7 +47,7 @@ module ol_framework::distance_to_root {
     // Returns (found_path, path_length)
     // Uses cached parent path when available to avoid recomputations
     public fun find_shortest_path_to_root(target: address, current_timestamp: u64): (bool, u64) acquires ShortestPathRecord {
-        assert!(root_of_trust::is_initialized(@diem_framework), error::not_found(ENOT_INITIALIZED));
+        assert!(human_candidates::is_initialized(@diem_framework), error::not_found(ENOT_INITIALIZED));
 
         // Check if target is already a root node
         if (is_root_node(target)) {
@@ -190,7 +190,7 @@ module ol_framework::distance_to_root {
 
     // Calculate and update the shortest path to root for a given address
     public fun update_shortest_path_to_root(addr: address, current_timestamp: u64): u64 acquires ShortestPathRecord {
-        assert!(root_of_trust::is_initialized(@diem_framework), error::not_found(ENOT_INITIALIZED));
+        assert!(human_candidates::is_initialized(@diem_framework), error::not_found(ENOT_INITIALIZED));
 
         // Get the shortest path
         let (path_found, path_length) = find_shortest_path_to_root(addr, current_timestamp);
@@ -266,7 +266,7 @@ module ol_framework::distance_to_root {
 
     // Helper to check if an address is a root node
     public fun is_root_node(addr: address): bool {
-        root_of_trust::is_root_at_registry(@diem_framework, addr)
+        human_candidates::found_in_registry(@diem_framework, addr)
     }
 
     #[test_only]
