@@ -729,11 +729,9 @@ fun validator_vouches_mocked_correctly(root: &signer, alice: address) {
     let (received_vouches, _) = vouch::get_received_vouches(alice);
     assert!(vector::length(&received_vouches) == 9, 7357002);
 
+    // no likely humans have bee set yet, so we would expect the score to be 0
     let score = page_rank_lazy::get_trust_score(alice);
-    // excluding self, the voucher has 9 vouches of remaining validator
-    // set which are also roots of trust
-    let max_score = page_rank_lazy::get_max_single_score();
-    assert!(score == vector::length(&received_vouches) * max_score, 7357002);
+    assert!(score == 0, 7357002);
 
     let remaining = vouch_limits::get_vouch_limit(alice);
     // received 9 vouches, and has given 9, and since is root
