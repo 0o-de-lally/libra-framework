@@ -58,14 +58,13 @@ module ol_framework::page_rank_lazy {
         // and it's not stale, return the cached score
         let user_record = borrow_global<UserTrustRecord>(addr);
         if (!user_record.is_stale) {
-            diem_std::debug::print(&2222);
             return user_record.cached_score
         };
 
-        calc_trust_score(addr)
+        calculate_trust_score(addr)
     }
 
-    public fun calc_trust_score(addr: address): u64 acquires UserTrustRecord {
+    public fun calculate_trust_score(addr: address): u64 acquires UserTrustRecord {
         let current_timestamp = timestamp::now_seconds();
 
         // Cache is stale or expired - compute fresh score

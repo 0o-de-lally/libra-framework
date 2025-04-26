@@ -90,7 +90,6 @@ module ol_framework::test_page_rank {
     let i = 0;
     while (i < count_roots) {
       let root_addr = signer::address_of(vector::borrow(&roots_sig, i));
-      diem_std::debug::print(&root_addr);
 
       let (received, _) = vouch::get_received_vouches(root_addr);
       // assert!(vector::length(&received) == 9, 7357009);
@@ -100,13 +99,26 @@ module ol_framework::test_page_rank {
 
       // Check page rank score is properly calculated
       // Each root should have a high score since they're all vouched for by other roots
-
-      let page_rank_score = page_rank_lazy::get_trust_score(root_addr);
-      diem_std::debug::print(&page_rank_score);
+      // With 9 other roots vouching, score should be 9 * max_single_score
 
       let max_single_score = page_rank_lazy::get_max_single_score();
-      // With 9 other roots vouching, score should be 9 * max_single_score
+
+      let page_rank_score = page_rank_lazy::calculate_trust_score(root_addr);
+
       assert!(page_rank_score == (count_roots - 1) * max_single_score, 7357012);
+
+      assert!(!page_rank_lazy::is_stale(root_addr), 7357013);
+      // check we can get cached score
+      let page_rank_score = page_rank_lazy::get_trust_score(root_addr);
+
+      assert!(page_rank_score == (count_roots - 1) * max_single_score, 7357014);
+
+      // check we can get cached score
+      let page_rank_score = page_rank_lazy::get_cached_score(root_addr);
+
+      assert!(page_rank_score == (count_roots - 1) * max_single_score, 7357014);
+
+
 
       i = i + 1;
     };
@@ -126,14 +138,19 @@ module ol_framework::test_page_rank {
     // the root sigs already have vouch initialized
     let root_sig = vector::borrow(&roots_sig, 0);
 
+    // Make sure vouch is initialized for the new user
     vouch::init(&new_user_sig);
     // Initialize page rank for the new user
     page_rank_lazy::maybe_initialize_trust_record(&new_user_sig);
 
-    // Setup one vouch from the first root
-    vouch::vouch_for(root_sig, new_user_addr);
+    // Verify user has no vouches initially
+    let page_rank_score_before = page_rank_lazy::get_trust_score(new_user_addr);
+    assert!(page_rank_score_before == 0, 7357000);
 
-    // Now check the page rank score (should be 100)
+    // Setup one vouch from the first root
+    vouch_txs::vouch_for(root_sig, new_user_addr);
+
+    // Now check the page rank score (should be max_single_score)
     let page_rank_score = page_rank_lazy::get_trust_score(new_user_addr);
     assert!(page_rank_score == max_single_score, 7357001);
   }
@@ -215,7 +232,6 @@ module ol_framework::test_page_rank {
 
     let direct_vouched_score = page_rank_lazy::get_trust_score(direct_vouched_addr);
 
-    diem_std::debug::print(&direct_vouched_score);
 
     // NOTE: this should be 10X the previous test
     assert!(direct_vouched_score == max_single_score * 10, 7357003);
@@ -236,7 +252,6 @@ module ol_framework::test_page_rank {
     // Direct vouched user vouches for the indirect vouched user
     vouch_txs::vouch_for(&direct_vouched_sig, indirect_vouched_addr);
     let indirect_score_after = page_rank_lazy::get_trust_score(indirect_vouched_addr);
-    diem_std::debug::print(&indirect_score_after);
 
     assert!(indirect_score_after == direct_vouched_score/2, 7357006);
 
@@ -246,66 +261,6 @@ module ol_framework::test_page_rank {
     // this users maxed out the vouches
     assert!(vouch_limit_indirect == 15, 7357004);
   }
-
-  // #[test(framework = @ol_framework)]
-  // /// Tests the case where all root users are reciprocally vouching for one another.
-  // /// Verifies that each root receives vouches from all other roots (9 vouches total),
-  // /// and that each root achieves a high page rank score (9 * max_single_score) from these vouches.
-  // fun test_root_reciprocal_vouch(framework: &signer) {
-  //   // Set up the test base
-  //   let roots_sig = test_base(framework, true);
-  //   let count_roots = vector::length(&roots_sig);
-
-  //   // First, have all root accounts initialize page rank
-  //   let i = 0;
-  //   while (i < count_roots) {
-  //     let root_sig = vector::borrow(&roots_sig, i);
-  //     page_rank_lazy::maybe_initialize_trust_record(root_sig);
-  //     i = i + 1;
-  //   };
-
-  //   // Make each root vouch for all other roots (reciprocal vouching)
-  //   let i = 0;
-  //   while (i < count_roots) {
-  //     let grantor = vector::borrow(&roots_sig, i);
-  //     let _grantor_addr = signer::address_of(grantor);
-
-  //     let j = 0;
-  //     while (j < count_roots) {
-  //       if (i != j) { // Don't vouch for yourself
-  //         let beneficiary = vector::borrow(&roots_sig, j);
-  //         let beneficiary_addr = signer::address_of(beneficiary);
-  //         vouch_txs::vouch_for(grantor, beneficiary_addr);
-  //       };
-  //       j = j + 1;
-  //     };
-  //     i = i + 1;
-  //   };
-
-  //   // Verify each root has received vouches from all other roots
-  //   let i = 0;
-  //   while (i < count_roots) {
-  //     let root_addr = signer::address_of(vector::borrow(&roots_sig, i));
-  //     diem_std::debug::print(&root_addr);
-
-  //     let (received, _) = vouch::get_received_vouches(root_addr);
-  //     assert!(vector::length(&received) == 9, 7357009);
-
-  //     // Each root should receive vouches from all other roots (count_roots - 1)
-  //     assert!(vector::length(&received) == count_roots - 1, 7357010);
-
-  //     // Check page rank score is properly calculated
-  //     // Each root should have a high score since they're all vouched for by other roots
-  //     let page_rank_score = page_rank_lazy::get_trust_score(root_addr);
-  //     diem_std::debug::print(&page_rank_score);
-
-  //     let max_single_score = page_rank_lazy::get_max_single_score();
-  //     // With 9 other roots vouching, score should be 9 * max_single_score
-  //     assert!(page_rank_score == 9 * max_single_score, 7357011);
-
-  //     i = i + 1;
-  //   };
-  // }
 
   #[test(framework = @ol_framework)]
   /// Tests the handling of stale trust records when vouches are revoked and re-added.
@@ -473,15 +428,17 @@ module ol_framework::test_page_rank {
     // create 10 root of trust accounts
     let users_sig = mock::create_test_end_users(framework, 10, 11);
     let users_addr = mock::collect_addresses(&users_sig);
+    let count_roots = vector::length(&roots_sig);
 
     // First hop: the root vouches for user1 (at first hop)
     let grantor_sig = vector::borrow(&roots_sig, 0);
     let root0_score = page_rank_lazy::get_trust_score(signer::address_of(grantor_sig));
-    diem_std::debug::print(&root0_score);
-    // in a simple initialization root doesn't have any vouches themselves
-    // assert!(root0_score == 0, 7357100);
 
     let max_single_score = page_rank_lazy::get_max_single_score();
+
+    // in a simple initialization root doesn't have any vouches themselves
+    assert!(root0_score == max_single_score * (count_roots - 1), 7357100);
+
 
     let prev_score = max_single_score * 2;
     let prev_vouch = 20;
@@ -508,7 +465,7 @@ module ol_framework::test_page_rank {
 
       let vouch_limit = vouch_limits::calculate_score_limit(*beneficiary_addr);
 
-            // in a simple initialization root doesn't have any vouches themselves
+      // in a simple initialization root doesn't have any vouches themselves
       if (prev_vouch > 1) {
         assert!(vouch_limit < prev_vouch, 7357101);
       };
