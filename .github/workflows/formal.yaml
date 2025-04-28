@@ -23,11 +23,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # NOTE: for debugging CI this allow shell access to github runner. Will print out tmate.io terminal url
-      # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
-      #   with:
-      #     detached: true
-      #   timeout-minutes: 3
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
+        timeout-minutes: 3
 
       - uses: actions/checkout@v3
 
@@ -42,3 +42,7 @@ jobs:
       - name: prover tests
         working-directory: ./framework
         run: make -f prover.mk prove
+
+      - name: prover tests 2
+        working-directory: ./framework
+        run: libra move prove -f slow
