@@ -191,6 +191,13 @@ pub enum EntryFunctionCall {
     /// Public function for production triggering of epoch boundary.
     DiemGovernanceTriggerEpoch {},
 
+    /// standalone function to close the poll after threshold or expiration passed
+    /// NOTE: calling the vote tx with a duplicate vote will also finalize
+    /// the poll without affecting the result.
+    DonorVoiceTxsMaybeTallyReauthTx {
+        multisig_address: AccountAddress,
+    },
+
     /// A signer of the multisig can propose a payment
     /// Public entry function required for txs cli
     DonorVoiceTxsProposeAdvanceTx {
@@ -491,6 +498,9 @@ impl EntryFunctionCall {
             } => diem_governance_ol_vote(proposal_id, should_pass),
             DiemGovernanceSmokeTriggerEpoch {} => diem_governance_smoke_trigger_epoch(),
             DiemGovernanceTriggerEpoch {} => diem_governance_trigger_epoch(),
+            DonorVoiceTxsMaybeTallyReauthTx { multisig_address } => {
+                donor_voice_txs_maybe_tally_reauth_tx(multisig_address)
+            }
             DonorVoiceTxsProposeAdvanceTx {
                 multisig_address,
                 payee,
@@ -986,6 +996,26 @@ pub fn diem_governance_trigger_epoch() -> TransactionPayload {
         ident_str!("trigger_epoch").to_owned(),
         vec![],
         vec![],
+    ))
+}
+
+/// standalone function to close the poll after threshold or expiration passed
+/// NOTE: calling the vote tx with a duplicate vote will also finalize
+/// the poll without affecting the result.
+pub fn donor_voice_txs_maybe_tally_reauth_tx(
+    multisig_address: AccountAddress,
+) -> TransactionPayload {
+    TransactionPayload::EntryFunction(EntryFunction::new(
+        ModuleId::new(
+            AccountAddress::new([
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 1,
+            ]),
+            ident_str!("donor_voice_txs").to_owned(),
+        ),
+        ident_str!("maybe_tally_reauth_tx").to_owned(),
+        vec![],
+        vec![bcs::to_bytes(&multisig_address).unwrap()],
     ))
 }
 
@@ -1817,6 +1847,18 @@ mod decoder {
         }
     }
 
+    pub fn donor_voice_txs_maybe_tally_reauth_tx(
+        payload: &TransactionPayload,
+    ) -> Option<EntryFunctionCall> {
+        if let TransactionPayload::EntryFunction(script) = payload {
+            Some(EntryFunctionCall::DonorVoiceTxsMaybeTallyReauthTx {
+                multisig_address: bcs::from_bytes(script.args().first()?).ok()?,
+            })
+        } else {
+            None
+        }
+    }
+
     pub fn donor_voice_txs_propose_advance_tx(
         payload: &TransactionPayload,
     ) -> Option<EntryFunctionCall> {
@@ -2251,6 +2293,10 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<EntryFunctionDecoderMa
         map.insert(
             "diem_governance_trigger_epoch".to_string(),
             Box::new(decoder::diem_governance_trigger_epoch),
+        );
+        map.insert(
+            "donor_voice_txs_maybe_tally_reauth_tx".to_string(),
+            Box::new(decoder::donor_voice_txs_maybe_tally_reauth_tx),
         );
         map.insert(
             "donor_voice_txs_propose_advance_tx".to_string(),
