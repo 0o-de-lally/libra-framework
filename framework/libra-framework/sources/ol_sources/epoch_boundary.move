@@ -25,6 +25,7 @@ module diem_framework::epoch_boundary {
   use ol_framework::match_index;
   use ol_framework::proof_of_fee;
   use ol_framework::infra_escrow;
+  use ol_framework::migration_capability;
   use ol_framework::musical_chairs;
   use ol_framework::donor_voice_txs;
   use ol_framework::libra_coin::LibraCoin;
@@ -117,6 +118,8 @@ module diem_framework::epoch_boundary {
     pof_thermo_increase: bool,
     pof_thermo_amount: u64,
   }
+
+  // struct EpochBoundaryCapability {}
 
   /// initialize structs, requires both signers since BoundaryBit can only be
   // accessed by VM
@@ -252,6 +255,7 @@ module diem_framework::epoch_boundary {
 
   /// testnet helper to allow testnet root account to set flip the boundary bit
   /// used for testing cli tools for polling and triggering
+  /// Public entry function necessary for smoke tests.
   public entry fun smoke_enable_trigger(core_resource: &signer)
   acquires BoundaryBit {
     // cannot call this on mainnet
@@ -294,14 +298,18 @@ module diem_framework::epoch_boundary {
   // This function handles the necessary migrations that occur at the epoch boundary
   // when new modules or structures are added by chain upgrades.
   fun migrate_data(framework: &signer) {
+    system_addresses::assert_ol(framework);
+    let migration_cap = migration_capability::create_cap(framework);
     randomness::initialize(framework);
-    migrations::execute(framework);
+    migrations::execute(framework, &migration_cap);
+    migration_capability::destroy_cap(framework, migration_cap);
+
   }
 
   /// Contains all of 0L's business logic for end of epoch.
   /// This removed business logic from reconfiguration.move
   /// and prevents dependency cycling.
-  // TODO: do we need closing_epoch if there is no depedency cycling with reconfiguration::
+  // TODO: do we need closing_epoch if there is no dependency cycling with reconfiguration::
   public(friend) fun epoch_boundary(root: &signer, closing_epoch: u64, epoch_round: u64)
   acquires BoundaryStatus {
     print(&string::utf8(b"EPOCH BOUNDARY BEGINS"));
@@ -459,7 +467,6 @@ module diem_framework::epoch_boundary {
 
   fun process_incoming_validators(root: &signer, status: &mut BoundaryStatus, compliant_vals: vector<address>, n_seats: u64) {
     system_addresses::assert_ol(root);
-
     // check amount of fees expected
     let (auction_winners, all_bidders, only_qualified_bidders, entry_fee) = proof_of_fee::end_epoch(root, &compliant_vals, n_seats);
     status.incoming_filled_seats = vector::length(&auction_winners);
@@ -481,6 +488,7 @@ module diem_framework::epoch_boundary {
     status.incoming_fees_success = fee_success;
     // make sure musical chairs doesn't keep incrementing if we are persistently
     // offering more seats than can be filled
+
     let final_set_size = vector::length(&actual_set);
     musical_chairs::set_current_seats(root, final_set_size);
     status.incoming_final_set_size = final_set_size;

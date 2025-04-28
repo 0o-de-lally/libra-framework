@@ -42,6 +42,7 @@ module ol_framework::donor_voice_txs {
     use diem_framework::system_addresses;
     use diem_framework::coin;
     use ol_framework::ballot;
+    use ol_framework::community_wallet_advance;
     use ol_framework::epoch_helper;
     use ol_framework::ol_account;
     use ol_framework::ol_features_constants;
@@ -109,6 +110,16 @@ module ol_framework::donor_voice_txs {
     /// This is used initially in a MultiSig, for the Authorities
     /// initially to schedule.
     struct Payment has copy, drop, store {
+      payee: address,
+      value: u64,
+      description: vector<u8>,
+    }
+
+    // NOTE: migrating data structures like PAyment
+    // which are deeply nested are complex
+    // Advance will require its own data structures
+    /// Payment details for a CW advance Loan
+    struct AdvanceLoan has copy, drop, store {
       payee: address,
       value: u64,
       description: vector<u8>,
@@ -201,7 +212,7 @@ module ol_framework::donor_voice_txs {
         });
 
       // Commit note: this should now failover gracefully
-      donor_voice_governance::init_donor_governance(sig);
+      donor_voice_governance::maybe_init_dv_governance(sig);
     }
 
     /// Like any MultiSig instance, a sponsor which is the original owner of the account, needs to initialize the account.
@@ -233,7 +244,7 @@ module ol_framework::donor_voice_txs {
       multisig_address: address,
       payee: address,
       value: u64,
-      description: vector<u8>
+      description: vector<u8>,
     ): guid::ID acquires TxSchedule {
 
       assert!(!ol_features_constants::is_governance_mode_enabled(), error::invalid_state(EGOVERNANCE_MODE));
@@ -255,7 +266,7 @@ module ol_framework::donor_voice_txs {
 
       let (passed, withdraw_cap_opt) = multi_action::vote_with_id<Payment>(sender, &uid, multisig_address);
 
-      let tx = multi_action::extract_proposal_data(multisig_address, &uid);
+      let tx: Payment = multi_action::extract_proposal_data(multisig_address, &uid);
 
       if (passed && option::is_some(&withdraw_cap_opt)) {
         schedule(option::borrow(&withdraw_cap_opt), tx, &uid);
@@ -267,22 +278,47 @@ module ol_framework::donor_voice_txs {
 
     }
 
-    #[test_only]
-    /// Returns the GUID of the transfer.
-    public(friend) fun test_propose_payment(
+    /// multisig signers vote and propose on an advance
+    public(friend) fun propose_advance(
       sender: &signer,
       multisig_address: address,
       payee: address,
       value: u64,
-      description: vector<u8>
-    ): guid::ID acquires TxSchedule {
-      propose_payment(
-      sender,
-      multisig_address,
-      payee,
-      value,
-      description)
+      description: vector<u8>,
+    ): guid::ID {
+
+      assert!(!ol_features_constants::is_governance_mode_enabled(), error::invalid_state(EGOVERNANCE_MODE));
+
+      donor_voice_reauth::assert_authorized(multisig_address);
+
+      let tx = AdvanceLoan {
+        payee,
+        value,
+        description,
+      };
+
+      // TODO: get expiration
+      let prop = multi_action::proposal_constructor(tx, option::none());
+
+      let uid = multi_action::propose_new<AdvanceLoan>(sender, multisig_address, prop);
+
+      let (passed, withdraw_cap_opt) = multi_action::vote_with_id<AdvanceLoan>(sender, &uid, multisig_address);
+
+      let tx: AdvanceLoan = multi_action::extract_proposal_data(multisig_address, &uid);
+
+      if (passed && option::is_some(&withdraw_cap_opt)) {
+        let cap = option::borrow(&withdraw_cap_opt);
+        community_wallet_advance::transfer_credit(cap, tx.payee, tx.value);
+      };
+
+      multi_action::maybe_restore_withdraw_cap(withdraw_cap_opt);
+
+      uid
+
     }
+
+
+
 
     /// Private function which handles the logic of adding a new timed transfer
     /// DANGER upstream functions need to check the sender is authorized.
@@ -299,7 +335,6 @@ module ol_framework::donor_voice_txs {
     fun schedule(
       withdraw_capability: &WithdrawCapability, tx: Payment, uid: &guid::ID
     ) acquires TxSchedule {
-
       let multisig_address = account::get_withdraw_cap_address(withdraw_capability);
       let transfers = borrow_global_mut<TxSchedule>(multisig_address);
 
@@ -372,14 +407,13 @@ module ol_framework::donor_voice_txs {
       let list = &mut state.scheduled;
       let split_point = vector::stable_partition<TimedTransfer>(list, |e| {
         let e: &TimedTransfer = e;
-
         e.deadline > epoch
       });
       vector::trim(&mut state.scheduled, split_point)
     }
 
 
-    /// tries to settle any amounts that have been scheduled for payment
+    /// Tries to settle any amounts that have been scheduled for payment
     /// for audit instrumentation returns how much was actually transferred
     /// and if that amount was equal to the expected amount transferred (amount_processed, expected_amount, success)
     fun maybe_pay_deadline(vm: &signer, state: &mut TxSchedule, epoch: u64): (u64, u64, bool) acquires Freeze {
@@ -392,13 +426,39 @@ module ol_framework::donor_voice_txs {
       // find all Txs scheduled prior to this epoch.
       let len = vector::length(&due_list);
       while (i < len) {
-
-        let t = vector::pop_back(&mut due_list);
-        let multisig_address = guid::id_creator_address(&t.uid);
-
-        // Note the VM can do this without the WithdrawCapability
+        let t: TimedTransfer = vector::pop_back(&mut due_list);
         expected_amount = expected_amount + t.tx.value;
 
+        let this_transfer_value = handle_slow_wallet_payment(vm, &t);
+        // check success
+        if  (this_transfer_value > 0) {
+          // if there's a single transaction that gets approved, then the consecutive rejection counter (for freezing the account) is reset
+          let multisig_address = guid::id_creator_address(&t.uid);
+          reset_rejection_counter(vm, multisig_address);
+
+          // update the records (hot potato, can't copy or drop)
+          vector::push_back(&mut state.paid, t);
+
+        } else {
+          // if it could not be paid because of low balance,
+          // place it back on the scheduled list
+          vector::push_back(&mut state.scheduled, t);
+        };
+
+        amount_processed = amount_processed + this_transfer_value;
+
+        i = i + 1;
+      };
+
+      (amount_processed, expected_amount, expected_amount == amount_processed)
+    }
+
+    /// Default payment mode, sends fund to a slow wallet
+    /// @returns: u64
+    /// -  the total amount able to transfer (including account limits)
+    fun handle_slow_wallet_payment(vm: &signer, t: &TimedTransfer): u64 {
+        // make a slow payment
+        let multisig_address = guid::id_creator_address(&t.uid);
         // if the account is a community wallet, then we assume
         // the transfers will be locked.
         let coin_opt = ol_account::vm_withdraw_unlimited(vm, multisig_address,
@@ -408,46 +468,11 @@ module ol_framework::donor_voice_txs {
           let c = option::extract(&mut coin_opt);
           amount_transferred = coin::value(&c);
           ol_account::vm_deposit_coins_locked(vm, t.tx.payee, c);
-          // update the records (don't copy or drop)
-          vector::push_back(&mut state.paid, t);
-        } else {
-          // if it could not be paid because of low balance,
-          // place it back on the scheduled list
-          vector::push_back(&mut state.scheduled, t);
         };
-
         option::destroy_none(coin_opt);
 
-        amount_processed = amount_processed + amount_transferred;
-
-        // if there's a single transaction that gets approved, then the freeze consecutive rejection counter is reset
-        reset_rejection_counter(vm, multisig_address);
-
-        i = i + 1;
-      };
-
-      (amount_processed, expected_amount, expected_amount == amount_processed)
+        amount_transferred
     }
-
-    #[test_only]
-    public(friend) fun find_by_deadline(multisig_address: address, epoch: u64): vector<guid::ID> acquires TxSchedule {
-      let state = borrow_global_mut<TxSchedule>(multisig_address);
-      let i = 0;
-      let list = vector::empty<guid::ID>();
-
-      while (i < vector::length(&state.scheduled)) {
-
-        let prop = vector::borrow(&state.scheduled, i);
-        if (prop.deadline == epoch) {
-          vector::push_back(&mut list, *&prop.uid);
-        };
-
-        i = i + 1;
-      };
-
-      list
-    }
-
 
 
   //////// GOVERNANCE HANDLERS ////////
@@ -533,7 +558,7 @@ module ol_framework::donor_voice_txs {
     let multisig_address = guid::id_creator_address(uid_of_tx);
     donor_voice_governance::assert_is_voter(donor, multisig_address);
     let state = borrow_global<TxSchedule>(multisig_address);
-    // need to check if the tx is already schedules.
+    // need to check if the tx is already scheduled.
 
     let (found, _index, status) = find_schedule_by_id(state, uid_of_tx);
     if (found && status == scheduled_enum()) {
@@ -707,61 +732,14 @@ module ol_framework::donor_voice_txs {
     }
   }
 
-  #[test_only]
-  public fun test_helper_vm_liquidate(vm: &signer) acquires Freeze {
-    vm_liquidate(vm);
+  /// option to set the liquidation destination to infrastructure escrow
+  /// must be done before the multisig is finalized and the sponsor cannot control the account.
+  public(friend) fun set_liquidate_to_match_index(sponsor: &signer, liquidate_to_match_index: bool) acquires Freeze {
+    let f = borrow_global_mut<Freeze>(signer::address_of(sponsor));
+    f.liquidate_to_match_index = liquidate_to_match_index;
   }
 
-  #[test_only]
-  public fun test_helper_make_donor_voice(vm: &signer, sig: &signer, initial_authorities: vector<address>) {
-    use ol_framework::testnet;
-    testnet::assert_testnet(vm);
-    make_donor_voice(sig);
-    multi_action::propose_offer_internal(sig, initial_authorities, option::none());
-    donor_voice_reauth::test_set_authorized(vm, signer::address_of(sig));
-  }
 
-  #[view]
-  /// get the proportion of donations of all donors to account.
-  public fun get_pro_rata(multisig_address: address): (vector<address>, vector<u64>) {
-    // get total fees
-    let (_, current_balance) = ol_account::balance(multisig_address);
-    let all_time_donations = cumulative_deposits::get_cumulative_deposits(multisig_address);
-    let donors = cumulative_deposits::get_depositors(multisig_address);
-    let pro_rata_addresses = vector::empty<address>();
-    let pro_rata_amounts = vector::empty<u64>();
-
-    let i = 0;
-    let len = vector::length(&donors);
-    while (i < len) {
-      let donor = vector::borrow(&donors, i);
-      let (_, _, my_total_donations) = receipts::read_receipt(*donor, multisig_address);
-
-      // proportionally how much has this donor contributed to the all time cumulative donations.
-      let ratio = fixed_point32::create_from_rational(my_total_donations, all_time_donations);
-      // of the current remaining balance, how much would be the share attributed to that donor.
-      let pro_rata = fixed_point32::multiply_u64(current_balance, ratio);
-
-      vector::push_back(&mut pro_rata_addresses, *donor);
-      vector::push_back(&mut pro_rata_amounts, pro_rata);
-      i = i + 1;
-    };
-
-      (pro_rata_addresses, pro_rata_amounts)
-  }
-
-  #[view]
-  /// get the total aggregate balance in all donor voice accounts.
-  public fun get_dv_supply(): u64 {
-    let list = donor_voice::get_root_registry();
-    let sum = 0;
-    vector::for_each(list, |addr| {
-      let (_, balance) =  ol_account::balance(addr);
-      sum = sum + balance;
-    });
-    sum
-  }
-  //////// GETTERS ////////
   public fun get_tx_params(t: &TimedTransfer): (address, u64, vector<u8>, u64) {
     (t.tx.payee, t.tx.value, *&t.tx.description, t.deadline)
   }
@@ -778,7 +756,6 @@ module ol_framework::donor_voice_txs {
     let state = borrow_global<TxSchedule>(directed_address);
     find_schedule_by_id(state, uid)
   }
-
 
   // Mapping the status enums to the multi-action (ballot) naming.
 
@@ -834,6 +811,9 @@ module ol_framework::donor_voice_txs {
     state == veto_enum()
   }
 
+  //////// VIEWS ////////
+
+  #[view]
   // getter to check if wallet is frozen
   // used in account before attempting a transfer.
   public fun is_account_frozen(addr: address): bool acquires Freeze{
@@ -848,31 +828,67 @@ module ol_framework::donor_voice_txs {
   }
 
 
-  //////// TRANSACTION SCRIPTS ////////
+  #[view]
+  /// get the proportion of donations of all donors to account.
+  public fun get_pro_rata(multisig_address: address): (vector<address>, vector<u64>) {
+    // get total fees
+    let (_, current_balance) = ol_account::balance(multisig_address);
+    let all_time_donations = cumulative_deposits::get_cumulative_deposits(multisig_address);
+    let donors = cumulative_deposits::get_depositors(multisig_address);
+    let pro_rata_addresses = vector::empty<address>();
+    let pro_rata_amounts = vector::empty<u64>();
 
-  /// option to set the liquidation destination to infrastructure escrow
-  /// must be done before the multisig is finalized and the sponsor cannot control the account.
-  public(friend) fun set_liquidate_to_match_index(sponsor: &signer, liquidate_to_match_index: bool) acquires Freeze {
-    let f = borrow_global_mut<Freeze>(signer::address_of(sponsor));
-    f.liquidate_to_match_index = liquidate_to_match_index;
+    let i = 0;
+    let len = vector::length(&donors);
+    while (i < len) {
+      let donor = vector::borrow(&donors, i);
+      let (_, _, my_total_donations) = receipts::read_receipt(*donor, multisig_address);
+
+      // proportionally how much has this donor contributed to the all time cumulative donations.
+      let ratio = fixed_point32::create_from_rational(my_total_donations, all_time_donations);
+      // of the current remaining balance, how much would be the share attributed to that donor.
+      let pro_rata = fixed_point32::multiply_u64(current_balance, ratio);
+
+      vector::push_back(&mut pro_rata_addresses, *donor);
+      vector::push_back(&mut pro_rata_amounts, pro_rata);
+      i = i + 1;
+    };
+
+      (pro_rata_addresses, pro_rata_amounts)
   }
 
-  //////// TX HELPER ////////
+  #[view]
+  /// get the total aggregate balance in all donor voice accounts.
+  public fun get_dv_supply(): u64 {
+    let list = donor_voice::get_root_registry();
+    let sum = 0;
+    vector::for_each(list, |addr| {
+      let (_, balance) =  ol_account::balance(addr);
+      sum = sum + balance;
+    });
+    sum
+  }
+
+
+  //////// TRANSACTIONS ////////
 
   /// A signer of the multisig can propose a payment
+  /// Public entry function required for txs cli.
   public entry fun propose_payment_tx(
     auth: signer,
     multisig_address: address,
     payee: address,
     value: u64,
-    description: vector<u8>
+    description: vector<u8>,
   )  acquires TxSchedule {
     donor_voice_reauth::assert_authorized(multisig_address);
     propose_payment(&auth, multisig_address, payee, value, description);
   }
 
+
   // VETO TXs
   /// A donor of the program can propose a veto
+  /// Public entry function required for txs cli.
   public entry fun propose_veto_tx(donor: &signer, multisig_address: address, id: u64) acquires TxSchedule, Freeze{
     let tx_uid = guid::create_id(multisig_address, id);
     let opt_uid_of_gov_prop = propose_veto(donor, &tx_uid);
@@ -882,43 +898,113 @@ module ol_framework::donor_voice_txs {
     }
   }
 
-
-  /// After proposed, subsequent veto voters call this to vote on a tx veto
-  public entry fun vote_veto_tx(donor: &signer, multisig_address: address, id: u64)  acquires TxSchedule, Freeze {
-    let tx_uid = guid::create_id(multisig_address, id);
-    let (found, veto_uid) = donor_voice_governance::find_tx_veto_id(tx_uid);
-    assert!(found, error::invalid_argument(ENO_VETO_ID_FOUND));
-    veto_handler(donor, &veto_uid, &tx_uid);
+  /// A signer of the multisig can propose a payment
+  /// Public entry function required for txs cli
+  public entry fun propose_advance_tx(
+    auth: signer,
+    multisig_address: address,
+    payee: address,
+    value: u64,
+    description: vector<u8>,
+  ) {
+    donor_voice_reauth::assert_authorized(multisig_address);
+    propose_advance(&auth, multisig_address, payee, value, description);
   }
-
 
   // REAUTH TXs
 
-  // TODO: unclear if we need a standalone propose reauth tx entry function.
-  // /// A donor of the program can propose to reauth a DV account
-  // public entry fun propose_reauth_tx(donor: &signer, multisig_address: address, days_duration: u64) acquires TxSchedule {
-  //   propose_reauthorization_impl(donor, multisig_address);
-  // }
-
   /// After proposed, subsequent donors can vote to reauth an account
+  /// Public entry function required for txs cli.
   public entry fun vote_reauth_tx(donor: &signer, multisig_address: address) acquires TxSchedule {
     if (donor_voice_governance::is_reauth_proposed(multisig_address)) {
       // if the reauthorization is already proposed, then we can vote on it.
       reauthorize_handler(donor, multisig_address);
     } else {
-      // go a head and propose it
+      // go ahead and propose it
       propose_reauthorization_impl(donor, multisig_address);
     }
+  }
+  /// standalone function to close the poll after threshold or expiration passed
+  /// NOTE: calling the vote tx with a duplicate vote will also finalize
+  /// the poll without affecting the result.
+  // Anyone cal call this
+  public entry fun maybe_tally_reauth_tx(multisig_address: address) {
+    donor_voice_governance::maybe_tally_reauth(multisig_address);
   }
 
   // LIQUIDATE TXS
 
   /// A donor can propose the liquidation of a Donor Voice account
+  /// Public entry function required for txs cli.
   public entry fun propose_liquidate_tx(donor: &signer, multisig_address: address)  acquires TxSchedule {
     propose_liquidation(donor, multisig_address);
   }
   /// After proposed, subsequent voters call this to vote liquidation
   public entry fun vote_liquidation_tx(donor: &signer, multisig_address: address) acquires Freeze {
     liquidation_handler(donor, multisig_address);
+  }
+
+  //////// TEST HELPERS ////////
+
+  #[test_only]
+  /// NOTE: this is needed because tests requires the the GUID of the transfer.
+  public(friend) fun test_propose_payment(
+    sender: &signer,
+    multisig_address: address,
+    payee: address,
+    value: u64,
+    description: vector<u8>,
+  ): guid::ID acquires TxSchedule {
+
+    propose_payment(
+    sender,
+    multisig_address,
+    payee,
+    value,
+    description)
+  }
+
+  #[test_only]
+  // TODO: flagged for deprecation. Propose_veto_tx handles both proposing and
+  // voting
+  /// After proposed, subsequent veto voters call this to vote on a tx veto
+  public fun vote_veto_tx(donor: &signer, multisig_address: address, id: u64)  acquires TxSchedule, Freeze {
+    let tx_uid = guid::create_id(multisig_address, id);
+    let (found, veto_uid) = donor_voice_governance::find_tx_veto_id(tx_uid);
+    assert!(found, error::invalid_argument(ENO_VETO_ID_FOUND));
+    veto_handler(donor, &veto_uid, &tx_uid);
+  }
+
+  #[test_only]
+  public(friend) fun find_by_deadline(multisig_address: address, epoch: u64): vector<guid::ID> acquires TxSchedule {
+    let state = borrow_global_mut<TxSchedule>(multisig_address);
+    let i = 0;
+    let list = vector::empty<guid::ID>();
+
+    while (i < vector::length(&state.scheduled)) {
+
+      let prop = vector::borrow(&state.scheduled, i);
+      if (prop.deadline == epoch) {
+        vector::push_back(&mut list, *&prop.uid);
+      };
+
+      i = i + 1;
+    };
+
+    list
+  }
+
+  #[test_only]
+  public fun test_helper_vm_liquidate(vm: &signer) acquires Freeze {
+    vm_liquidate(vm);
+  }
+
+  #[test_only]
+  public fun test_helper_make_donor_voice(vm: &signer, sig: &signer, initial_authorities: vector<address>) {
+    use ol_framework::testnet;
+    testnet::assert_testnet(vm);
+    make_donor_voice(sig);
+    multi_action::propose_offer_internal(sig, initial_authorities, option::none());
+    donor_voice_reauth::test_set_authorized(vm, signer::address_of(sig));
   }
 }

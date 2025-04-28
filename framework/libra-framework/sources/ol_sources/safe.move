@@ -54,7 +54,7 @@ module ol_framework::safe {
   use ol_framework::system_addresses;
   use ol_framework::transaction_fee;
 
-  // use diem_std::debug::print;
+
 
   friend diem_framework::genesis;
   friend ol_framework::epoch_boundary;
@@ -81,7 +81,7 @@ module ol_framework::safe {
   /// This function initiates governance for the multisig. It is called by the sponsor address, and is only callable once.
   /// init_gov fails gracefully if the governance is already initialized.
   /// init_type will throw errors if the type is already initialized.
-  public entry fun init_payment_multisig(sponsor: &signer, authorities: vector<address>) acquires RootMultiSigRegistry {
+  public fun init_payment_multisig(sponsor: &signer, authorities: vector<address>) acquires RootMultiSigRegistry {
     multi_action::init_gov(sponsor);
     multi_action::init_type<PaymentType>(sponsor, true);
     add_to_registry(signer::address_of(sponsor));

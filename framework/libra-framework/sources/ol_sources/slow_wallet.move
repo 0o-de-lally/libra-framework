@@ -17,8 +17,6 @@ module ol_framework::slow_wallet {
   use ol_framework::sacred_cows;
   use ol_framework::testnet;
 
-  // use diem_std::debug::print;
-
   friend diem_framework::genesis;
   friend ol_framework::ol_account;
   friend ol_framework::transaction_fee;
@@ -38,6 +36,8 @@ module ol_framework::slow_wallet {
 
   /// genesis failed to initialized the slow wallet registry
   const EGENESIS_ERROR: u64 = 1;
+  /// supply calculations exceed total supply
+  const EINVALID_SUPPLY: u64 = 2;
 
   /// Maximum possible aggregatable coin value.
   const MAX_U64: u128 = 18446744073709551615;
@@ -94,6 +94,7 @@ module ol_framework::slow_wallet {
         // for already existing accounts
         let state = borrow_global_mut<SlowWallet>(signer::address_of(sig));
         state.unlocked = 0;
+        state.transferred = 0;
     }
 
     /// Users can change their account to slow, by calling the entry function
@@ -404,9 +405,20 @@ module ol_framework::slow_wallet {
       while (i < len) {
         let addr = vector::borrow<address>(&list, i);
         let (u, t) = unlocked_and_total(*addr);
+        spec {
+          assume total + t < MAX_U64;
+          assume unlocked + u < MAX_U64;
+        };
+
         total = total + t;
         unlocked = unlocked + u;
         transferred = transferred + transferred_amount(*addr);
+
+        // TODO:
+        // assert!(total < system_supply, error::invalid_argument(EINVALID_SUPPLY));
+        // assert!(unlocked < total, error::invalid_argument(EINVALID_SUPPLY));
+        // assert!(transferred < total, error::invalid_argument(EINVALID_SUPPLY));
+
         i = i + 1;
       };
 

@@ -12,13 +12,13 @@ module ol_framework::ol_account {
   use diem_std::math64;
   use ol_framework::activity;
   use ol_framework::ancestry;
+  use ol_framework::community_wallet;
   use ol_framework::ol_features_constants;
   use ol_framework::libra_coin::{Self, LibraCoin};
   use ol_framework::slow_wallet;
   use ol_framework::receipts;
   use ol_framework::reauthorization;
   use ol_framework::cumulative_deposits;
-  use ol_framework::community_wallet;
   use ol_framework::donor_voice;
   use ol_framework::testnet;
 
@@ -40,6 +40,7 @@ module ol_framework::ol_account {
   friend diem_framework::transaction_fee;
   friend ol_framework::genesis_migration;
   friend ol_framework::rewards;
+  friend ol_framework::community_wallet_advance;
 
   #[test_only]
   friend ol_framework::test_multi_action;
@@ -230,8 +231,8 @@ module ol_framework::ol_account {
     //   lookup_addr == signer::address_of(&new_signer),
     //   error::invalid_state(ECANT_MATCH_ADDRESS_IN_LOOKUP)
     // );
-    coin::register<LibraCoin>(&new_signer);
-    maybe_init_burn_tracker(&new_signer);
+    init_from_sig_impl(framework, &new_signer);
+
     new_signer
   }
   /// Migrate the tracker. Depends on the BurnTracker having been initialized
@@ -253,7 +254,7 @@ module ol_framework::ol_account {
 
   #[test_only]
   /// Batch version of GAS transfer.
-  public entry fun batch_transfer(source: &signer, recipients:
+  fun batch_transfer(source: &signer, recipients:
   vector<address>, amounts: vector<u64>) acquires BurnTracker {
     let recipients_len = vector::length(&recipients);
     assert!(
@@ -275,6 +276,13 @@ module ol_framework::ol_account {
   public entry fun transfer(sender: &signer, to: address, amount: u64)
   acquires BurnTracker {
     let payer = signer::address_of(sender);
+
+    // community wallets cannot use ol_transfer, they have a dedicated workflow
+    assert!(!community_wallet::is_init(payer),
+    error::invalid_state(ENOT_FOR_CW));
+    assert!(!donor_voice::is_donor_voice(payer),
+    error::invalid_state(ENOT_FOR_DV));
+
     maybe_sender_creates_account(sender, to, amount);
     transfer_checks(payer, to, amount);
     // both update burn tracker
@@ -286,7 +294,7 @@ module ol_framework::ol_account {
   // transfer with capability, and do appropriate checks on both sides, and
   // track the slow wallet
   // NOTE: this requires that the account exists, since the SENDER signature is not used
-  fun transfer_with_capability(cap: &WithdrawCapability, recipient:
+  public(friend) fun transfer_with_capability(cap: &WithdrawCapability, recipient:
   address, amount: u64) acquires BurnTracker {
     if(!account::exists_at(recipient)) return; // exit without abort,
     // since this might be called by the 0x0 at an epoch boundary.
@@ -353,11 +361,8 @@ module ol_framework::ol_account {
     fun transfer_checks(payer: address, recipient: address, amount: u64) {
         assert!(!ol_features_constants::is_governance_mode_enabled(), error::invalid_state(EGOVERNANCE_MODE));
 
-        // community wallets cannot use ol_transfer, they have a dedicated workflow
-        assert!(!community_wallet::is_init(payer),
-        error::invalid_state(ENOT_FOR_CW));
-        assert!(!donor_voice::is_donor_voice(payer),
-        error::invalid_state(ENOT_FOR_DV));
+        // commit note: cw wallet checks are deprecated here.
+        // they are however good user feedback on the txs
 
 
         // TODO: Check if Resource Accounts can register here, since they
@@ -597,7 +602,7 @@ module ol_framework::ol_account {
     // TODO:
     // #[test_only]
     // /// Batch version of transfer_coins.
-    // public entry fun batch_transfer<CoinType>(
+    // fun batch_transfer<CoinType>(
     //     from: &signer, recipients: vector<address>, amounts: vector<u64>) {
     //     let recipients_len = vector::length(&recipients);
     //     assert!(
@@ -653,7 +658,7 @@ module ol_framework::ol_account {
     }
 
     /// Set whether `account` can receive direct transfers of coins that they have not explicitly registered to receive.
-    public entry fun set_allow_direct_coin_transfers(account: &signer, allow: bool) acquires DirectTransferConfig {
+    fun set_allow_direct_coin_transfers(account: &signer, allow: bool) acquires DirectTransferConfig {
         let addr = signer::address_of(account);
         if (exists<DirectTransferConfig>(addr)) {
             let direct_transfer_config = borrow_global_mut<DirectTransferConfig>(addr);

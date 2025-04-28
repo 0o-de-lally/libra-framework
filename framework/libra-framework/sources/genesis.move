@@ -1,5 +1,5 @@
 module diem_framework::genesis {
-    // use diem_std::debug::print;
+
 
     use std::error;
     use std::vector;
@@ -137,6 +137,8 @@ module diem_framework::genesis {
 
         chain_id::initialize(&diem_framework_account, chain_id);
         reconfiguration::initialize(&diem_framework_account);
+
+        // TODO: the epoch interval should be set on Move global.move, not externally.
         block::initialize(&diem_framework_account, epoch_interval_microsecs);
         state_storage::initialize(&diem_framework_account);
         randomness::initialize(&diem_framework_account);

@@ -18,8 +18,6 @@ module ol_framework::test_slow_wallet {
   use std::vector;
   use std::signer;
 
-  //  use diem_std::debug::print;
-
   #[test(root = @ol_framework)]
   // we are testing that genesis creates the needed struct
   // and a validator creation sets the users account to slow.
@@ -240,7 +238,7 @@ module ol_framework::test_slow_wallet {
 
 
   #[test(root = @0x1)]
-  public entry fun test_human_read(
+  fun test_human_read(
         root: signer,
     ) {
         let _set = mock::genesis_n_vals(&root, 4);

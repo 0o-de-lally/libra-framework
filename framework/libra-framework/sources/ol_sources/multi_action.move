@@ -36,20 +36,19 @@ module ol_framework::multi_action {
     use ol_framework::epoch_helper;
     use ol_framework::community_wallet;
 
-    // use diem_std::debug::print;
+
 
     friend ol_framework::community_wallet_init;
     friend ol_framework::donor_voice_txs;
     friend ol_framework::safe;
 
     // TODO: Remove after migration
-    friend ol_framework::multi_action_migration;
-
-    #[test_only]
-    friend ol_framework::test_multi_action_migration; // TODO: remove after offer migration
+    friend ol_framework::donor_voice_migration;
 
     #[test_only]
     friend ol_framework::test_multi_action;
+    #[test_only]
+    friend ol_framework::test_community_wallet;
 
     const EGOV_NOT_INITIALIZED: u64 = 1;
     /// The owner of this account can't be an authority, since it will subsequently be bricked. The signer of this account is no longer useful. The account is now controlled by the Governance logic.
@@ -192,7 +191,8 @@ module ol_framework::multi_action {
         offer.proposed_n_of_m = option::none();
     }
 
-    public(friend) fun init_offer(sig: &signer, addr: address) {
+    // TODO: we don't need two args here
+    public(friend) fun maybe_init_auth_offer(sig: &signer, addr: address) {
         if (!exists<Offer>(addr)) {
             move_to(sig, construct_empty_offer());
         };
@@ -224,7 +224,7 @@ module ol_framework::multi_action {
             });
         };
 
-        init_offer(sig, multisig_address);
+        maybe_init_auth_offer(sig, multisig_address);
     }
 
     fun ensure_valid_propose_offer_state(addr: address) {
@@ -689,7 +689,7 @@ module ol_framework::multi_action {
 
 
     // @returns bool, complete and passed
-    // TODO: Multi_action will never pass a complete and rejected, which needs a UX
+    // TODO: Multi_action should pass a complete BUT rejected option, which also would need an UX
     fun tally<ProposalData: store + drop>(prop: &mut Proposal<ProposalData>, n: u64): bool {
         if (vector::length(&prop.votes) >= n) {
             prop.approved = true;
@@ -1038,20 +1038,5 @@ module ol_framework::multi_action {
                 vote: ballot::new_tracker<Proposal<PropGovSigners>>(),
             });
         };
-    }
-
-    // TODO: remove this function after offer migration is completed
-    #[test_only]
-    public entry fun finalize_and_cage_deprecated(sig: &signer, initial_authorities: vector<address>, num_signers: u64) {
-        let addr = signer::address_of(sig);
-        assert!(exists<Governance>(addr),
-        error::invalid_argument(EGOV_NOT_INITIALIZED));
-        assert!(exists<Action<PropGovSigners>>(addr),
-        error::invalid_argument(EGOV_NOT_INITIALIZED));
-        // not yet initialized
-        assert!(!multisig_account::is_multisig(addr),
-        error::invalid_argument(EGOV_NOT_INITIALIZED));
-
-        multisig_account::migrate_with_owners(sig, initial_authorities, num_signers, vector::empty(), vector::empty());
     }
 }

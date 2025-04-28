@@ -207,16 +207,28 @@ pub struct ProposeTx {
     #[clap(short, long)]
     /// Description of payment for memo
     pub description: String,
+    #[clap(short, long)]
+    /// Request small administrative advance
+    pub advance: bool,
 }
 
 impl ProposeTx {
     pub async fn run(&self, sender: &mut Sender) -> anyhow::Result<()> {
-        let payload = libra_stdlib::donor_voice_txs_propose_payment_tx(
-            self.community_wallet,
-            self.recipient,
-            gas_coin::cast_decimal_to_coin(self.amount as f64),
-            self.description.clone().into_bytes(),
-        );
+        let payload = if self.advance {
+            libra_stdlib::donor_voice_txs_propose_advance_tx(
+                self.community_wallet,
+                self.recipient,
+                gas_coin::cast_decimal_to_coin(self.amount as f64),
+                self.description.clone().into_bytes(),
+            )
+        } else {
+            libra_stdlib::donor_voice_txs_propose_payment_tx(
+                self.community_wallet,
+                self.recipient,
+                gas_coin::cast_decimal_to_coin(self.amount as f64),
+                self.description.clone().into_bytes(),
+            )
+        };
         sender.sign_submit_wait(payload).await?;
         Ok(())
     }
@@ -238,12 +250,14 @@ pub struct BatchTx {
     pub check: bool,
 }
 
+/// Used for batch processing of CW payments
 #[derive(Serialize, Deserialize, Clone)]
 struct ProposePay {
     recipient: String,
     parsed: Option<AccountAddress>,
     amount: u64,
     description: String,
+    is_advance: bool,
     is_slow: Option<bool>,
     proposed: Option<bool>,
     approved: Option<bool>,
@@ -319,6 +333,8 @@ impl BatchTx {
                                                 parsed: Some(recipient),
                                                 amount,
                                                 description: "debugging".to_string(),
+                                                is_advance: false, // TODO: should warn that advance txs are not available in batch.
+
                                                 is_slow: None,
                                                 proposed: None,
                                                 approved: Some(is_approved),
@@ -477,23 +493,6 @@ impl ReauthVoteTx {
     pub async fn run(&self, sender: &mut Sender) -> anyhow::Result<()> {
         let payload = libra_stdlib::donor_voice_txs_vote_reauth_tx(self.community_wallet);
         sender.sign_submit_wait(payload).await?;
-        Ok(())
-    }
-}
-
-// TODO remove after migration is completed
-#[derive(clap::Args)]
-pub struct MigrateOfferTx {
-    #[clap(short, long)]
-    /// The Community Wallet to propose the offer
-    pub community_wallet: AccountAddress,
-}
-
-impl MigrateOfferTx {
-    pub async fn run(&self, sender: &mut Sender) -> anyhow::Result<()> {
-        let payload = libra_stdlib::multi_action_migration_migrate_offer(self.community_wallet);
-        sender.sign_submit_wait(payload).await?;
-        println!("You have migrated the account to have the Offer structure. You can proceed with the authority offer now.");
         Ok(())
     }
 }

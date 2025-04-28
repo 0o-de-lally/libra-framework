@@ -13,7 +13,7 @@ module ol_framework::libra_coin {
     use std::signer;
     use std::vector;
     use std::option::{Self, Option};
-    // use diem_std::debug::print;
+
 
     use diem_framework::coin::{Self, Coin, MintCapability, BurnCapability};
     use diem_framework::system_addresses;
@@ -190,7 +190,7 @@ module ol_framework::libra_coin {
     #[view]
     /// get the gas coin supply. Helper which wraps coin::supply and extracts option type
     // NOTE: there is casting between u128 and u64, but 0L has final supply below the u64.
-    public fun supply(): u64 {
+    public fun supply(): u64 acquires FinalMint{
 
       let supply_opt = coin::supply<LibraCoin>();
       if (option::is_some(&supply_opt)) {
@@ -200,7 +200,7 @@ module ol_framework::libra_coin {
         };
         return (value as u64)
       };
-      0
+      get_final_supply()
     }
     #[view]
     /// debugging view
@@ -261,7 +261,7 @@ module ol_framework::libra_coin {
         root: &signer,
         dst_addr: address,
         amount: u64,
-    ) acquires MintCapStore {
+    ) acquires MintCapStore, FinalMint {
         let _s = supply(); // check we didn't overflow supply
 
         let account_addr = signer::address_of(root);
@@ -277,18 +277,18 @@ module ol_framework::libra_coin {
     }
 
     #[test_only]
-    public entry fun test_mint_to(
+    fun test_mint_to(
         root: &signer,
         dst_addr: address,
         amount: u64,
-    ) acquires MintCapStore {
+    ) acquires MintCapStore, FinalMint {
       system_addresses::assert_ol(root);
       mint_to_impl(root, dst_addr, amount);
     }
 
     /// Only callable in tests and testnets where the core resources account exists.
     /// Create delegated token for the address so the account could claim MintCapability later.
-    public entry fun delegate_mint_capability(account: signer, to: address) acquires Delegations {
+    fun delegate_mint_capability(account: signer, to: address) acquires Delegations {
         system_addresses::assert_core_resource(&account);
         let delegations = &mut borrow_global_mut<Delegations>(@core_resources).inner;
         let i = 0;
@@ -302,7 +302,7 @@ module ol_framework::libra_coin {
 
     /// Only callable in tests and testnets where the core resources account exists.
     /// Claim the delegated mint capability and destroy the delegated token.
-    public entry fun claim_mint_capability(account: &signer) acquires Delegations, MintCapStore {
+    fun claim_mint_capability(account: &signer) acquires Delegations, MintCapStore {
         let maybe_index = find_delegation(signer::address_of(account));
         assert!(option::is_some(&maybe_index), EDELEGATION_NOT_FOUND);
         let idx = *option::borrow(&maybe_index);

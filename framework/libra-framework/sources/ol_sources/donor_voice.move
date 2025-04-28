@@ -48,9 +48,8 @@ module ol_framework::donor_voice {
     use std::error;
     use diem_framework::system_addresses;
 
-    // use diem_std::debug::print;
-    friend diem_framework::genesis;
 
+    friend diem_framework::genesis;
     friend ol_framework::community_wallet_init;
     friend ol_framework::donor_voice_txs;
 

@@ -3,13 +3,12 @@ module ol_framework::migrations {
   use std::string;
   use std::error;
   use diem_framework::system_addresses;
+  use ol_framework::donor_voice_migration;
   use ol_framework::epoch_helper;
   use ol_framework::root_of_trust;
+  use ol_framework::migration_capability::MigrationCapability;
 
   use diem_std::debug::print;
-
-  // migrations
-  // use ol_framework::vouch_migration;
 
   //////// CONST ////////
   const EMIGRATIONS_NOT_INITIALIZED: u64 = 1;
@@ -26,7 +25,7 @@ module ol_framework::migrations {
     history: vector<Migration>,
   }
 
-  public fun execute(root: &signer) acquires Migrations {
+  public fun execute(root: &signer, migration_cap: &MigrationCapability) acquires Migrations {
     // ensure ol_framework
     system_addresses::assert_ol(root);
 
@@ -38,6 +37,10 @@ module ol_framework::migrations {
 
     if (apply_migration(root, 2, b"If root of trust is not initialize use 2021 genesis set")) {
       root_of_trust::genesis_initialize(root, root_of_trust::genesis_root());
+    };
+
+    if (apply_migration(root, 3, b"All community endowments need new data structures")) {
+      donor_voice_migration::v8_state_migration(root, migration_cap);
     };
 
   }
@@ -84,6 +87,8 @@ module ol_framework::migrations {
     };
   }
 
+  #[view]
+  /// see which migration ran most recently
   public fun get_last_migration_number(): u64 acquires Migrations {
     if (!exists<Migrations>(@ol_framework)) {
       return 0
@@ -93,6 +98,8 @@ module ol_framework::migrations {
     state.last_migration
   }
 
+  #[view]
+  /// get the state of the migrations
   public fun get_last_migrations_history(): (u64, u64, vector<u8>) acquires Migrations {
     assert!(exists<Migrations>(@ol_framework), error::invalid_state(EMIGRATIONS_NOT_INITIALIZED));
 
