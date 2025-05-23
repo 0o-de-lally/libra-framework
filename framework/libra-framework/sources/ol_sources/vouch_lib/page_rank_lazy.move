@@ -33,7 +33,7 @@ module ol_framework::page_rank_lazy {
 
     /// Maximum depth for path traversal in the trust graph.
     /// This limits how far the algorithm will search from a root node.
-    const MAX_PATH_DEPTH: u64 = 5;
+    const MAX_PATH_DEPTH: u64 = 6;
 
     /// Per-user trust record - each user stores their own trust data
     /// This resource tracks a user's cached trust score and staleness state.
@@ -102,7 +102,7 @@ module ol_framework::page_rank_lazy {
         // Default roots to system account if no registry
         let roots = root_of_trust::get_current_roots_at_registry(@diem_framework);
         // Compute score using selected algorithm
-        let score = traverse_graph(&roots, addr);
+        let score = traverse_graph(&roots, addr, MAX_PATH_DEPTH);
         // Update the cache
         let user_record_mut = borrow_global_mut<UserTrustRecord>(addr);
         user_record_mut.cached_score = score;
@@ -125,6 +125,7 @@ module ol_framework::page_rank_lazy {
     fun traverse_graph(
         roots: &vector<address>,
         target: address,
+        max_depth: u64,
     ): u64 {
         let total_score = 0;
         let root_idx = 0;
@@ -134,7 +135,7 @@ module ol_framework::page_rank_lazy {
         // For each root, calculate its contribution independently
         while (root_idx < roots_len) {
             // Check if the global limit for processed nodes has been reached
-            if (processed_count >= MAX_PROCESSED_ADDRESSES - 50) {
+            if (processed_count >= MAX_PROCESSED_ADDRESSES) {
                 // Stop processing additional roots if we're close to the limit
                 break
             };
@@ -143,7 +144,7 @@ module ol_framework::page_rank_lazy {
             let visited = vector::empty<address>();
             if (root != target) {
                 total_score = total_score + walk_from_node(
-                    root, target, &mut visited, 2 * MAX_VOUCH_SCORE, 0, &mut processed_count
+                    root, target, &mut visited, 2 * MAX_VOUCH_SCORE, 0, &mut processed_count, max_depth
                 );
             };
             root_idx = root_idx + 1;
@@ -174,10 +175,11 @@ module ol_framework::page_rank_lazy {
         visited: &mut vector<address>,
         current_power: u64,
         current_depth: u64,
-        processed_count: &mut u64
+        processed_count: &mut u64,
+        max_depth: u64
     ): u64 {
         // Early terminations that don't consume processing budget
-        if (current_depth >= MAX_PATH_DEPTH) return 0;
+        if (current_depth >= max_depth) return 0;
         if (vector::contains(visited, &current)) return 0;
         if (!vouch::is_init(current)) return 0;
         if (current_power < 2) return 0;
@@ -195,7 +197,7 @@ module ol_framework::page_rank_lazy {
         let total_score = 0;
 
         // Direct connection check
-        if (vector::contains(&neighbors, &target) && current_depth + 1 < MAX_PATH_DEPTH) {
+        if (vector::contains(&neighbors, &target) && current_depth + 1 < max_depth) {
             total_score = total_score + (current_power / 2);
         };
 
@@ -234,7 +236,8 @@ module ol_framework::page_rank_lazy {
                         &mut visited_copy,
                         next_power,
                         next_depth,
-                        processed_count
+                        processed_count,
+                        max_depth
                     );
                     total_score = total_score + path_score;
                     neighbors_explored = neighbors_explored + 1;
@@ -308,7 +311,7 @@ module ol_framework::page_rank_lazy {
         let len = vector::length(&outgoing_vouches);
         while (i < len) {
             // Check again if we've hit the processing limit
-            if (*processed_count >= MAX_PROCESSED_ADDRESSES - 5) break;
+            if (*processed_count >= MAX_PROCESSED_ADDRESSES) break;
 
             let each_vouchee = vector::borrow(&outgoing_vouches, i);
             // Pass the same mutable reference to processed_count.
@@ -350,8 +353,22 @@ module ol_framework::page_rank_lazy {
         // Default roots to system account if no registry
         let roots = root_of_trust::get_current_roots_at_registry(@diem_framework);
         // Compute score using selected algorithm
-        let (score, max_depth, processed_count) = traverse_graph_with_stats(&roots, addr);
-        (score, max_depth, processed_count)
+        let (score, max_depth_reached, processed_count) = traverse_graph_with_stats(&roots, addr, MAX_PATH_DEPTH);
+        (score, max_depth_reached, processed_count)
+    }
+
+    #[view]
+    /// Calculates a fresh trust score for a user without updating the cache.
+    /// Returns (score, max_depth_reached, accounts_processed).
+    /// Intended for diagnostics and testing only.
+    public fun calculate_score_depth(addr: address, max_depth: u64): (u64, u64, u64) {
+        assert!(exists<UserTrustRecord>(addr), error::invalid_state(ENOT_INITIALIZED));
+        // Cache is stale or expired - compute fresh score
+        // Default roots to system account if no registry
+        let roots = root_of_trust::get_current_roots_at_registry(@diem_framework);
+        // Compute score using selected algorithm
+        let (score, max_depth_reached, processed_count) = traverse_graph_with_stats(&roots, addr, max_depth);
+        (score, max_depth_reached, processed_count)
     }
 
     #[view]
@@ -464,6 +481,7 @@ module ol_framework::page_rank_lazy {
     fun traverse_graph_with_stats(
         roots: &vector<address>,
         target: address,
+        max_depth: u64,
     ): (u64, u64, u64) {
         let processed_count: u64 = 0;
         let max_depth_reached: u64 = 0;
@@ -471,7 +489,7 @@ module ol_framework::page_rank_lazy {
 
         // Start the reverse walk from the target
         let score = traverse_graph_stats_inner(
-            target, roots, &mut visited, 2 * MAX_VOUCH_SCORE, 0, &mut processed_count, &mut max_depth_reached
+            target, roots, &mut visited, 2 * MAX_VOUCH_SCORE, 0, &mut processed_count, &mut max_depth_reached, max_depth
         );
 
         (score, max_depth_reached, processed_count)
@@ -486,7 +504,8 @@ module ol_framework::page_rank_lazy {
         current_power: u64,
         current_depth: u64,
         processed_count: &mut u64,
-        max_depth_reached: &mut u64
+        max_depth_reached: &mut u64,
+        max_depth: u64
     ): u64 {
         // Track maximum depth reached
         if (current_depth > *max_depth_reached) {
@@ -494,7 +513,7 @@ module ol_framework::page_rank_lazy {
         };
 
         // Early terminations that don't consume processing budget
-        if (current_depth >= MAX_PATH_DEPTH) return 0;
+        if (current_depth >= max_depth) return 0;
         if (vector::contains(visited, &current)) return 0;
         if (!vouch::is_init(current)) return 0;
         if (current_power < 2) return 0;
@@ -521,16 +540,12 @@ module ol_framework::page_rank_lazy {
         // Add current to visited and explore received vouches (backwards)
         vector::push_back(visited, current);
 
-        // CRITICAL: Limit number of neighbors explored to prevent exponential explosion
-        // Remove neighbor exploration limit: explore all neighbors at every depth
         let i = 0;
-
         while (i < neighbor_count) {
             if (*processed_count >= MAX_PROCESSED_ADDRESSES) break;
 
             let neighbor = *vector::borrow(&received_from, i);
             if (!vector::contains(visited, &neighbor)) {
-                // Create a copy of visited for this path
                 let visited_copy = *visited;
                 let path_score = traverse_graph_stats_inner(
                     neighbor,
@@ -539,7 +554,8 @@ module ol_framework::page_rank_lazy {
                     next_power,
                     next_depth,
                     processed_count,
-                    max_depth_reached
+                    max_depth_reached,
+                    max_depth
                 );
                 total_score = total_score + path_score;
             };
