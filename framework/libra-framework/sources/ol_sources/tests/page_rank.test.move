@@ -205,6 +205,17 @@ module ol_framework::test_page_rank {
     // Check the vouch limit for the directly vouched user
     // this users maxed out the vouches
     assert!(vouch_limit_indirect == 15, 7357004);
+
+    // Compare DFS vs BFS results for both users
+    let (dfs_direct, dfs_direct_depth, _) = page_rank_lazy::calculate_score(direct_vouched_addr);
+    let (bfs_direct, bfs_direct_depth, _) = page_rank_lazy::calculate_score_bfs(direct_vouched_addr);
+    let (dfs_indirect, dfs_indirect_depth, _) = page_rank_lazy::calculate_score(indirect_vouched_addr);
+    let (bfs_indirect, bfs_indirect_depth, _) = page_rank_lazy::calculate_score_bfs(indirect_vouched_addr);
+    
+    assert!(dfs_direct == bfs_direct, 7357007); // Direct scores should be identical
+    assert!(dfs_indirect == bfs_indirect, 7357008); // Indirect scores should be identical
+    assert!(dfs_direct_depth == bfs_direct_depth, 7357009); // Depths should match
+    assert!(dfs_indirect_depth == bfs_indirect_depth, 7357010); // Depths should match
   }
 
   #[test(framework = @ol_framework)]
@@ -579,6 +590,14 @@ module ol_framework::test_page_rank {
 
     let (carol_score_post, _, _) = page_rank_lazy::calculate_score(carol_addr);
     assert!(carol_score_post == 25_000, 7357002);
+
+    // Compare DFS vs BFS results
+    let (dfs_score, dfs_depth, _) = page_rank_lazy::calculate_score(carol_addr);
+    let (bfs_score, bfs_depth, _) = page_rank_lazy::calculate_score_bfs(carol_addr);
+    
+    assert!(dfs_score == bfs_score, 7357002); // Scores should be identical
+    assert!(dfs_depth == bfs_depth, 7357002); // Depths should be identical
+    assert!(dfs_score == 25_000, 7357002);
   }
 
   #[test(framework = @ol_framework)]
@@ -624,6 +643,17 @@ module ol_framework::test_page_rank {
     // TODO: is this the spec?
     let (alice_score_post, _, _) = page_rank_lazy::calculate_score(alice_addr);
     assert!(alice_score_post == 100_000, 7357002);
+
+    // Compare DFS vs BFS results for both users
+    let (dfs_carol, dfs_carol_depth, _) = page_rank_lazy::calculate_score(carol_addr);
+    let (bfs_carol, bfs_carol_depth, _) = page_rank_lazy::calculate_score_bfs(carol_addr);
+    let (dfs_alice, dfs_alice_depth, _) = page_rank_lazy::calculate_score(alice_addr);
+    let (bfs_alice, bfs_alice_depth, _) = page_rank_lazy::calculate_score_bfs(alice_addr);
+    
+    assert!(dfs_carol == bfs_carol, 7357003); // Carol scores should be identical
+    assert!(dfs_alice == bfs_alice, 7357004); // Alice scores should be identical
+    assert!(dfs_carol_depth == bfs_carol_depth, 7357005); // Depths should match
+    assert!(dfs_alice_depth == bfs_alice_depth, 7357006); // Depths should match
   }
 
   #[test(framework = @ol_framework)]
@@ -670,6 +700,17 @@ module ol_framework::test_page_rank {
     let (alice_score_post, _, _) = page_rank_lazy::calculate_score(alice_addr);
     diem_std::debug::print(&alice_score_post);
     assert!(alice_score_post == 100_000, 7357002);
+
+    // Compare DFS vs BFS results for both users
+    let (dfs_carol, dfs_carol_depth, _) = page_rank_lazy::calculate_score(carol_addr);
+    let (bfs_carol, bfs_carol_depth, _) = page_rank_lazy::calculate_score_bfs(carol_addr);
+    let (dfs_alice, dfs_alice_depth, _) = page_rank_lazy::calculate_score(alice_addr);
+    let (bfs_alice, bfs_alice_depth, _) = page_rank_lazy::calculate_score_bfs(alice_addr);
+    
+    assert!(dfs_carol == bfs_carol, 7357003); // Carol scores should be identical
+    assert!(dfs_alice == bfs_alice, 7357004); // Alice scores should be identical
+    assert!(dfs_carol_depth == bfs_carol_depth, 7357005); // Depths should match
+    assert!(dfs_alice_depth == bfs_alice_depth, 7357006); // Depths should match
   }
 
   #[test(framework = @ol_framework)]
@@ -727,6 +768,17 @@ module ol_framework::test_page_rank {
     // TODO: is this the spec?
     let (alice_score_post, _, _) = page_rank_lazy::calculate_score(alice_addr);
     assert!(alice_score_post == 100_000, 7357002);
+
+    // Compare DFS vs BFS results for both carol and alice
+    let (dfs_carol, dfs_carol_depth, _) = page_rank_lazy::calculate_score(carol_addr);
+    let (bfs_carol, bfs_carol_depth, _) = page_rank_lazy::calculate_score_bfs(carol_addr);
+    let (dfs_alice, dfs_alice_depth, _) = page_rank_lazy::calculate_score(alice_addr);
+    let (bfs_alice, bfs_alice_depth, _) = page_rank_lazy::calculate_score_bfs(alice_addr);
+    
+    assert!(dfs_carol == bfs_carol, 7357003); // Carol scores should be identical
+    assert!(dfs_alice == bfs_alice, 7357004); // Alice scores should be identical
+    assert!(dfs_carol_depth == bfs_carol_depth, 7357005); // Depths should match
+    assert!(dfs_alice_depth == bfs_alice_depth, 7357006); // Depths should match
   }
 
   #[test(framework = @ol_framework)]
