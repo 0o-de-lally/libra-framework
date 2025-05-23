@@ -13,6 +13,8 @@ module ol_framework::page_rank_lazy {
     #[test_only]
     friend ol_framework::test_page_rank;
     #[test_only]
+    friend ol_framework::test_page_rank_bfs;
+    #[test_only]
     friend ol_framework::mock;
 
     //////// ERROR CODES ////////
@@ -183,75 +185,125 @@ module ol_framework::page_rank_lazy {
         total_score
     }
 
-    /// Marks a user's trust score as stale and propagates staleness to downstream accounts.
-    /// Uses cycle detection and a processing limit to prevent infinite recursion.
-    public(friend) fun mark_as_stale(user: address) acquires UserTrustRecord {
+    /// Breadth-first alternative to walk_backwards_from_target_with_stats.
+    /// Uses a queue-based approach instead of recursion to traverse the trust graph.
+    /// - Starts from the target user and explores level by level.
+    /// - Uses received vouches for traversal (backwards direction).
+    /// - Accumulates score when reaching roots.
+    /// - Avoids cycles and implements processing limits.
+    fun walk_backwards_from_target_bfs(
+        target: address,
+        roots: &vector<address>,
+        max_depth: u64
+    ): (u64, u64, u64) {
+        // BFS data structures
+        let queue = vector::empty<address>();
+        let depths = vector::empty<u64>();
+        let powers = vector::empty<u64>();
         let visited = vector::empty<address>();
-        let processed_count: u64 = 0; // Initialize as a mutable local variable
-        walk_stale(user, &mut visited, &mut processed_count); // Pass as a mutable reference
+
+        // Statistics tracking
+        let processed_count: u64 = 0;
+        let max_depth_reached: u64 = 0;
+        let total_score: u64 = 0;
+
+        // Initialize queue with target
+        vector::push_back(&mut queue, target);
+        vector::push_back(&mut depths, 0);
+        vector::push_back(&mut powers, 2 * MAX_VOUCH_SCORE);
+
+        while (!vector::is_empty(&queue)) {
+            // Circuit breaker
+            assert!(processed_count < MAX_PROCESSED_ADDRESSES, error::invalid_state(EMAX_PROCESSED_ADDRESSES));
+            processed_count = processed_count + 1;
+
+            // Dequeue current node
+            let current = vector::remove(&mut queue, 0);
+            let current_depth = vector::remove(&mut depths, 0);
+            let current_power = vector::remove(&mut powers, 0);
+
+            // Track maximum depth reached
+            if (current_depth > max_depth_reached) {
+                max_depth_reached = current_depth;
+            };
+
+            // Skip if already visited (cycle detection)
+            if (vector::contains(&visited, &current)) {
+                continue
+            };
+
+            // Mark as visited
+            vector::push_back(&mut visited, current);
+
+            // Early terminations
+            if (current_depth >= max_depth) continue;
+            if (!vouch::is_init(current)) continue;
+            if (current_power < 2) continue;
+
+            // Check if we've reached a root of trust
+            if (vector::contains(roots, &current) && current_depth > 0) {
+                total_score = total_score + current_power;
+                continue // Found a root, continue exploring other paths
+            };
+
+            // Get who vouched FOR this current user (backwards direction)
+            let (received_from, _) = vouch::get_received_vouches(current);
+            let neighbor_count = vector::length(&received_from);
+
+            if (neighbor_count == 0) continue;
+
+            let next_power = current_power / 2;
+            let next_depth = current_depth + 1;
+
+            // Add all neighbors to queue
+            let i = 0;
+            while (i < neighbor_count) {
+                let neighbor = *vector::borrow(&received_from, i);
+                if (!vector::contains(&visited, &neighbor)) {
+                    vector::push_back(&mut queue, neighbor);
+                    vector::push_back(&mut depths, next_depth);
+                    vector::push_back(&mut powers, next_power);
+                };
+                i = i + 1;
+            };
+        };
+
+        (total_score, max_depth_reached, processed_count)
     }
 
-    /// Helper for `mark_as_stale`. Recursively marks downstream nodes as stale.
-    /// - Avoids revisiting nodes (cycle detection).
-    /// - Stops if the processing limit is reached.
-    /// - Only processes nodes initialized in the vouch system.
-    fun walk_stale(
-        user: address,
-        visited: &mut vector<address>,
-        processed_count: &mut u64
-    ) acquires UserTrustRecord {
-        // Skip if we've already visited this node in the current traversal (cycle detection)
-        // This also ensures we only count/process each unique node once.
-        if (vector::contains(visited, &user)) {
-            return
-        };
+    /// Alternative implementation of set_score using breadth-first search.
+    /// This version explores the trust graph level by level instead of depth-first.
+    fun set_score_bfs(addr: address): u64 acquires UserTrustRecord {
+        // If user has no trust record, they have no score
+        assert!(exists<UserTrustRecord>(addr), error::invalid_state(ENOT_INITIALIZED));
 
-        // Check if the global limit for processed nodes has been reached *before* processing this one.
-        // If *processed_count is already at the limit, we can't process another new node.
-        assert!(*processed_count < MAX_PROCESSED_ADDRESSES, error::invalid_state(EMAX_PROCESSED_ADDRESSES));
+        // Get roots for computation
+        let roots = root_of_trust::get_current_roots_at_registry(@diem_framework);
 
-        // This node is new and will be processed. Increment the global count.
-        *processed_count = *processed_count + 1;
+        // Compute score using BFS algorithm
+        let (score, _max_depth_reached, _processed_count) = walk_backwards_from_target_bfs(
+            addr, &roots, MAX_PATH_DEPTH
+        );
 
-        // Process the current 'user' node:
-        // 1. Mark its UserTrustRecord as stale if it exists.
-        if (exists<UserTrustRecord>(user)) {
-            let record = borrow_global_mut<UserTrustRecord>(user);
-            record.is_stale = true;
-        };
+        // Update the cache
+        let user_record_mut = borrow_global_mut<UserTrustRecord>(addr);
+        user_record_mut.cached_score = score;
+        user_record_mut.score_computed_at_timestamp = timestamp::now_seconds();
+        user_record_mut.is_stale = false;
 
-        // 2. Add this node to the visited set for the current traversal.
-        vector::push_back(visited, user);
-
-        // If the user is not initialized in the vouch system, they cannot have outgoing vouches.
-        // Staleness propagation stops here for this path, but 'user' itself has been processed and counted.
-        if (!vouch::is_init(user)) {
-            return
-        };
-
-        // Now walk their outgoing vouches
-        let (outgoing_vouches, _) = vouch::get_given_vouches(user);
-        if (vector::length(&outgoing_vouches) == 0) {
-            return
-        };
-
-        // Recursively process downstream addresses
-        let i = 0;
-        let len = vector::length(&outgoing_vouches);
-        while (i < len) {
-            // Check again if we've hit the processing limit
-            if (*processed_count >= MAX_PROCESSED_ADDRESSES) break;
-
-            let each_vouchee = vector::borrow(&outgoing_vouches, i);
-            // Pass the same mutable reference to processed_count.
-            // The checks at the beginning of the recursive call (visited and limit)
-            // will handle whether to proceed for 'each_vouchee'.
-            walk_stale(*each_vouchee, visited, processed_count);
-            i = i + 1;
-        };
+        score
     }
 
     //////// CACHE ////////
+
+    /// Marks a user's trust score as stale, forcing recalculation on next access.
+    /// Called when trust relationships change to invalidate cached scores.
+    public(friend) fun mark_as_stale(addr: address) acquires UserTrustRecord {
+        if (exists<UserTrustRecord>(addr)) {
+            let user_record_mut = borrow_global_mut<UserTrustRecord>(addr);
+            user_record_mut.is_stale = true;
+        };
+    }
 
     /// Refreshes the cached trust score for a user by recalculating it.
     /// Only callable by the user.
@@ -304,6 +356,42 @@ module ol_framework::page_rank_lazy {
             addr, &roots, &mut visited, 2 * MAX_VOUCH_SCORE, 0, &mut processed_count, &mut max_depth_reached, max_depth
         );
         (score, max_depth_reached, processed_count)
+    }
+
+    #[view]
+    /// Calculates a fresh trust score using BFS for a user without updating the cache.
+    /// Returns (score, max_depth_reached, accounts_processed).
+    /// Intended for diagnostics and testing only.
+    public fun calculate_score_bfs(addr: address): (u64, u64, u64) {
+        assert!(exists<UserTrustRecord>(addr), error::invalid_state(ENOT_INITIALIZED));
+        let roots = root_of_trust::get_current_roots_at_registry(@diem_framework);
+        let (score, max_depth_reached, processed_count) = walk_backwards_from_target_bfs(
+            addr, &roots, MAX_PATH_DEPTH
+        );
+        (score, max_depth_reached, processed_count)
+    }
+
+    #[view]
+    /// Calculates a fresh trust score using BFS for a user without updating the cache, using a custom max depth.
+    /// Returns (score, max_depth_reached, accounts_processed).
+    /// Intended for diagnostics and testing only.
+    public fun calculate_score_bfs_depth(addr: address, max_depth: u64): (u64, u64, u64) {
+        assert!(exists<UserTrustRecord>(addr), error::invalid_state(ENOT_INITIALIZED));
+        let roots = root_of_trust::get_current_roots_at_registry(@diem_framework);
+        let (score, max_depth_reached, processed_count) = walk_backwards_from_target_bfs(
+            addr, &roots, max_depth
+        );
+        (score, max_depth_reached, processed_count)
+    }
+
+    #[view]
+    /// Returns the trust score using BFS algorithm (for testing/comparison purposes).
+    /// This is a public wrapper around the BFS calculation.
+    public fun get_trust_score_bfs(addr: address): u64 {
+        assert!(exists<UserTrustRecord>(addr), error::invalid_state(ENOT_INITIALIZED));
+        let roots = root_of_trust::get_current_roots_at_registry(@diem_framework);
+        let (score, _, _) = walk_backwards_from_target_bfs(addr, &roots, MAX_PATH_DEPTH);
+        score
     }
 
     #[view]
@@ -411,6 +499,50 @@ module ol_framework::page_rank_lazy {
 
         vouch::test_set_both_lists(user2_addr, user2_receives, user2_gives);
         vouch::test_set_both_lists(user3_addr, user3_receives, vector::empty());
+    }
+
+    #[test_only]
+    /// Compares DFS vs BFS performance and results for the same address.
+    /// Returns (dfs_score, dfs_depth, dfs_processed, bfs_score, bfs_depth, bfs_processed).
+    public fun compare_dfs_vs_bfs(addr: address): (u64, u64, u64, u64, u64, u64) {
+        assert!(exists<UserTrustRecord>(addr), error::invalid_state(ENOT_INITIALIZED));
+
+        let (dfs_score, dfs_depth, dfs_processed) = calculate_score(addr);
+        let (bfs_score, bfs_depth, bfs_processed) = calculate_score_bfs(addr);
+
+        (dfs_score, dfs_depth, dfs_processed, bfs_score, bfs_depth, bfs_processed)
+    }
+
+    #[test_only]
+    /// Test helper that sets up a comparison between DFS and BFS algorithms
+    /// using the mock trust network.
+    public fun test_algorithm_comparison(
+        admin: &signer,
+        root: &signer,
+        user1: &signer,
+        user2: &signer,
+        user3: &signer
+    ) {
+        setup_mock_trust_network(admin, root, user1, user2, user3);
+
+        let user1_addr = signer::address_of(user1);
+        let user2_addr = signer::address_of(user2);
+        let user3_addr = signer::address_of(user3);
+
+        // Compare algorithms for each user
+        let (dfs1, dfs1_depth, _dfs1_proc, bfs1, bfs1_depth, _bfs1_proc) = compare_dfs_vs_bfs(user1_addr);
+        let (dfs2, dfs2_depth, _dfs2_proc, bfs2, bfs2_depth, _bfs2_proc) = compare_dfs_vs_bfs(user2_addr);
+        let (dfs3, dfs3_depth, _dfs3_proc, bfs3, bfs3_depth, _bfs3_proc) = compare_dfs_vs_bfs(user3_addr);
+
+        // The scores should be identical between DFS and BFS
+        assert!(dfs1 == bfs1, 99001);
+        assert!(dfs2 == bfs2, 99002);
+        assert!(dfs3 == bfs3, 99003);
+
+        // Both should reach the same maximum depth
+        assert!(dfs1_depth == bfs1_depth, 99004);
+        assert!(dfs2_depth == bfs2_depth, 99005);
+        assert!(dfs3_depth == bfs3_depth, 99006);
     }
 
 }
