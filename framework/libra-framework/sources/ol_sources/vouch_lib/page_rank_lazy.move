@@ -522,12 +522,11 @@ module ol_framework::page_rank_lazy {
         vector::push_back(visited, current);
 
         // CRITICAL: Limit number of neighbors explored to prevent exponential explosion
-        let max_neighbors_to_explore = if (current_depth < 2) { 10 } else { 5 };
-        let neighbors_explored = 0;
+        // Remove neighbor exploration limit: explore all neighbors at every depth
         let i = 0;
 
-        while (i < neighbor_count && neighbors_explored < max_neighbors_to_explore) {
-            if (*processed_count >= MAX_PROCESSED_ADDRESSES - 5) break;
+        while (i < neighbor_count) {
+            if (*processed_count >= MAX_PROCESSED_ADDRESSES) break;
 
             let neighbor = *vector::borrow(&received_from, i);
             if (!vector::contains(visited, &neighbor)) {
@@ -543,7 +542,6 @@ module ol_framework::page_rank_lazy {
                     max_depth_reached
                 );
                 total_score = total_score + path_score;
-                neighbors_explored = neighbors_explored + 1;
             };
             i = i + 1;
         };
