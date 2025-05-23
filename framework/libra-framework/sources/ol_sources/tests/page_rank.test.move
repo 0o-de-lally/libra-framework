@@ -86,6 +86,14 @@ module ol_framework::test_page_rank {
     // Now check the page rank score (should be 100)
     let page_rank_score = page_rank_lazy::get_trust_score(new_user_addr);
     assert!(page_rank_score == max_single_score, 7357001);
+
+    // Compare DFS vs BFS results
+    let (dfs_score, dfs_depth, dfs_processed) = page_rank_lazy::calculate_score(new_user_addr);
+    let (bfs_score, bfs_depth, bfs_processed) = page_rank_lazy::calculate_score_bfs(new_user_addr);
+    
+    assert!(dfs_score == bfs_score, 7357001); // Scores should be identical
+    assert!(dfs_depth == bfs_depth, 7357001); // Depths should be identical
+    assert!(dfs_score == max_single_score, 7357001);
   }
 
   #[test(framework = @ol_framework)]
@@ -121,6 +129,14 @@ module ol_framework::test_page_rank {
     let page_rank_score_later = page_rank_lazy::get_trust_score(new_user_addr);
     // NOTE: this should be 10X the previous test
     assert!(page_rank_score_later == max_single_score * 10, 7357003);
+
+    // Compare DFS vs BFS results
+    let (dfs_score, dfs_depth, dfs_processed) = page_rank_lazy::calculate_score(new_user_addr);
+    let (bfs_score, bfs_depth, bfs_processed) = page_rank_lazy::calculate_score_bfs(new_user_addr);
+    
+    assert!(dfs_score == bfs_score, 7357003); // Scores should be identical
+    assert!(dfs_depth == bfs_depth, 7357003); // Depths should be identical
+    assert!(dfs_score == max_single_score * 10, 7357003);
   }
 
   #[test(framework = @ol_framework)]
@@ -721,7 +737,7 @@ module ol_framework::test_page_rank {
   // Root0 ->  Bob
   // Alice ->  Carol
   // Bob ->  Carol
-  fun diamond_pattern(framework: &signer) {
+  fun diamond_pattern_simple(framework: &signer) {
     // Set up the test base
     let roots_sig = test_base(framework);
 
@@ -754,9 +770,24 @@ module ol_framework::test_page_rank {
     vouch_txs::vouch_for(&alice_sig, carol_addr);
     vouch_txs::vouch_for(&bob_sig, carol_addr);
 
-    let (carol_score_post, _, _) = page_rank_lazy::calculate_score(carol_addr);
-    diem_std::debug::print(&carol_score_post);
-    assert!(carol_score_post == 100_000, 7357002);
+    let (dfs_score, dfs_depth, dfs_processed) = page_rank_lazy::calculate_score(carol_addr);
+    let (bfs_score, bfs_depth, bfs_processed) = page_rank_lazy::calculate_score_bfs(carol_addr);
+
+    diem_std::debug::print(&std::string::utf8(b"DFS Score: "));
+    diem_std::debug::print(&dfs_score);
+    diem_std::debug::print(&std::string::utf8(b"BFS Score: "));
+    diem_std::debug::print(&bfs_score);
+    diem_std::debug::print(&std::string::utf8(b"DFS Depth: "));
+    diem_std::debug::print(&dfs_depth);
+    diem_std::debug::print(&std::string::utf8(b"BFS Depth: "));
+    diem_std::debug::print(&bfs_depth);
+    diem_std::debug::print(&std::string::utf8(b"DFS Processed: "));
+    diem_std::debug::print(&dfs_processed);
+    diem_std::debug::print(&std::string::utf8(b"BFS Processed: "));
+    diem_std::debug::print(&bfs_processed);
+
+    assert!(dfs_score == 100_000, 7357002);
+    assert!(bfs_score == 100_000, 7357003);
   }
 
   #[test(framework = @ol_framework)]

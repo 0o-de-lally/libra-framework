@@ -196,11 +196,11 @@ module ol_framework::page_rank_lazy {
         roots: &vector<address>,
         max_depth: u64
     ): (u64, u64, u64) {
-        // BFS data structures
+        // BFS data structures - we track paths, not just nodes
         let queue = vector::empty<address>();
         let depths = vector::empty<u64>();
         let powers = vector::empty<u64>();
-        let visited = vector::empty<address>();
+        let path_visited = vector::empty<vector<address>>(); // Track visited nodes per path
 
         // Statistics tracking
         let processed_count: u64 = 0;
@@ -211,32 +211,27 @@ module ol_framework::page_rank_lazy {
         vector::push_back(&mut queue, target);
         vector::push_back(&mut depths, 0);
         vector::push_back(&mut powers, 2 * MAX_VOUCH_SCORE);
+        vector::push_back(&mut path_visited, vector::empty<address>());
 
         while (!vector::is_empty(&queue)) {
             // Circuit breaker
             assert!(processed_count < MAX_PROCESSED_ADDRESSES, error::invalid_state(EMAX_PROCESSED_ADDRESSES));
             processed_count = processed_count + 1;
 
-            // Dequeue current node
+            // Dequeue current node and its path
             let current = vector::remove(&mut queue, 0);
             let current_depth = vector::remove(&mut depths, 0);
             let current_power = vector::remove(&mut powers, 0);
+            let current_visited = vector::remove(&mut path_visited, 0);
 
             // Track maximum depth reached
             if (current_depth > max_depth_reached) {
                 max_depth_reached = current_depth;
             };
 
-            // Skip if already visited (cycle detection)
-            if (vector::contains(&visited, &current)) {
-                continue
-            };
-
-            // Mark as visited
-            vector::push_back(&mut visited, current);
-
             // Early terminations
             if (current_depth >= max_depth) continue;
+            if (vector::contains(&current_visited, &current)) continue; // Cycle detection for this path
             if (!vouch::is_init(current)) continue;
             if (current_power < 2) continue;
 
@@ -245,6 +240,10 @@ module ol_framework::page_rank_lazy {
                 total_score = total_score + current_power;
                 continue // Found a root, continue exploring other paths
             };
+
+            // Add current to this path's visited list
+            let new_visited = current_visited;
+            vector::push_back(&mut new_visited, current);
 
             // Get who vouched FOR this current user (backwards direction)
             let (received_from, _) = vouch::get_received_vouches(current);
@@ -255,14 +254,15 @@ module ol_framework::page_rank_lazy {
             let next_power = current_power / 2;
             let next_depth = current_depth + 1;
 
-            // Add all neighbors to queue
+            // Add all neighbors to queue with their own path copy
             let i = 0;
             while (i < neighbor_count) {
                 let neighbor = *vector::borrow(&received_from, i);
-                if (!vector::contains(&visited, &neighbor)) {
+                if (!vector::contains(&new_visited, &neighbor)) {
                     vector::push_back(&mut queue, neighbor);
                     vector::push_back(&mut depths, next_depth);
                     vector::push_back(&mut powers, next_power);
+                    vector::push_back(&mut path_visited, new_visited); // Each neighbor gets its own copy
                 };
                 i = i + 1;
             };
