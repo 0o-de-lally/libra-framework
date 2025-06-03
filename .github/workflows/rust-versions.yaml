@@ -39,6 +39,5 @@ jobs:
           version: 1.0
         if: runner.os == 'Linux' # This action only works on Ubuntu
 
-
       - name: does it build?
         run: cargo r -p libra -- version
