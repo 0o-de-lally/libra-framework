@@ -42,7 +42,6 @@ module ol_framework::migrations {
     if (apply_migration(root, 3, b"All community endowments need new data structures")) {
       donor_voice_migration::v8_state_migration(root, migration_cap);
     };
-
   }
 
   fun apply_migration(root: &signer, mig_number: u64, description: vector<u8>): bool acquires Migrations {

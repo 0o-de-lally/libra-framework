@@ -470,6 +470,21 @@ module ol_framework::slow_wallet {
       }
     }
 
+    // public(friend) fun destroy_slow(
+    //   vm: &signer,
+    //   user: &signer,
+    // ) acquires SlowWallet, SlowWalletList {
+    //   system_addresses::assert_ol(vm);
+    //   // remove address from slow wallet list
+    //   let state = borrow_global_mut<SlowWalletList>(@ol_framework);
+    //   let addr = signer::address_of(user);
+    //   let index = vector::find_index(&state.list, &addr);
+    //   if (index != vector::length(&state.list)) {
+    //     vector::remove(&mut state.list, index);
+    //   };
+
+    // }
+
 
     // Commit note: deprecated function from v6->v7 migration
 
