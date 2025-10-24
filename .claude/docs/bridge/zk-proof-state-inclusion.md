@@ -38,7 +38,7 @@ Key objectives:
 # Move Modules
 ## State Storage
 We need to store all known ethereum headers (or a window). However this would take a lot of space over time.
-There is a pattern in the Ethereum ecosystem of using an Accumulator which can be incremented. There are a number of techniques (e.g. Merkle Mountain Range). However Succint labs has production deployed SNARK proof accumulators (which we can check against accumulator hashes published by other ecosystem paritipants).
+There is a pattern in the Ethereum ecosystem of using an Accumulator which can be incremented. There are a number of techniques (e.g. Merkle Mountain Range). However Succinct Labs has production deployed SNARK proof accumulators (which we can check against accumulator hashes published by other ecosystem participants).
 
 ### Storage Requirements
 
@@ -47,11 +47,11 @@ There is a pattern in the Ethereum ecosystem of using an Accumulator which can b
 * **Transaction proofs:** Ephemeral; verified on submission, not stored permanently
 
 ### Stub
----
+
 ```move
 struct AccumulatorState has key {
     blob: vector<u8>,        // State of all known headers
-    last_header: vector<u8>
+    last_header: vector<u8>,
     block_number: u64,       // Block number of the last verified header
 }
 
@@ -59,6 +59,8 @@ struct ZKVerifierParams {
   // ** TBD parameters for all ZK verification ** //
 }
 ```
+
+---
 
 ## Header Proof Submission
 
@@ -97,7 +99,7 @@ Allows users to prove that a transaction was committed on Ethereum.
 
 ### Workflow Transaction Inclusion (User)
 
-1. User fetches Ethereum transaction receipt + Merkle–Patricia proof.
+1. User fetches Ethereum transaction receipt + Merkle-Patricia proof.
 2. Optionally compresses proof into a zk proof.
 3. Submits proof to Home chain referencing current `AccumulatorRoot`.
 4. Home chain verifies proof → confirms transaction inclusion.
@@ -128,6 +130,25 @@ public fun submit_tx_inclusion_proof(
 
 ---
 
+## Open Questions
+
+### Chain Reorganization Handling
+
+**Question:** How does Optimism or SP1 handle Ethereum chain reorganizations?
+
+**Context:** While Ethereum post-merge reorgs are rare (especially after finality), they can still occur. The system needs to define behavior when:
+- A previously "finalized" block gets reorganized (extremely rare but theoretically possible)
+- Headers are submitted that conflict with the canonical chain
+- The accumulator includes headers from a non-canonical fork
+
+**Research needed:**
+- Review SP1/Optimism implementation for reorg handling mechanisms
+- Determine if relying on Ethereum's finality (64+ slots) is sufficient
+- Define recovery procedures if reorg is detected
+- Consider whether accumulator needs reorg protection or if finality guarantees are adequate
+
+---
+
 ## Implementation Recommendation
 
 * Use **Succinct Labs zk-light-client technology** to:
@@ -141,3 +162,75 @@ public fun submit_tx_inclusion_proof(
   * **Permissionless participation:** Any volunteer or user can submit proofs
   * **Constant on-chain storage:** Only one root and verifier parameters
   * **Scalability and efficiency:** No historical headers or receipts need storing
+
+1. SP1
+
+Description: SP1 is a high-performance zero-knowledge virtual machine (zkVM) that allows developers to write programs in Rust (or any LLVM-compiled language) and generate zero-knowledge proofs of their execution.
+
+Use Case: Ideal for generating ZK proofs of Ethereum block execution or header validity.
+
+Features:
+
+Supports Rust standard library.
+
+Customizable precompiles for performance.
+
+Utilizes the latest techniques in STARKs for performant recursion and on-chain verification.
+
+2. RSP (Reth Succinct Processor)
+
+Description: RSP is a minimal implementation of generating zero-knowledge proofs of EVM block execution using Reth. It supports both Ethereum and the Optimism Stack.
+
+Use Case: Suitable for generating ZK proofs of Ethereum block execution, ensuring correctness without trusting the execution environment.
+
+Features:
+
+Generates ZK proofs for Ethereum block execution.
+
+Supports both Ethereum and Optimism, facilitating interoperability between different Ethereum-compatible chains.
+GitHub
+
+## On-Chain Precompile of Rust Verifier
+
+### Using the sp1-verifier Crate
+
+The `sp1-verifier` crate is designed for verifying ZK proofs produced by SP1. It is compatible with Rust and can be integrated into your application to validate proofs off-chain or compiled as a precompile for on-chain verification.
+
+To include the `sp1-verifier` crate in your Rust project, add the following to your `Cargo.toml`:
+
+```toml
+[dependencies]
+sp1-verifier = "1.0"  # Check for latest version
+```
+
+### Usage Example
+
+Here's a basic example of how to use the `sp1-verifier` crate to verify a ZK proof:
+
+```rust
+use sp1_verifier::{verify_groth16, verify_plonk};
+
+fn main() {
+    // Load your proof data
+    let proof_data = load_proof_data();
+
+    // Verify Groth16 proof
+    match verify_groth16(&proof_data) {
+        Ok(is_valid) => println!("Groth16 proof valid: {}", is_valid),
+        Err(e) => eprintln!("Error verifying Groth16 proof: {}", e),
+    }
+
+    // Verify Plonk proof
+    match verify_plonk(&proof_data) {
+        Ok(is_valid) => println!("Plonk proof valid: {}", is_valid),
+        Err(e) => eprintln!("Error verifying Plonk proof: {}", e),
+    }
+}
+
+fn load_proof_data() -> Vec<u8> {
+    // Implement loading of proof data
+    vec![]
+}
+```
+
+This example demonstrates how to verify both Groth16 and Plonk proofs. You'll need to implement the load_proof_data function to load your specific proof data.
